@@ -70,6 +70,44 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.country}, {self.region}, {self.woreda}, {self.city}, {self.street}"
+    
+class Permission(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name = 'Permission'
+        verbose_name_plural = 'Permissions'
+
+class Admin(User):
+    permissions = models.ManyToManyField(Permission, blank=True, related_name='admin_permissions')
+    admin_level = models.PositiveIntegerField(default=0)
+    
+    def __str__(self):
+        return f"{self.email} - Admin Level {self.admin_level}"
+    
+    class Meta:
+        verbose_name = 'Admin'
+        verbose_name_plural = 'Admins'
+        
+    def has_perm(self, perm):
+        return self.permissions.filter(name=perm).exists()
+    
+class AdminLog(models.Model):
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
+    action = models.CharField(max_length=100)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.admin.email} - {self.action}"
+    
+    class Meta:
+        verbose_name = 'Admin Log'
+        verbose_name_plural = 'Admin Logs'
+        
 
 class Customer(User):
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
@@ -168,3 +206,5 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.name
+    
+    
