@@ -4,9 +4,8 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from rest_framework import generics
 from rest_framework.response import Response
 from django.http import JsonResponse
-from .serializers import GoogleLoginSerializer  # Adjust the import based on your project structure
-
-class GoogleLogin(generics.GenericAPIView):
+from .serializers import GoogleLoginSerializer  
+class GoogleAuthView(generics.GenericAPIView):
     serializer_class = GoogleLoginSerializer
     adapter_class = GoogleOAuth2Adapter
 
