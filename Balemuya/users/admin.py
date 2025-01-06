@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Address, Professional, Certificate, Portfolio, Education, Skill
+from .models import User, Address, Professional, Certificate, Portfolio, Education, Skill,Permission,Admin,AdminLog
 
 class AddressInline(admin.StackedInline):
     model = Address
@@ -113,4 +113,21 @@ class CertificateAdmin(admin.ModelAdmin):
         'expiration_date', 'certificate_type', 'is_renewable',
         'renewal_period'
     ]
+    
+    
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description']
+
+@admin.register(Admin)
+class AdminAdmin(admin.ModelAdmin):
+    list_display = ['username', 'email', 'first_name', 'last_name', 'admin_level', 'date_joined', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    list_filter = ['admin_level', 'is_active']
+
+@admin.register(AdminLog)
+class AdminLogAdmin(admin.ModelAdmin):
+    list_display = ['admin', 'action', 'timestamp']
+    list_filter = ['admin', 'timestamp']
 
