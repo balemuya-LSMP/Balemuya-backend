@@ -1,23 +1,24 @@
 from django.urls import path
-from .views import home
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from rest_framework import generics
 from rest_framework.response import Response
 from django.http import JsonResponse
-from .serializers import GoogleLoginSerializer  
+from .views import ProfessionalRegisterView
+# from .serializers import GoogleLoginSerializer  
 class GoogleAuthView(generics.GenericAPIView):
-    serializer_class = GoogleLoginSerializer
-    adapter_class = GoogleOAuth2Adapter
+    pass
+    # serializer_class = GoogleLoginSerializer
+    # adapter_class = GoogleOAuth2Adapter
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    # def post(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
         
-        # Implement your Google login logic here
-        # For example, you might call some method to handle the login
-        # return Response({"message": "Google login successful!"})
+    #     # Implement your Google login logic here
+    #     # For example, you might call some method to handle the login
+    #     # return Response({"message": "Google login successful!"})
 
-        return Response({"message": "Login logic not implemented."})
+    #     return Response({"message": "Login logic not implemented."})
 
 def google_callback(request):
     print('Full Path:', request.get_full_path())
@@ -34,7 +35,8 @@ def google_callback(request):
 
 # In your urls.py
 urlpatterns = [
-    path('google-auth/', GoogleAuthView.as_view(), name='google_auth'),
+ path('auth/register/professional/', ProfessionalRegisterView.as_view(), name='auth-register-professional'),
+ path('google-auth/', google_callback, name='google_auth'),
 
 ]
 
