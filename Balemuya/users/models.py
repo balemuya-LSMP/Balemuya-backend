@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 # Custom User Manager
@@ -30,6 +31,7 @@ USER_TYPE_CHOICES = (
 )
 
 class User(AbstractUser):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     username = None
     first_name = models.CharField(max_length=30)
     middle_name = models.CharField(max_length=30)
@@ -58,6 +60,7 @@ class User(AbstractUser):
 
 # Address Model
 class Address(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
     country = models.CharField(max_length=100)
     region = models.CharField(max_length=100)
@@ -78,6 +81,7 @@ class Address(models.Model):
 
 # Permissions Model
 class Permission(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField()
 
@@ -90,6 +94,7 @@ class Permission(models.Model):
 
 # Admin Profile Model
 class AdminProfile(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
     permissions = models.ManyToManyField(Permission, blank=True, related_name='admins')
     admin_level = models.PositiveIntegerField(default=0)
@@ -106,6 +111,7 @@ class AdminProfile(models.Model):
 
 # Admin Action Log
 class AdminLog(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     admin = models.ForeignKey(AdminProfile, on_delete=models.CASCADE, related_name='logs')
     action = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -119,6 +125,7 @@ class AdminLog(models.Model):
 
 # Customer Profile
 class CustomerProfile(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     total_interactions = models.PositiveIntegerField(default=0) 
@@ -132,6 +139,7 @@ class CustomerProfile(models.Model):
 
 # Skill Model for Professionals
 class Skill(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     name = models.CharField(max_length=100)
 
     def __str__(self):
@@ -143,6 +151,7 @@ class Skill(models.Model):
 
 # Professional Profile
 class ProfessionalProfile(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional_profile')
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     is_verified = models.BooleanField(default=False)
@@ -162,6 +171,7 @@ class ProfessionalProfile(models.Model):
 
 # Education Model for Professionals
 class Education(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='educations')
     school = models.CharField(max_length=100)
     degree = models.CharField(max_length=100, blank=True, null=True)
@@ -183,6 +193,7 @@ class Education(models.Model):
 
 # Portfolio Model for Professionals
 class Portfolio(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='portfolios')
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -201,6 +212,7 @@ class Portfolio(models.Model):
 
 # Certificate Model for Professionals
 class Certificate(models.Model):
+    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='certificates')
     name = models.CharField(max_length=100)
     issued_by = models.CharField(max_length=100)
