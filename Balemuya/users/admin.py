@@ -1,133 +1,84 @@
-from django.contrib import admin
-from .models import User, Address, Professional, Certificate, Portfolio, Education, Skill,Permission,Admin,AdminLog
+# from django.contrib import admin
+# from .models import User, AdminProfile, CustomerProfile, ProfessionalProfile, Education, Portfolio, Certificate, Address
+# from django.contrib.auth.admin import UserAdmin
+# from django.utils.translation import gettext_lazy as _
 
-class AddressInline(admin.StackedInline):
-    model = Address
-    extra = 1 
-    fields = ['country', 'region', 'woreda', 'city', 'kebele', 'street', 'latitude', 'longitude', 'is_current']  
 
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = [
-        'email', 'first_name', 'middle_name', 'last_name',
-        'phone_number', 'gender', 'profile_image', 'kebele_id_image',
-        'user_type', 'is_active', 'is_superuser'
-    ]
-    list_filter = [
-        'user_type', 'email', 'first_name', 'middle_name',
-        'last_name', 'phone_number', 'gender', 'is_active'
-    ]
-    search_fields = [
-        'email', 'first_name', 'middle_name', 'last_name',
-        'phone_number', 'gender'
-    ]
-    inlines = [AddressInline] 
+# # Custom User Admin
+# class CustomUserAdmin(UserAdmin):
+#     model = User
+#     list_display = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number', 'user_type', 'is_active', 'is_staff', 'is_superuser')
+#     list_filter = ('user_type', 'is_active', 'is_staff', 'is_superuser')
+#     search_fields = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number')
+#     ordering = ('email',)
+#     fieldsets = (
+#         (None, {'fields': ('email', 'password')}),
+#         (_('Personal info'), {'fields': ('first_name', 'middle_name', 'last_name', 'phone_number')}),
+#         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'user_type')}),
+#         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+#     )
+#     add_fieldsets = (
+#         (None, {'fields': ('email', 'password1', 'password2')}),
+#         (_('Personal info'), {'fields': ('first_name', 'middle_name', 'last_name', 'phone_number')}),
+#         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'user_type')}),
+#     )
 
-@admin.register(Address)
-class AddressAdmin(admin.ModelAdmin):
-    list_display = [
-        'user', 'country', 'region', 'woreda', 
-        'city', 'kebele', 'street', 'latitude', 
-        'longitude', 'is_current'
-    ]
-    search_fields = [
-        'country', 'region', 'woreda', 'city', 
-        'kebele', 'street'
-    ]
-    
-class EducationInline(admin.StackedInline):
-    model = Education
-    extra = 1
-    fields = [
-        'school', 'degree', 'field_of_study',
-        'location', 'document_url', 'start_date', 'end_date',
-        'honors', 'is_current_student'
-    ]
-    
-class PortfolioInline(admin.StackedInline):
-    model = Portfolio
-    extra = 1
-    fields = [
-        'title', 'description', 'image', 'video_url'
-    ]
-    
-@admin.register(Skill)
-class SkillAdmin(admin.ModelAdmin):
-    list_display = ['name']
 
-class CertificateInline(admin.StackedInline):
-    model = Certificate
-    extra = 1
-    fields = [
-        'name', 'issued_by', 'document_url', 'date_issued',
-        'expiration_date', 'certificate_type', 'is_renewable',
-        'renewal_period'
-    ]
+# # Admin Profile Admin
+# class AdminProfileAdmin(admin.ModelAdmin):
+#     list_display = ('user', 'permissions', 'admin_level')
+#     search_fields = ('user__email', 'permissions', 'admin_level')
+#     list_filter = ('admin_level',)
 
-@admin.register(Professional)
-class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = [
-        'email', 'is_verified', 'is_approved',
-        'logo', 'business_card', 'rating', 'years_of_experience',
-        'portfolio_url', 'availability'
-    ]
-    search_fields = [
-        'email', 'skills__name', 'is_verified', 'is_approved',
-        'logo', 'business_card', 'rating', 'years_of_experience',
-        'portfolio_url', 'availability'
-    ]
-    filter_horizontal = ['skills']
-    inlines = [CertificateInline, PortfolioInline, EducationInline]  
 
-@admin.register(Education)
-class EducationAdmin(admin.ModelAdmin):
-    list_display = [
-        'professional', 'school', 'degree', 'field_of_study',
-        'location', 'document_url', 'start_date', 'end_date',
-        'honors', 'is_current_student'
-    ]
-    search_fields = [
-        'professional__email', 'school', 'degree', 'field_of_study',
-        'location', 'document_url', 'start_date', 'end_date',
-        'honors', 'is_current_student'
-    ]
-    
-@admin.register(Portfolio)
-class PortfolioAdmin(admin.ModelAdmin):
-    list_display = [
-        'professional', 'title', 'description', 'image', 'video_url'
-    ]
-    search_fields = [
-        'professional__email', 'title', 'description'
-    ]
+# # Customer Profile Admin
+# class CustomerProfileAdmin(admin.ModelAdmin):
+#     list_display = ('user', 'rating', 'total_interactions')
+#     search_fields = ('user__email', 'rating')
+#     list_filter = ('rating',)
 
-@admin.register(Certificate)
-class CertificateAdmin(admin.ModelAdmin):
-    list_display = [
-        'professional', 'name', 'issued_by', 'document_url', 'date_issued',
-        'expiration_date', 'certificate_type', 'is_renewable',
-        'renewal_period'
-    ]
-    search_fields = [
-        'professional__email', 'name', 'issued_by', 'document_url', 'date_issued',
-        'expiration_date', 'certificate_type', 'is_renewable',
-        'renewal_period'
-    ]
-    
-    
 
-@admin.register(Permission)
-class PermissionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'description']
+# # Professional Profile Admin
+# class ProfessionalProfileAdmin(admin.ModelAdmin):
+#     list_display = ('user', 'is_verified', 'business_logo', 'business_card', 'rating', 'years_of_experience', 'portfolio_url', 'availability')
+#     search_fields = ('user__email', 'business_logo', 'business_card', 'portfolio_url')
+#     list_filter = ('is_verified', 'availability', 'rating')
 
-@admin.register(Admin)
-class AdminAdmin(admin.ModelAdmin):
-    list_display = ['username', 'email', 'first_name', 'last_name', 'admin_level', 'date_joined', 'is_active']
-    search_fields = ['username', 'email', 'first_name', 'last_name']
-    list_filter = ['admin_level', 'is_active']
 
-@admin.register(AdminLog)
-class AdminLogAdmin(admin.ModelAdmin):
-    list_display = ['admin', 'action', 'timestamp']
-    list_filter = ['admin', 'timestamp']
+# # Education Admin
+# class EducationAdmin(admin.ModelAdmin):
+#     list_display = ('school', 'degree', 'field_of_study', 'location', 'start_date', 'end_date', 'is_current_student')
+#     search_fields = ('school', 'degree', 'field_of_study')
+#     list_filter = ('is_current_student',)
 
+
+# # Portfolio Admin
+# class PortfolioAdmin(admin.ModelAdmin):
+#     list_display = ('title', 'description','image', 'created_at', 'updated_at')
+#     search_fields = ('title', 'description')
+#     list_filter = ('created_at', 'updated_at')
+
+
+# # Certificate Admin
+# class CertificateAdmin(admin.ModelAdmin):
+#     list_display = ('name', 'issued_by', 'document_url', 'date_issued', 'expiration_date', 'certificate_type', 'is_renewable')
+#     search_fields = ('name', 'issued_by', 'certificate_type')
+#     list_filter = ('is_renewable', 'date_issued', 'expiration_date')
+
+
+# # Address Admin
+# class AddressAdmin(admin.ModelAdmin):
+#     list_display = ('user', 'country', 'region', 'woreda', 'city', 'kebele', 'street', 'latitude', 'longitude', 'is_current')
+#     search_fields = ('user__email', 'country', 'region', 'city', 'street')
+#     list_filter = ('is_current',)
+
+
+# # Register the models with the custom admin classes
+# admin.site.register(User, CustomUserAdmin)
+# admin.site.register(AdminProfile, AdminProfileAdmin)
+# admin.site.register(CustomerProfile, CustomerProfileAdmin)
+# admin.site.register(ProfessionalProfile, ProfessionalProfileAdmin)
+# admin.site.register(Education, EducationAdmin)
+# admin.site.register(Portfolio, PortfolioAdmin)
+# admin.site.register(Certificate, CertificateAdmin)
+# admin.site.register(Address, AddressAdmin)
