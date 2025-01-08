@@ -121,7 +121,7 @@ class AdminLog(models.Model):
 class CustomerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    total_interactions = models.PositiveIntegerField(default=0)  # Replaced `total_orders` with `total_interactions`
+    total_interactions = models.PositiveIntegerField(default=0) 
 
     def __str__(self):
         return self.user.email
