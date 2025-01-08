@@ -16,11 +16,11 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 'email', 'phone_number', 'profile_image', 'kebele_id_image', 'user_type', 'bio', 'last_login', 'created_at', 'updated_at', 'addresses']
+        fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 'email', 'phone_number', 'profile_image', 'kebele_id_image', 'user_type', 'bio', 'last_login', 'created_at', 'addresses']
 
 
 class PermissionSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model = Permission
         fields = '__all__'
