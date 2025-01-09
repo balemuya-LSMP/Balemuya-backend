@@ -1,3 +1,5 @@
+from django.core.cache import cache
+
 from rest_framework import generics
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.response import Response
@@ -5,6 +7,8 @@ from rest_framework import status
 
 from allauth.account.utils import send_email_confirmation
 from allauth.account.models import get_adapter
+
+from .utils import send_sms,generate_otp
 
 from .serializers import ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
 class RegisterView(generics.CreateAPIView):
@@ -25,9 +29,16 @@ class RegisterView(generics.CreateAPIView):
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
             user_instance = serializer.save()
+            
+            otp = generate_otp()
+            cache.set(f"otp_{user_instance.user.phone_number}", otp, timeout=300)
             # Send email verification
             send_email_confirmation(request, user_instance.user)
-            print('serialized data',serializer.data)
+            
+            phone_number = user_instance.user.phone_number
+            message_body = f"Hello {user_instance.user.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+            send_sms(request, to=phone_number, message_body=message_body)
+            
             return Response({
                 'message': 'Registration successful. Please check your email to verify your account.',
                 'data': serializer.data

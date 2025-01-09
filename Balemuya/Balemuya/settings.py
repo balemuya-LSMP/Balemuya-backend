@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.sites',  
     'allauth',
     'allauth.account',
+    'django_twilio',
+
     'users',
 ]
 
@@ -172,3 +174,8 @@ EMAIL_PORT = os.getenv('EMAIL_PORT')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
+
+
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
