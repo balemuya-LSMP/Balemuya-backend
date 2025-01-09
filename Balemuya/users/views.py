@@ -7,7 +7,6 @@ from allauth.account.utils import send_email_confirmation
 from allauth.account.models import get_adapter
 
 from .serializers import ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
-
 class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     
@@ -25,11 +24,13 @@ class RegisterView(generics.CreateAPIView):
         
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            #send email verification
-            send_email_confirmation(request, user)
-            
-            return Response({'message': 'Registration successful. please check your email to verify your account',
-                             'data':serializer.data}, status=status.HTTP_201_CREATED)
+            user_instance = serializer.save()
+            # Send email verification
+            send_email_confirmation(request, user_instance.user)
+            print('serialized data',serializer.data)
+            return Response({
+                'message': 'Registration successful. Please check your email to verify your account.',
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
