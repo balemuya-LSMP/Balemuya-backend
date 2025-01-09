@@ -70,7 +70,7 @@ class UserSerializer(serializers.ModelSerializer):
                     country=address_data['country'],
                     region=address_data['region'],
                     woreda=address_data['woreda'],
-                    city=address_data.get('city', ''),  # Default to empty string
+                    city=address_data.get('city', ''),  
                     kebele=address_data['kebele'],
                     street=address_data['street'],
                     latitude=address_data['latitude'],
@@ -125,16 +125,6 @@ class SkillSerializer(serializers.ModelSerializer):
         model = Skill
         fields = '__all__'
     
-    def create(self,validated_data):
-        skill_data = validated_data
-        if Skill.objects.filter(name=skill_data['name']).exists():
-            pass
-        else:
-            skill = Skill.objects.create(name = skill_data['name'])
-            
-            return skill
-
-
 
 class PermissionSerializer(serializers.ModelSerializer):
 
@@ -210,7 +200,7 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
         business_logo = validated_data.pop('business_logo', None)
 
         user_serializer = UserSerializer(data=user_data)
-        user_serializer.is_valid(raise_exception=True)  # Validate user data
+        user_serializer.is_valid(raise_exception=True) 
         user = user_serializer.save()  
 
         professional_profile = ProfessionalProfile.objects.create(
@@ -221,9 +211,8 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
         )
 
         for skill_data in skills_data:
-            skill_serializer = SkillSerializer(data=skill_data)
-            skill_serializer.is_valid(raise_exception=True)
-            skill_serializer.save()
+            skill, created = Skill.objects.get_or_create(name=skill_data['name'])
+            professional_profile.skills.add(skill)
 
         for education_data in educations_data:
             education_serializer = EducationSerializer(data=education_data)
