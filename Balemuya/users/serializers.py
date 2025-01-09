@@ -8,7 +8,7 @@ from .models import User, Address, Permission, AdminProfile, AdminLog, CustomerP
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = '__all__'
+        exclude = ['user']
         
 class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many = True)
@@ -16,31 +16,31 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
-                  'email', 'phone_number', 'profile_image', 'kebele_id_image', 
+                  'email','password', 'phone_number', 'profile_image', 'kebele_id_image', 
                   'user_type', 'bio', 'last_login', 'created_at', 'addresses']
         
         extra_kwargs = {
             'password':{'write_only':True}
         }
         
-        def validate_email(self,value):
+    def validate_email(self,value):
             
-            try:
-                validate_email(value)
-            except ValidationError:
-                raise serializers.ValidationError(_("Invalid  email format."))
+            # try:
+            #     validate_email(value)
+            # except ValidationError:
+            #     raise serializers.ValidationError(_("Invalid  email format."))
             
-            domain = value.split('@')[-1]
-            try:
-                dns.resolver.resolve(domain, 'MX')
-            except(dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-                raise serializers.ValidationError(_("Email domain does not exist."))
+            # domain = value.split('@')[-1]
+            # try:
+            #     dns.resolver.resolve(domain, 'MX')
+            # except(dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            #     raise serializers.ValidationError(_("Email domain does not exist."))
             
             if User.objects.filter(email=value).exists():
                 raise serializers.ValidationError("User with this Email already exists")
             return value
 
-        def validate_phone_number(self,value):
+    def validate_phone_number(self,value):
             
             if not re.match(r'^\+?1?\d{9,15}$', value):
                   raise serializers.ValidationError(_("Phone number must be in a valid format."))
@@ -51,13 +51,13 @@ class UserSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("User with this phone number already exists")
             return value
         
-        def validate_password(self,value):
+    def validate_password(self,value):
             if len(value)<8:
                 raise serializers.ValidationError(_("Password must be at least 8 characters long."))
             
             return value
         
-        def create(self, validated_data):
+    def create(self, validated_data):
             addresses_data = validated_data.pop('addresses', [])
             user = User.objects.create(**validated_data)
             user.set_password(validated_data['password'])
@@ -85,7 +85,7 @@ class UserSerializer(serializers.ModelSerializer):
             return user
 
             
-        def update(self, instance, validated_data):
+    def update(self, instance, validated_data):
             addresses_data = validated_data.pop('addresses', None)
 
             # Update user fields
@@ -132,7 +132,7 @@ class SkillSerializer(serializers.ModelSerializer):
         else:
             skill = Skill.objects.create(name = skill_data['name'])
             
-        return skill
+            return skill
 
 
 
@@ -170,8 +170,10 @@ class EducationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Education
-        fields = [ 'school', 'degree', 'field_of_study', 'location', 'document_url', 'start_date', 'end_date', 'honors', 'is_current_student']
-
+        fields = ['school', 'degree', 'field_of_study', 'location', 
+                  'document_url', 'start_date', 'end_date', 'honors', 
+                  'is_current_student']
+        
 # Portfolio Serializer
 class PortfolioSerializer(serializers.ModelSerializer):
 
@@ -220,23 +222,23 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
 
         for skill_data in skills_data:
             skill_serializer = SkillSerializer(data=skill_data)
-            skill_serializer.is_valid(raise_exception=True)  # Validate skill data
-            skill_serializer.save(profile=professional_profile)  # Create Skill instance
+            skill_serializer.is_valid(raise_exception=True)
+            skill_serializer.save()
 
         for education_data in educations_data:
             education_serializer = EducationSerializer(data=education_data)
-            education_serializer.is_valid(raise_exception=True)  # Validate education data
-            education_serializer.save(profile=professional_profile)  # Create Education instance
+            education_serializer.is_valid(raise_exception=True)
+            education_serializer.save(professional=professional_profile)
 
         for portfolio_data in portfolios_data:
             portfolio_serializer = PortfolioSerializer(data=portfolio_data)
-            portfolio_serializer.is_valid(raise_exception=True)  # Validate portfolio data
-            portfolio_serializer.save(profile=professional_profile)  # Create Portfolio instance
+            portfolio_serializer.is_valid(raise_exception=True)
+            portfolio_serializer.save(professional=professional_profile)
 
         for certification_data in certifications_data:
             certificate_serializer = CertificateSerializer(data=certification_data)
-            certificate_serializer.is_valid(raise_exception=True)  # Validate certificate data
-            certificate_serializer.save(profile=professional_profile)  # Create Certificate instance
+            certificate_serializer.is_valid(raise_exception=True)
+            certificate_serializer.save(professional=professional_profile)
 
         return professional_profile
 

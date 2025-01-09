@@ -153,7 +153,7 @@ class Skill(models.Model):
 class ProfessionalProfile(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional_profile')
-    skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
+    skills = models.ManyToManyField(Skill, blank=True,null=True, related_name='professionals')
     is_verified = models.BooleanField(default=False)
     business_logo = models.ImageField(upload_to='professional_logos', null=True, blank=True)
     business_card = models.ImageField(upload_to='business_cards', null=True, blank=True)

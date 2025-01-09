@@ -12,13 +12,13 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     
     def create(self, request, *args, **kwargs):
-        user_type = request.data.get('user_type')
+        user = request.data.get('user')
         
-        if user_type == 'professional':
+        if user['user_type'] == 'professional':
             serializer_class = ProfessionalProfileSerializer
-        elif user_type == 'customer':
+        elif user['user_type'] == 'customer':
             serializer_class = CustomerProfileSerializer
-        elif user_type == 'admin':
+        elif user['user_type'] == 'admin':
             serializer_class = AdminProfileSerializer
         else:
             return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
