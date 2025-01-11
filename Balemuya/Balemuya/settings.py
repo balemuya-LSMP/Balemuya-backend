@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django_twilio',
 
     'users',
+    'services',
 ]
 
 AUTHENTICATION_BACKENDS = (
