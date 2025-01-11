@@ -3,8 +3,10 @@ import re
 import dns.resolver
 from django.core.validators import validate_email
 from django.utils.translation import gettext_lazy as _
+from django.db import transaction
 from .models import User, Address, Permission, AdminProfile, AdminLog, CustomerProfile, Skill, ProfessionalProfile, Education, Portfolio, Certificate
 
+from services.serializers import CategorySerializer
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
@@ -16,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
-                  'email','password', 'phone_number', 'profile_image', 'kebele_id_image', 
+                  'email','password', 'phone_number', 'profile_image', 'kebele_id_front_image', 'kebele_id_back_image',
                   'user_type', 'bio', 'last_login', 'created_at', 'addresses']
         
         extra_kwargs = {
@@ -69,7 +71,6 @@ class UserSerializer(serializers.ModelSerializer):
                     user=user,
                     country=address_data['country'],
                     region=address_data['region'],
-                    woreda=address_data['woreda'],
                     city=address_data.get('city', ''),  
                     kebele=address_data['kebele'],
                     street=address_data['street'],
@@ -100,7 +101,6 @@ class UserSerializer(serializers.ModelSerializer):
                         user=instance,
                         country=address_data['country'],
                         region=address_data['region'],
-                        woreda=address_data['woreda'],
                         city=address_data.get('city', ''),
                         kebele=address_data['kebele'],
                         street=address_data['street'],
@@ -179,14 +179,15 @@ class CertificateSerializer(serializers.ModelSerializer):
         
 class ProfessionalProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
-    skills = SkillSerializer(many=True)
-    educations = EducationSerializer(many=True)
-    portfolios = PortfolioSerializer(many=True)
-    certificates = CertificateSerializer(many=True)
+    skills = SkillSerializer(many=True,required=False)
+    educations = EducationSerializer(many=True,required=False)
+    portfolios = PortfolioSerializer(many=True,required=False)
+    certificates = CertificateSerializer(many=True,required=False)
+    categories = CategorySerializer(many=True,required=False)
 
     class Meta:
         model = ProfessionalProfile
-        fields = ['user', 'skills', 'educations', 'portfolios', 'certificates',
+        fields = ['user', 'skills', 'educations', 'portfolios', 'certificates','categories',
                   'is_verified', 'business_logo', 'business_card', 
                   'rating', 'years_of_experience', 'portfolio_url', 'availability']
 
@@ -195,39 +196,47 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
         educations_data = validated_data.pop('educations', [])
         certifications_data = validated_data.pop('certificates', [])
         portfolios_data = validated_data.pop('portfolios', [])
+        categories_data = validated_data.pop('categories', [])
         skills_data = validated_data.pop('skills', [])
         business_card = validated_data.pop('business_card', None)
         business_logo = validated_data.pop('business_logo', None)
+        
+        with transaction.atomic():
+        
+            user_serializer = UserSerializer(data=user_data)
+            user_serializer.is_valid(raise_exception=True) 
+            user = user_serializer.save()  
 
-        user_serializer = UserSerializer(data=user_data)
-        user_serializer.is_valid(raise_exception=True) 
-        user = user_serializer.save()  
+            professional_profile = ProfessionalProfile.objects.create(
+                user=user,
+                business_card=business_card,
+                business_logo=business_logo,
+                **validated_data
+            )
 
-        professional_profile = ProfessionalProfile.objects.create(
-            user=user,
-            business_card=business_card,
-            business_logo=business_logo,
-            **validated_data
-        )
+            for skill_data in skills_data:
+                skill, created = Skill.objects.get_or_create(name=skill_data['name'])
+                professional_profile.skills.add(skill)
+            
+            if categories_data:
+                for category_data in categories_data:
+                    category, created = category.objects.get_or_create(name=category_data['name'])
+                    professional_profile.categories.add(category)
 
-        for skill_data in skills_data:
-            skill, created = Skill.objects.get_or_create(name=skill_data['name'])
-            professional_profile.skills.add(skill)
+            for education_data in educations_data:
+                education_serializer = EducationSerializer(data=education_data)
+                education_serializer.is_valid(raise_exception=True)
+                education_serializer.save(professional=professional_profile)
 
-        for education_data in educations_data:
-            education_serializer = EducationSerializer(data=education_data)
-            education_serializer.is_valid(raise_exception=True)
-            education_serializer.save(professional=professional_profile)
+            for portfolio_data in portfolios_data:
+                portfolio_serializer = PortfolioSerializer(data=portfolio_data)
+                portfolio_serializer.is_valid(raise_exception=True)
+                portfolio_serializer.save(professional=professional_profile)
 
-        for portfolio_data in portfolios_data:
-            portfolio_serializer = PortfolioSerializer(data=portfolio_data)
-            portfolio_serializer.is_valid(raise_exception=True)
-            portfolio_serializer.save(professional=professional_profile)
-
-        for certification_data in certifications_data:
-            certificate_serializer = CertificateSerializer(data=certification_data)
-            certificate_serializer.is_valid(raise_exception=True)
-            certificate_serializer.save(professional=professional_profile)
+            for certification_data in certifications_data:
+                certificate_serializer = CertificateSerializer(data=certification_data)
+                certificate_serializer.is_valid(raise_exception=True)
+                certificate_serializer.save(professional=professional_profile)
 
         return professional_profile
 
