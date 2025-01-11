@@ -40,9 +40,11 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=30)
     profile_image = models.ImageField(upload_to='profile_images', null=True, blank=True)
-    kebele_id_image = models.ImageField(upload_to='kebele_id_images', null=True, blank=True)
+    kebele_id_front_image = models.ImageField(upload_to='kebele_id_images/front_images', null=True, blank=True)
+    kebele_id_back_image = models.ImageField(upload_to='kebele_id_images/back_images', null=True, blank=True)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     bio = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=False)
     last_login = models.DateTimeField(auto_now=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -62,18 +64,17 @@ class User(AbstractUser):
 class Address(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
-    country = models.CharField(max_length=100)
-    region = models.CharField(max_length=100)
-    woreda = models.CharField(max_length=100)
+    country = models.CharField(max_length=100,default = 'ethiopia')
+    region = models.CharField(max_length=100,null = True, blank = True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    kebele = models.CharField(max_length=100)
-    street = models.CharField(max_length=100)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    kebele = models.CharField(max_length=100,null=True, blank=True)
+    street = models.CharField(max_length=100, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank= True, null=True)
     is_current = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.country}, {self.region}, {self.woreda}, {self.city}, {self.street}"
+        return f"{self.country}, {self.region}, {self.city}, {self.street}"
 
     class Meta:
         verbose_name = 'Address'
@@ -128,7 +129,6 @@ class CustomerProfile(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    total_interactions = models.PositiveIntegerField(default=0) 
 
     def __str__(self):
         return self.user.email
@@ -153,8 +153,8 @@ class Skill(models.Model):
 class ProfessionalProfile(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional_profile')
-    category = models.ManyToManyField(Category, blank = True, null =True,related_name='professionals')
-    skills = models.ManyToManyField(Skill, blank=True,null=True, related_name='professionals')
+    categories = models.ManyToManyField(Category, blank=True, related_name='professionals')
+    skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     is_verified = models.BooleanField(default=False)
     business_logo = models.ImageField(upload_to='professional_logos', null=True, blank=True)
     business_card = models.ImageField(upload_to='business_cards', null=True, blank=True)

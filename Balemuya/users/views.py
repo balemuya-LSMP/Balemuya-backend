@@ -42,7 +42,9 @@ class RegisterView(generics.CreateAPIView):
             recipient_list = [user_instance.user.email]
             
             # send confirmation email
+            print('email send start')
             send_email_confirmation(subject, message,recipient_list)
+            print('email send end')
             
             otp = generate_otp()
             cache.set(f"otp_{user_instance.user.phone_number}", otp, timeout=300)

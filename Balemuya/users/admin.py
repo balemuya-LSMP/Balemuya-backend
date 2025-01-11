@@ -47,7 +47,7 @@ class AdminProfileAdmin(admin.ModelAdmin):
 
 # Customer Profile Admin
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'rating', 'total_interactions')
+    list_display = ('user', 'rating')
     search_fields = ('user__email', 'rating')
     list_filter = ('rating',)
 
