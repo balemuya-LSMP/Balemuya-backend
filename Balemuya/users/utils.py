@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.mail import send_mail
 from django_twilio.client import twilio_client
 from django.http import JsonResponse
 import random
@@ -13,7 +14,7 @@ def send_sms(request,to,message_body):
     try:
         sender_number = settings.TWILIO_DEFAULT_CALLERID
         if not sender_number:
-            return JsonResponse({"error": "Twilio sender number is not configured in settings."})
+            return JsonResponse({"error": "Twilio sender number is not configured."})
 
         message = twilio_client.messages.create(
             body=message_body,
@@ -24,3 +25,17 @@ def send_sms(request,to,message_body):
         return JsonResponse({"message": f"Message sent: {message.sid}"})
     except Exception as e:
         return JsonResponse({"error": str(e)})
+    
+
+def send_email_confirmation(subject, message,recipient_list):
+    try:
+        response = send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            recipient_list)
+        return response
+    except Exception as e:
+        return str(e)
+    
+    
