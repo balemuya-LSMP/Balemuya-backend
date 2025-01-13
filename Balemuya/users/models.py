@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from services.models import Category
 # Custom User Manager
@@ -39,9 +40,9 @@ class User(AbstractUser):
     gender = models.CharField(max_length=30, choices=[('male', 'Male'), ('female', 'Female')])
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=30)
-    profile_image = models.ImageField(upload_to='profile_images', null=True, blank=True)
-    kebele_id_front_image = models.ImageField(upload_to='kebele_id_images/front_images', null=True, blank=True)
-    kebele_id_back_image = models.ImageField(upload_to='kebele_id_images/back_images', null=True, blank=True)
+    profile_image = CloudinaryField('image', null=True, blank=True,folder='profile_images')
+    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/front_images')
+    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/back_images')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     bio = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=False)
@@ -156,8 +157,8 @@ class ProfessionalProfile(models.Model):
     categories = models.ManyToManyField(Category, blank=True, related_name='professionals')
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     is_verified = models.BooleanField(default=False)
-    business_logo = models.ImageField(upload_to='professional_logos', null=True, blank=True)
-    business_card = models.ImageField(upload_to='business_cards', null=True, blank=True)
+    business_logo = CloudinaryField('image', null=True, blank=True,folder='business_logos')
+    business_card = CloudinaryField('image', null=True, blank=True,folder='business_cards')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     years_of_experience = models.PositiveIntegerField(default=0)
     portfolio_url = models.URLField(null=True, blank=True)
@@ -198,7 +199,7 @@ class Portfolio(models.Model):
     professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='portfolios')
     title = models.CharField(max_length=200)
     description = models.TextField()
-    image = models.ImageField(upload_to='portfolio_images', null=True, blank=True)
+    image = CloudinaryField('image', null=True, blank=True,folder='portfolio_images')
     video_url = models.URLField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
