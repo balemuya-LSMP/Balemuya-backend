@@ -129,14 +129,14 @@ WSGI_APPLICATION = 'Balemuya.wsgi.application'
 
 
 
-DATABASE_URL = os.getenv(
-    'POSTGRES_URL',
-    'postgresql://postgres.qcxkobiqwdvjughquxmn:balemuya123@aws-0-us-east-1.pooler.supabase.com:5432/postgres'
-)
+# DATABASE_URL = os.getenv(
+#     'POSTGRES_URL',
+#     'postgresql://postgres.qcxkobiqwdvjughquxmn:balemuya123@aws-0-us-east-1.pooler.supabase.com:5432/postgres'
+# )
 
-DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL)
-}
+# DATABASES = {
+#     'default': dj_database_url.config(default=DATABASE_URL)
+# }
 
 
 
