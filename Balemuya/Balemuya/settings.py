@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
+
 import os
 
 from datetime import timedelta
@@ -119,12 +121,17 @@ WSGI_APPLICATION = 'Balemuya.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
+
+DATABASE_URL = os.getenv(
+    'POSTGRES_URL',
+    'postgresql://postgres.qcxkobiqwdvjughquxmn:balemuya123@aws-0-us-east-1.pooler.supabase.com:5432/postgres'
+)
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=DATABASE_URL)
 }
+
 
 
 # Password validation
