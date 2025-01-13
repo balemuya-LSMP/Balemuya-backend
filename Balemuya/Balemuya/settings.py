@@ -14,6 +14,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 import os
 
 from datetime import timedelta
@@ -54,6 +58,8 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'django_twilio',
+    'cloudinary',
+
 
     'users',
     'services',
@@ -195,7 +201,12 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 # EMAIL_TIMEOUT = 30
 
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL')
+cloudinary.config(
+    cloudinary_url=CLOUDINARY_URL
+)
 
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
