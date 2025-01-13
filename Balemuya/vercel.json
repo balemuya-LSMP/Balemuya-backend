@@ -18,6 +18,10 @@
       "src": "/(.*)",
       "dest": "Balemuya/wsgi.py"
     },
+    {
+      "src": "/static/(.*)",
+      "dest": "/staticfiles/$1"
+    },
 
     {
       "src": "/media/(.*)",
