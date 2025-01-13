@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.http import HttpResponse
 from django.contrib import admin
-from django.conf.urls import static
+from django.conf.urls.static import static
 from django.conf import settings
 from django.urls import path,include
 
@@ -31,4 +31,6 @@ urlpatterns = [
     # path('api/bookings/',include('bookings.urls')),
     # path('api/notifications/',include('notifications.urls')),
     # path('api/subscriptions/',include('subscriptions.urls')),
-]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
+]
+urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
