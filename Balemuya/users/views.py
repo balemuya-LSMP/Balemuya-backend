@@ -39,7 +39,10 @@ class RegisterView(generics.CreateAPIView):
             print('email send end')
             
             otp = generate_otp()
-            cache.set(f"otp_{user_instance.phone_number}", otp, timeout=300)
+            cache.set(f"otp_{user_instance.email}", otp, timeout=300)
+            
+            cached = cache.get(f"otp_{user_instance.email}")
+            print('cached otp',cached)
         
             phone_number = user_instance.phone_number
             message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
@@ -54,7 +57,7 @@ class RegisterView(generics.CreateAPIView):
 
 
 
-class VerifyEmailView(generics.GenericAPIView):
+class VerifyEmailView(APIView):
     def get(self,request):
         uidb64 = request.GET.get('uid')
         token = request.GET.get('token')
@@ -73,8 +76,26 @@ class VerifyEmailView(generics.GenericAPIView):
             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
         
 class VerifyOTPView(APIView):
-    permission_classes = (AllowAny,)
-    pass
+    
+    def post(self,request):
+        otp = int( request.data.get('otp'))
+        print('otp',otp)
+        email = request.data.get('email')
+        print('email',email)
+        cached_otp = cache.get(f"otp_{email}")
+        print('cached otp',cached_otp)
+        
+        if cached_otp == otp:
+            print('otp is valid')
+            user = User.objects.filter(email=email).first()
+            user.is_active = True
+            user.save()
+            cache.delete(f"otp_{email}")
+            return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid OTP please type again.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
 
 class ResendOTPView(APIView):
     permission_classes = (AllowAny,)

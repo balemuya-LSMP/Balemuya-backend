@@ -30,7 +30,7 @@ class CertificateInline(admin.StackedInline):
 # Custom User Admin
 class CustomUserAdmin(admin.ModelAdmin):
     model = User
-    list_display = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number', 'user_type', 'is_active', 'is_staff', 'is_superuser')
+    list_display = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number','gender', 'user_type', 'is_active', 'is_staff', 'is_superuser')
     list_filter = ('user_type', 'is_active', 'is_staff', 'is_superuser')
     search_fields = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number')
     ordering = ('email',)
