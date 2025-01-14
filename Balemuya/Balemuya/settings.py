@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
 
+
     'users',
     'services',
 ]
