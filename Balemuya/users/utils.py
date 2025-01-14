@@ -4,8 +4,6 @@ from django_twilio.client import twilio_client
 from django.http import JsonResponse
 import random
 
-
-@staticmethod
 def generate_otp():
     """Generates a 6-digit random OTP."""
     return random.randint(100000, 999999)
