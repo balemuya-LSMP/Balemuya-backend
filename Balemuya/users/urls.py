@@ -12,7 +12,7 @@ urlpatterns = [
     path('auth/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
     path('auth/reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('auth/verify-pass-reset-otp/', VerifyPaswordResetOTPView.as_view(), name='verify-otp'),
-    path('auth/set-password/', SetPasswordView.as_view(), name='set-password'),
+    path('auth/set-new-password/', SetPasswordView.as_view(), name='set-password'),
     path('auth/update-password/', UpdatePasswordView.as_view(), name='update-password'),
       
 ]
