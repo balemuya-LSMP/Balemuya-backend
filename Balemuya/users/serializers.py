@@ -26,7 +26,7 @@ class LoginSerializer(serializers.Serializer):
         }
   
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many = True)
+    addresses = AddressSerializer(many=True, required=False)
     
     class Meta:
         model = User
