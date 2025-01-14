@@ -49,8 +49,8 @@ class UserSerializer(serializers.ModelSerializer):
             
             
             
-            if User.objects.filter(phone_number=value).exists():
-                raise serializers.ValidationError("User with this phone number already exists")
+            # if User.objects.filter(phone_number=value).exists():
+            #     raise serializers.ValidationError("User with this phone number already exists")
             return value
         
     def validate_password(self,value):
@@ -153,7 +153,16 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ['user', 'rating', 'total_interactions']
+        fields = ['user','rating']
+        
+    def create(self, validated_data):
+        user_data = validated_data.pop('user', {})
+        with transaction.atomic():
+            user_serializer = UserSerializer(data=user_data)
+            user_serializer.is_valid(raise_exception=True)
+            user = user_serializer.save()
+            customer_profile = CustomerProfile.objects.create(user=user,**validated_data)
+            return customer_profile
 
 
 class EducationSerializer(serializers.ModelSerializer):
