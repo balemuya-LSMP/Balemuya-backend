@@ -16,32 +16,22 @@ from .utils import send_sms,generate_otp,send_email_confirmation
 
 from .serializers import UserSerializer,LoginSerializer,ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
 class RegisterView(generics.CreateAPIView):
-    permission_classes = (AllowAny,)
+    serializer_class = UserSerializer
     
     def create(self, request, *args, **kwargs):
-        user = request.data.get('user')
-        
-        if user['user_type'] == 'professional':
-            serializer_class = ProfessionalProfileSerializer
-        elif user['user_type'] == 'customer':
-            serializer_class = CustomerProfileSerializer
-        elif user['user_type'] == 'admin':
-            serializer_class = AdminProfileSerializer
-        else:
-            return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
-        
+        serializer_class = self.get_serializer_class()
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
             user_instance = serializer.save()
-            token = default_token_generator.make_token(user_instance.user)
-            uid = urlsafe_base64_encode(str(user_instance.user.pk).encode())
+            token = default_token_generator.make_token(user_instance)
+            uid = urlsafe_base64_encode(str(user_instance.pk).encode())
             
             current_domain = request.get_host()
             verification_link = f'http://{current_domain}/api/users/auth/verify-email/?uid={uid}&token={token}'
             
             subject = 'Verify your email for Balemuya.'
             message = f'Please click the link below to verify your email for Balemuya.\n\n{verification_link}'
-            recipient_list = [user_instance.user.email]
+            recipient_list = [user_instance.email]
             
             # send confirmation email
             print('email send start')
@@ -49,10 +39,10 @@ class RegisterView(generics.CreateAPIView):
             print('email send end')
             
             otp = generate_otp()
-            cache.set(f"otp_{user_instance.user.phone_number}", otp, timeout=300)
+            cache.set(f"otp_{user_instance.phone_number}", otp, timeout=300)
         
-            phone_number = user_instance.user.phone_number
-            message_body = f"Hello {user_instance.user.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+            phone_number = user_instance.phone_number
+            message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
             send_sms(request, to=phone_number, message_body=message_body)
             
             return Response({
