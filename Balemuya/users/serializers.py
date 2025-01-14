@@ -31,8 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
-                  'email','password', 'phone_number', 'profile_image', 'kebele_id_front_image', 'kebele_id_back_image',
-                  'user_type', 'bio', 'last_login', 'created_at', 'addresses']
+                  'email','password', 'phone_number','user_type', 'is_active', 'created_at', 'addresses']
         
         extra_kwargs = {
             'password':{'write_only':True}
@@ -211,7 +210,7 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
         model = ProfessionalProfile
         fields = ['user', 'skills', 'educations', 'portfolios', 'certificates','categories',
                   'is_verified', 'business_logo', 'business_card', 
-                  'rating', 'years_of_experience', 'portfolio_url', 'availability']
+                  'rating', 'years_of_experience', 'portfolio_url', 'is_available', 'bio']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user', {})

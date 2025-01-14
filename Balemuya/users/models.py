@@ -40,11 +40,7 @@ class User(AbstractUser):
     gender = models.CharField(max_length=30, choices=[('male', 'Male'), ('female', 'Female')])
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=30)
-    profile_image = CloudinaryField('image', null=True, blank=True,folder='profile_images')
-    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/front_images')
-    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/back_images')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
-    bio = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=False)
     last_login = models.DateTimeField(auto_now=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -129,6 +125,9 @@ class AdminLog(models.Model):
 class CustomerProfile(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
+    profile_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/profile_images')
+    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/kebele_id_images/front_images')
+    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/kebele_id_images/back_images')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
@@ -157,12 +156,17 @@ class ProfessionalProfile(models.Model):
     categories = models.ManyToManyField(Category, blank=True, related_name='professionals')
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     is_verified = models.BooleanField(default=False)
-    business_logo = CloudinaryField('image', null=True, blank=True,folder='business_logos')
-    business_card = CloudinaryField('image', null=True, blank=True,folder='business_cards')
+    business_logo = CloudinaryField('image', null=True, blank=True,folder='Professional/business_logos')
+    business_card = CloudinaryField('image', null=True, blank=True,folder='professional/business_cards')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    profile_image = CloudinaryField('image', null=True, blank=True,folder='Professional_profile/profile_images')
+    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='professional_profile/kebele_id_images/front_images')
+    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/back_images')
     years_of_experience = models.PositiveIntegerField(default=0)
     portfolio_url = models.URLField(null=True, blank=True)
-    availability = models.BooleanField(default=True)
+    is_available = models.BooleanField(default=True)
+    bio = models.TextField(blank=True, null=True)
+
 
     def __str__(self):
         return self.user.email
