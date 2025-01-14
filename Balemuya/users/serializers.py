@@ -11,7 +11,20 @@ class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
         exclude = ['user']
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+    
+    class Meta:
+        model = User
+        fields = ['email', 'password']
         
+        extra_kwargs = {
+            'password':{'write_only':True}  
+        }
+  
 class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many = True)
     

@@ -6,13 +6,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-
+from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.account.models import get_adapter
 
 from .models import User
 from .utils import send_sms,generate_otp,send_email_confirmation
 
-from .serializers import ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
+from .serializers import UserSerializer,LoginSerializer,ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
 class RegisterView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
     
@@ -97,8 +97,37 @@ class ResetPasswordView(generics.GenericAPIView):
     pass
 
 class LoginView(generics.GenericAPIView):
-    permission_classes = (AllowAny,)
-    serializer_class = ProfessionalProfileSerializer
+    permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        
+        user = User.objects.filter(email=email).first()
+        
+        if user is None:
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if not user.check_password(password):
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if not user.is_active:
+            return Response({'error': 'Your account is not active. Please check your email to verify your account.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if user:
+            refresh = RefreshToken.for_user(user)
+            access = str(refresh.access_token)
+            refresh = str(refresh)
+            return Response({
+                'access': access,
+                'refresh': refresh},status=status.HTTP_200_OK)
+        
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+    
 
 class LogoutView(generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
