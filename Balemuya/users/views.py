@@ -75,7 +75,7 @@ class VerifyEmailView(APIView):
         else:
             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
         
-class VerifyOTPView(APIView):
+class VerifyPhoneView(APIView):
     
     def post(self,request):
         otp = int( request.data.get('otp'))
@@ -102,12 +102,46 @@ class ResendOTPView(APIView):
     pass
 
 class SetPasswordView(APIView):
-    permission_classes = (AllowAny,)
-    pass
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        user = User.objects.filter(email=email).first()
+        
+        if user:
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': 'Password set successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+            
 
 class ResetPasswordView(APIView):
-    permission_classes = (AllowAny,)
-    pass
+    
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        user = User.objects.filter(email=email).first()
+        if user:
+            otp = generate_otp()
+            cache.set(f"otp_{user.email}", otp, timeout=300)
+            phone_number = user.phone_number
+            message_body = f"Hello {user.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+            send_sms(request, to=phone_number, message_body=message_body)
+            return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class VerifyPaswordResetOTPView(APIView):
+    
+    def post(self, request, *args, **kwargs):
+        otp = int(request.data.get('otp'))
+        email = request.data.get('email')
+        cached_otp = cache.get(f"otp_{email}")
+        if cached_otp == otp:
+            return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid OTP please type again.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
