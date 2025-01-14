@@ -3,7 +3,9 @@ from django.core.cache import cache
 from rest_framework import generics
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -80,23 +82,23 @@ class VerifyEmailView(generics.GenericAPIView):
         else:
             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
         
-class VerifyOTPView(generics.GenericAPIView):
+class VerifyOTPView(APIView):
     permission_classes = (AllowAny,)
     pass
 
-class ResendOTPView(generics.GenericAPIView):
+class ResendOTPView(APIView):
     permission_classes = (AllowAny,)
     pass
 
-class SetPasswordView(generics.GenericAPIView):
+class SetPasswordView(APIView):
     permission_classes = (AllowAny,)
     pass
 
-class ResetPasswordView(generics.GenericAPIView):
+class ResetPasswordView(APIView):
     permission_classes = (AllowAny,)
     pass
 
-class LoginView(generics.GenericAPIView):
+class LoginView(APIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
     
@@ -129,8 +131,26 @@ class LoginView(generics.GenericAPIView):
         
     
 
-class LogoutView(generics.GenericAPIView):
-    permission_classes = (IsAuthenticated,)
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        try:
+            auth_header = request.headers.get('Authorization')
 
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return Response({"error": "Authorization header with Bearer token is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+            access_token = auth_header.split(' ')[1]
+
+            user = request.user
+
+            tokens = OutstandingToken.objects.filter(user=user)
+            for token in tokens:
+                if not BlacklistedToken.objects.filter(token=token).exists():
+                    BlacklistedToken.objects.create(token=token)
+
+            return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

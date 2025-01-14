@@ -53,13 +53,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django.contrib.sites',  
     'allauth',
     'allauth.account',
     'django_twilio',
     'cloudinary',
-
 
     'users',
     'services',
@@ -70,20 +70,27 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',  # Allauth
 )
 
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',  # For JWT
-    ),
+   'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+   
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+   
 }
 
 SITE_ID = 1
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME':timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME':timedelta(days=5),
-    'ROTATE_REFRESH_TOKENS':False,
-    'BLACKLIST_AFTER_ROTATION':True,
-    
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=2),    
+    'ROTATE_REFRESH_TOKENS': False,                
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,               
+    'AUTH_HEADER_TYPES': ('Bearer',),                
 }
 
 
