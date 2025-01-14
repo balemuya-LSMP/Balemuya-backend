@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.account.models import get_adapter
 
@@ -141,6 +142,26 @@ class VerifyPaswordResetOTPView(APIView):
             return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid OTP please type again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdatePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        print('user',user.password)
+        password = user.password
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        if not check_password(old_password, password):
+            return Response({'error': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+        if old_password == new_password:
+            return Response({'error': 'New password should be different from old password.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.get(id=user.id)
+        user.set_password(new_password)
+        user.save()
+        return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
+    
 
 
 class LoginView(APIView):
