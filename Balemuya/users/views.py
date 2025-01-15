@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.contrib.auth import login
 
 from rest_framework import generics
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -11,6 +12,10 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from allauth.account.models import get_adapter
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+# from allauth.socialaccount.utils import complete_social_login
+
 
 from .models import User
 from .utils import send_sms,generate_otp,send_email_confirmation
@@ -163,6 +168,23 @@ class UpdatePasswordView(APIView):
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
 
+class GoogleLoginView(APIView):
+    pass
+    
+    # def post(self,request):
+    #     access_token = request.data.get('access_token')
+        
+    #     if not access_token:
+    #         return Response({'error':"No access token provided"},status = status.HTTP_400_BAD_REQUEST)
+        
+    #     adapter = GoogleOAuth2Adapter()
+    #     try:
+    #         token = adapter.complete_login(request,access_token)
+    #         complete_social_login(request,token)
+    #         user = token.user
+    #         pass
+            
+        
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
