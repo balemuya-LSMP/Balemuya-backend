@@ -215,6 +215,21 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
 
 CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_HEADERS =  [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',  # Always include OPTIONS for preflight requests
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
