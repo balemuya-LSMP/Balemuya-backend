@@ -10,12 +10,13 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.hashers import check_password
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
+
 from allauth.account.models import get_adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
-# from allauth.socialaccount.utils import complete_social_login
-
+from allauth.socialaccount.helpers import complete_social_login
+from allauth.socialaccount.models import SocialLogin
 
 from .models import User
 from .utils import send_sms,generate_otp,send_email_confirmation
@@ -167,22 +168,83 @@ class UpdatePasswordView(APIView):
         user.save()
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
-
 class GoogleLoginView(APIView):
-    pass
-    
-    # def post(self,request):
-    #     access_token = request.data.get('access_token')
+    def post(self, request):
+        access_token = request.data.get('access_token')
+        user_type = request.data.get('user_type')
+
+        if not access_token:
+            return Response({'error': "No access token provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        adapter = GoogleOAuth2Adapter()
+        provider = adapter.get_provider()
+
+        try:
+            social_login = provider.sociallogin_from_response(request, access_token)
+
+            if not social_login.is_valid():
+                return Response({'error': "Invalid social login"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_data = social_login.account.extra_data
+            email = user_data.get('email')
+            first_name = user_data.get('given_name', '')
+            last_name = user_data.get('family_name', '')
+
+            middle_name = ''
+            phone_number = ''
+            gender = ''
+
+            user = User.objects.filter(email=email).first()
+
+            if user:
+                if not SocialAccount.objects.filter(user=user).exists():
+                    social_login.user = user
+                    social_login.save(request)
+            else:
+                user = User.objects.create(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    user_type=user_type
+                )
+                user.set_unusable_password()
+                user.save()
+
+                social_login.user = user
+                social_login.save(request)
+
+            complete_social_login(request, social_login)
+
+            access = AccessToken.for_user(user)
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'access': str(access),
+                'refresh': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'middle_name': middle_name,
+                    'last_name': user.last_name,
+                    'phone_number': phone_number,
+                    'gender': gender,
+                    'user_type': user.user_type
+                }
+            }, status=status.HTTP_200_OK)
+
+        except OAuth2Error as e:
+            return Response({'error': f"OAuth2 error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+
+
+                
+                
+            
         
-    #     if not access_token:
-    #         return Response({'error':"No access token provided"},status = status.HTTP_400_BAD_REQUEST)
         
-    #     adapter = GoogleOAuth2Adapter()
-    #     try:
-    #         token = adapter.complete_login(request,access_token)
-    #         complete_social_login(request,token)
-    #         user = token.user
-    #         pass
             
         
 
@@ -211,9 +273,14 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(user)
             access = str(refresh.access_token)
             refresh = str(refresh)
-            return Response({
-                'access': access,
-                'refresh': refresh},status=status.HTTP_200_OK)
+            return Response({'message': 'Successfully logged in.',
+                             "user":{
+                            'email': user.email,
+                            'user_type':user.user_type,
+                            'access': access,
+                            'refresh': refresh,
+                            }
+                            },status=status.HTTP_200_OK)
         
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
         
