@@ -179,20 +179,23 @@ class GoogleLoginCallbackView(APIView):
     def get(self, request):
         code = request.GET.get('code')  
         state = request.GET.get('state', '{}')
+        print('state',state)
+        print('code',code)
+        
         try:
             state = json.loads(state)
+            print('state',state)
         except json.JSONDecodeError:
             state = {}
 
         if not code or not state:
             return Response({'error': "Missing code or state parameters"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        user_type = state['user_type']
+
+        user_type = state.get('user_type')
         print('user_type',user_type)
-        
         if not user_type:
             return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             token_url = 'https://oauth2.googleapis.com/token'
             data = {
@@ -204,17 +207,18 @@ class GoogleLoginCallbackView(APIView):
             }
             token_response = requests.post(token_url, data=data)
             token_data = token_response.json()
+            print('token_data',token_data)
 
             access_token = token_data.get('access_token')
+            print('access_token',access_token)
             if not access_token:
                 return Response({'error': "No access token received"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Get the user's Google profile info
+            # Get user info from Google
             response = requests.get(
                 'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses',
                 headers={'Authorization': f'Bearer {access_token}'}
             )
-            print('response',response)
 
             if response.status_code != 200:
                 return Response({'error': response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
@@ -230,14 +234,15 @@ class GoogleLoginCallbackView(APIView):
             if not email:
                 return Response({"error": "Email not found in user info"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Create or retrieve the user
             user = User.objects.filter(email=email).first()
             if user is None:
                 user = User.objects.create_user(
                     first_name=first_name,
                     last_name=last_name,
                     email=email,
-                    password='yikeber123',
-                    user_type=user_type ,
+                    password='temporarypassword123',
+                    user_type=user_type,
                     is_active=True
                 )
 
@@ -252,6 +257,7 @@ class GoogleLoginCallbackView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
