@@ -1,3 +1,5 @@
+import requests
+import json
 from django.core.cache import cache
 from django.contrib.auth import login
 
@@ -12,11 +14,16 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
 
+from django.conf import settings
+
 from allauth.account.models import get_adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
 from allauth.socialaccount.helpers import complete_social_login
 from allauth.socialaccount.models import SocialLogin
+from allauth.socialaccount.models import SocialApp
+
+from urllib.parse import parse_qs
 
 from .models import User
 from .utils import send_sms,generate_otp,send_email_confirmation
@@ -168,52 +175,71 @@ class UpdatePasswordView(APIView):
         user.save()
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
-class GoogleLoginView(APIView):
-    def post(self, request):
-        access_token = request.data.get('access_token')
-        user_type = request.data.get('user_type')
-
-        if not access_token:
-            return Response({'error': "No access token provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        adapter = GoogleOAuth2Adapter()
-        provider = adapter.get_provider()
-
+class GoogleLoginCallbackView(APIView):
+    def get(self, request):
+        code = request.GET.get('code')  
+        state = request.GET.get('state', '{}')
         try:
-            social_login = provider.sociallogin_from_response(request, access_token)
+            state = json.loads(state)
+        except json.JSONDecodeError:
+            state = {}
 
-            if not social_login.is_valid():
-                return Response({'error': "Invalid social login"}, status=status.HTTP_400_BAD_REQUEST)
+        if not code or not state:
+            return Response({'error': "Missing code or state parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user_type = state['user_type']
+        print('user_type',user_type)
+        
+        if not user_type:
+            return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            token_url = 'https://oauth2.googleapis.com/token'
+            data = {
+                'code': code,
+                'client_id': settings.GOOGLE_CLIENT_ID,
+                'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                'redirect_uri': 'http://localhost:8000/api/users/auth/google-callback/',
+                'grant_type': 'authorization_code',
+            }
+            token_response = requests.post(token_url, data=data)
+            token_data = token_response.json()
 
-            user_data = social_login.account.extra_data
-            email = user_data.get('email')
-            first_name = user_data.get('given_name', '')
-            last_name = user_data.get('family_name', '')
+            access_token = token_data.get('access_token')
+            if not access_token:
+                return Response({'error': "No access token received"}, status=status.HTTP_400_BAD_REQUEST)
 
-            middle_name = ''
-            phone_number = ''
-            gender = ''
+            # Get the user's Google profile info
+            response = requests.get(
+                'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+            print('response',response)
+
+            if response.status_code != 200:
+                return Response({'error': response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_info = response.json()
+            names = user_info.get('names', [{}])
+            email_addresses = user_info.get('emailAddresses', [{}])
+
+            first_name = names[0].get('givenName', '')
+            last_name = names[0].get('unstructuredName', '')
+            email = email_addresses[0].get('value', '')
+
+            if not email:
+                return Response({"error": "Email not found in user info"}, status=status.HTTP_400_BAD_REQUEST)
 
             user = User.objects.filter(email=email).first()
-
-            if user:
-                if not SocialAccount.objects.filter(user=user).exists():
-                    social_login.user = user
-                    social_login.save(request)
-            else:
-                user = User.objects.create(
-                    email=email,
+            if user is None:
+                user = User.objects.create_user(
                     first_name=first_name,
                     last_name=last_name,
-                    user_type=user_type
+                    email=email,
+                    password='yikeber123',
+                    user_type=user_type ,
+                    is_active=True
                 )
-                user.set_unusable_password()
-                user.save()
-
-                social_login.user = user
-                social_login.save(request)
-
-            complete_social_login(request, social_login)
 
             access = AccessToken.for_user(user)
             refresh = RefreshToken.for_user(user)
@@ -221,32 +247,11 @@ class GoogleLoginView(APIView):
             return Response({
                 'access': str(access),
                 'refresh': str(refresh),
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'middle_name': middle_name,
-                    'last_name': user.last_name,
-                    'phone_number': phone_number,
-                    'gender': gender,
-                    'user_type': user.user_type
-                }
+                'user_type': user.user_type
             }, status=status.HTTP_200_OK)
 
-        except OAuth2Error as e:
-            return Response({'error': f"OAuth2 error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
-
-
-                
-                
-            
-        
-        
-            
-        
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
