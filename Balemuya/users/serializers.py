@@ -27,42 +27,45 @@ class LoginSerializer(serializers.Serializer):
   
 class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True, required=False)
-    
+
     class Meta:
         model = User
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender', 
-                  'email','password', 'phone_number','user_type', 'is_active', 'created_at', 'addresses']
+                  'email', 'password', 'phone_number', 'user_type', 
+                  'is_active', 'is_blocked', 'created_at', 'addresses']
         
         extra_kwargs = {
-            'password':{'write_only':True}
+            'password': {'write_only': True}
         }
         
-    def validate_email(self,value):
-            
-            # try:
-            #     validate_email(value)
-            # except ValidationError:
-            #     raise serializers.ValidationError(_("Invalid  email format."))
-            
-            # domain = value.split('@')[-1]
-            # try:
-            #     dns.resolver.resolve(domain, 'MX')
-            # except(dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-            #     raise serializers.ValidationError(_("Email domain does not exist."))
-            
-            if User.objects.filter(email=value).exists():
-                raise serializers.ValidationError("User with this Email already exists")
-            return value
+    def validate_email(self, value):
+        # Validate email format
+        try:
+            validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError(_("Invalid email format."))
+
+        # Validate email domain
+        domain = value.split('@')[-1]
+        try:
+            dns.resolver.resolve(domain, 'MX')
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            raise serializers.ValidationError(_("Email domain does not exist."))
+
+        request = self.context['request']
+        if request and request.method == 'PATCH':
+            current_user_id = request.user.id
+            if value == request.user.email:
+                return value  
+            if User.objects.filter(email=value).exclude(id=current_user_id).exists():
+                raise serializers.ValidationError("User with this Email already exists.")
+        return value
 
     def validate_phone_number(self,value):
             
             if not re.match(r'^\+?1?\d{9,15}$', value):
                   raise serializers.ValidationError(_("Phone number must be in a valid format."))
             
-            
-            
-            # if User.objects.filter(phone_number=value).exists():
-            #     raise serializers.ValidationError("User with this phone number already exists")
             return value
         
     def validate_password(self,value):
@@ -156,12 +159,44 @@ class PermissionSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class AdminProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer() 
+    user = UserSerializer()
     permissions = PermissionSerializer(many=True)
 
     class Meta:
         model = AdminProfile
         fields = ['user', 'permissions', 'admin_level']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            print('context is',self.context)
+
+            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True,context=self.context)
+            user_serializer.is_valid(raise_exception=True)
+            user_serializer.save()
+
+        # Update main profile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        # Handle permissions update
+        self._update_permissions(instance, validated_data)
+
+        return instance
+
+    def _update_permissions(self, instance, validated_data):
+        if 'permissions' in validated_data:
+            # Clear existing permissions
+            instance.permissions.clear()
+
+            # Add new permissions
+            for permission_data in validated_data['permissions']:
+                permission_serializer = PermissionSerializer(data=permission_data)
+                permission_serializer.is_valid(raise_exception=True)
+                permission_serializer.save()  # Save the permission instance
+                instance.permissions.add(permission_serializer.instance)
         
 class AdminLogSerializer(serializers.ModelSerializer):
     admin = AdminProfileSerializer()
@@ -182,7 +217,9 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
         user_data = validated_data.pop('user', None)
 
         if user_data:
-            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
+            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True,context={
+                'request':self.request
+            })
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
 
@@ -224,65 +261,129 @@ class CertificateSerializer(serializers.ModelSerializer):
         
 class ProfessionalProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
-    skills = SkillSerializer(many=True,required=False)
-    educations = EducationSerializer(many=True,required=False)
-    portfolios = PortfolioSerializer(many=True,required=False)
-    certificates = CertificateSerializer(many=True,required=False)
-    categories = CategorySerializer(many=True,required=False)
+    skills = SkillSerializer(many=True, required=False)
+    educations = EducationSerializer(many=True, required=False)
+    portfolios = PortfolioSerializer(many=True, required=False)
+    certificates = CertificateSerializer(many=True, required=False)
+    categories = CategorySerializer(many=True, required=False)
 
     class Meta:
         model = ProfessionalProfile
-        fields = ['user', 'skills', 'educations', 'portfolios', 'certificates','categories',
+        fields = ['user', 'skills', 'educations', 'portfolios', 'certificates', 'categories',
                   'is_verified', 'business_logo', 'business_card', 
                   'rating', 'years_of_experience', 'portfolio_url', 'is_available', 'bio']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user', {})
-        educations_data = validated_data.pop('educations', [])
-        certifications_data = validated_data.pop('certificates', [])
-        portfolios_data = validated_data.pop('portfolios', [])
-        categories_data = validated_data.pop('categories', [])
         skills_data = validated_data.pop('skills', [])
-        business_card = validated_data.pop('business_card', None)
-        business_logo = validated_data.pop('business_logo', None)
+        educations_data = validated_data.pop('educations', [])
+        portfolios_data = validated_data.pop('portfolios', [])
+        certificates_data = validated_data.pop('certificates', [])
+        categories_data = validated_data.pop('categories', [])
         
         with transaction.atomic():
-        
             user_serializer = UserSerializer(data=user_data)
-            user_serializer.is_valid(raise_exception=True) 
-            user = user_serializer.save()  
+            user_serializer.is_valid(raise_exception=True)
+            user = user_serializer.save()
 
-            professional_profile = ProfessionalProfile.objects.create(
-                user=user,
-                business_card=business_card,
-                business_logo=business_logo,
-                **validated_data
-            )
+            professional_profile = ProfessionalProfile.objects.create(user=user, **validated_data)
 
-            for skill_data in skills_data:
-                skill, created = Skill.objects.get_or_create(name=skill_data['name'])
-                professional_profile.skills.add(skill)
-            
-            if categories_data:
-                for category_data in categories_data:
-                    category, created = category.objects.get_or_create(name=category_data['name'])
-                    professional_profile.categories.add(category)
-
-            for education_data in educations_data:
-                education_serializer = EducationSerializer(data=education_data)
-                education_serializer.is_valid(raise_exception=True)
-                education_serializer.save(professional=professional_profile)
-
-            for portfolio_data in portfolios_data:
-                portfolio_serializer = PortfolioSerializer(data=portfolio_data)
-                portfolio_serializer.is_valid(raise_exception=True)
-                portfolio_serializer.save(professional=professional_profile)
-
-            for certification_data in certifications_data:
-                certificate_serializer = CertificateSerializer(data=certification_data)
-                certificate_serializer.is_valid(raise_exception=True)
-                certificate_serializer.save(professional=professional_profile)
+            self._create_related_objects(professional_profile, skills_data, categories_data, educations_data, portfolios_data, certificates_data)
 
         return professional_profile
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
+            user_serializer.is_valid(raise_exception=True)
+            user_serializer.save()
+
+        # Update main profile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+
+        # Update or add related objects
+        self._update_or_create_related_objects(instance, validated_data)
+
+        return instance
+
+    def _create_related_objects(self, professional_profile, skills_data, categories_data, educations_data, portfolios_data, certificates_data):
+        for skill_data in skills_data:
+            skill, created = Skill.objects.get_or_create(name=skill_data['name'])
+            professional_profile.skills.add(skill)
+        
+        for category_data in categories_data:
+            category, created = Category.objects.get_or_create(name=category_data['name'])
+            professional_profile.categories.add(category)
+
+        for education_data in educations_data:
+            education_serializer = EducationSerializer(data=education_data)
+            education_serializer.is_valid(raise_exception=True)
+            education_serializer.save(professional=professional_profile)
+
+        for portfolio_data in portfolios_data:
+            portfolio_serializer = PortfolioSerializer(data=portfolio_data)
+            portfolio_serializer.is_valid(raise_exception=True)
+            portfolio_serializer.save(professional=professional_profile)
+
+        for certification_data in certificates_data:
+            certificate_serializer = CertificateSerializer(data=certification_data)
+            certificate_serializer.is_valid(raise_exception=True)
+            certificate_serializer.save(professional=professional_profile)
+
+    def _update_or_create_related_objects(self, instance, validated_data):
+        # Update or create skills
+        if 'skills' in validated_data:
+            for skill_data in validated_data['skills']:
+                skill, created = Skill.objects.get_or_create(name=skill_data['name'])
+                instance.skills.add(skill)
+
+        # Update or create categories
+        if 'categories' in validated_data:
+            for category_data in validated_data['categories']:
+                category, created = Category.objects.get_or_create(name=category_data['name'])
+                instance.categories.add(category)
+
+        # Update educations
+        if 'educations' in validated_data:
+            for education_data in validated_data['educations']:
+                education_id = education_data.get('id')
+                if education_id:
+                    education = Education.objects.get(id=education_id)
+                    education_serializer = EducationSerializer(instance=education, data=education_data, partial=True)
+                else:
+                    education_serializer = EducationSerializer(data=education_data)
+
+                education_serializer.is_valid(raise_exception=True)
+                education_serializer.save(professional=instance)
+
+        # Update portfolios
+        if 'portfolios' in validated_data:
+            for portfolio_data in validated_data['portfolios']:
+                portfolio_id = portfolio_data.get('id')
+                if portfolio_id:
+                    portfolio = Portfolio.objects.get(id=portfolio_id)
+                    portfolio_serializer = PortfolioSerializer(instance=portfolio, data=portfolio_data, partial=True)
+                else:
+                    portfolio_serializer = PortfolioSerializer(data=portfolio_data)
+
+                portfolio_serializer.is_valid(raise_exception=True)
+                portfolio_serializer.save(professional=instance)
+
+        # Update certificates
+        if 'certificates' in validated_data:
+            for certification_data in validated_data['certificates']:
+                certificate_id = certification_data.get('id')
+                if certificate_id:
+                    certificate = Certificate.objects.get(id=certificate_id)
+                    certificate_serializer = CertificateSerializer(instance=certificate, data=certification_data, partial=True)
+                else:
+                    certificate_serializer = CertificateSerializer(data=certification_data)
+
+                certificate_serializer.is_valid(raise_exception=True)
+                certificate_serializer.save(professional=instance)
 
 

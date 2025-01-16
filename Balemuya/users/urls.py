@@ -21,7 +21,7 @@ urlpatterns = [
     path('auth/google-signin/',GoogleLoginView.as_view(), name='google-login'),
     
     path('profile/',ProfileView.as_view(), name='profile'),
-    path('profiles/<uuid:uuid>/update/', ProfileUpdateView.as_view(), name='profile-update'),
+    path('profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
     path('professionals/',ProfessionalListView.as_view(), name='professional-list'),

@@ -176,9 +176,9 @@ class UpdatePasswordView(APIView):
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
 class GoogleLoginView(APIView):
-    def get(self, request):
-        code = request.GET.get('code')  
-        state = request.GET.get('state', '{}')
+    def post(self, request):
+        code = request.data.get('code')  
+        state = request.data.get('state', '{}')
 
         try:
             state = json.loads(state)
@@ -352,28 +352,25 @@ class ProfileView(APIView):
 class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, uuid):
-        try:
-            return CustomUser.objects.get(pk=uuid)
-        except CustomUser.DoesNotExist:
-            return None
+    def get_queryset(self):
+        # Return the queryset of the currently authenticated user
+        return User.objects.filter(pk=self.request.user.pk)
 
-    def patch(self, request, uuid, *args, **kwargs):
-        user = self.get_object(uuid)
+    def patch(self, request, *args, **kwargs):
+        user = request.user
 
-        if user is None:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Determine the profile type
         if user.user_type == 'customer':
             profile = CustomerProfile.objects.get(user=user)
-            serializer = CustomerProfileSerializer(profile, data=request.data, partial=True)
+            serializer = CustomerProfileSerializer(profile, data=request.data, partial=True, context={'request':request})
         elif user.user_type == 'professional':
             profile = ProfessionalProfile.objects.get(user=user)
-            serializer = ProfessionalProfileSerializer(profile, data=request.data, partial=True)
+            serializer = ProfessionalProfileSerializer(profile, data=request.data, partial=True, context={'request':request})
         elif user.user_type == 'admin':
             profile = AdminProfile.objects.get(user=user)
-            serializer = AdminProfileSerializer(profile, data=request.data, partial=True)
+            serializer = AdminProfileSerializer(profile, data=request.data, partial=True, context={
+                'request':request
+            })
+            print('context is',request.method)
         else:
             return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -381,8 +378,7 @@ class ProfileUpdateView(generics.UpdateAPIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
-
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UsersView(APIView):
     permission_class = [IsAuthenticated]
@@ -443,7 +439,7 @@ class UserDeleteView(generics.DestroyAPIView):
     def get_object(self, pk):
         try:
             return User.objects.get(pk=pk)
-        except CustomUser.DoesNotExist:
+        except User.DoesNotExist:
             return None
 
     def delete(self, request, pk, *args, **kwargs):
