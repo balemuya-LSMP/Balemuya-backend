@@ -179,20 +179,16 @@ class GoogleLoginCallbackView(APIView):
     def get(self, request):
         code = request.GET.get('code')  
         state = request.GET.get('state', '{}')
-        print('state',state)
-        print('code',code)
-        
+
         try:
             state = json.loads(state)
-            print('state',state)
         except json.JSONDecodeError:
-            state = {}
+            return Response({'error': "Invalid state parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not code or not state:
             return Response({'error': "Missing code or state parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
         user_type = state.get('user_type')
-        print('user_type',user_type)
         if not user_type:
             return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -202,28 +198,26 @@ class GoogleLoginCallbackView(APIView):
                 'code': code,
                 'client_id': settings.GOOGLE_CLIENT_ID,
                 'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'https://balemuya-project.vercel.app/api/users/auth/google-callback/',
+                'redirect_uri': 'http://localhost:3000/google-callback',  # Set to your frontend redirect URI in development
                 'grant_type': 'authorization_code',
             }
             token_response = requests.post(token_url, data=data)
             token_data = token_response.json()
-            print('token_data',token_data)
 
             access_token = token_data.get('access_token')
-            print('access_token',access_token)
             if not access_token:
                 return Response({'error': "No access token received"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Get user info from Google
-            response = requests.get(
+            user_info_response = requests.get(
                 'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses',
                 headers={'Authorization': f'Bearer {access_token}'}
             )
 
-            if response.status_code != 200:
-                return Response({'error': response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
+            if user_info_response.status_code != 200:
+                return Response({'error': user_info_response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
 
-            user_info = response.json()
+            user_info = user_info_response.json()
             names = user_info.get('names', [{}])
             email_addresses = user_info.get('emailAddresses', [{}])
 
@@ -235,17 +229,18 @@ class GoogleLoginCallbackView(APIView):
                 return Response({"error": "Email not found in user info"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Create or retrieve the user
-            user = User.objects.filter(email=email).first()
-            if user is None:
-                user = User.objects.create_user(
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    password='temporarypassword123',
-                    user_type=user_type,
-                    is_active=True
-                )
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'password': 'temporarypassword123',
+                    'is_active': True,
+                    'user_type': user_type,
+                }
+            )
 
+            # Generate access and refresh tokens
             access = AccessToken.for_user(user)
             refresh = RefreshToken.for_user(user)
 
