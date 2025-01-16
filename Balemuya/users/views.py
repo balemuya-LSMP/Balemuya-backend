@@ -176,9 +176,11 @@ class UpdatePasswordView(APIView):
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
 class GoogleLoginView(APIView):
-    def post(self, request):
-        code = request.data.get('code')  
-        state = request.data.get('state', '{}')
+    def get(self, request):
+        code = request.GET.get('code')  
+        state = request.GET.get('state', '{}')
+        print('state',state)
+        print('code',code)
 
         try:
             state = json.loads(state)
