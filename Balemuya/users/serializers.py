@@ -89,11 +89,22 @@ class UserSerializer(serializers.ModelSerializer):
                     latitude=address_data['latitude'],
                     longitude=address_data['longitude']
                 )
-
+ 
                 if address_data.get('is_current'):
                     Address.objects.filter(user=user, is_current=True).update(is_current=False)
                     address.is_current = True
                     address.save()
+                
+            if user.user_type =='professional':
+                professional_profile = ProfessionalProfile.objects.create(user = user)
+                professional_profile.save()
+                
+            if user.user_type =='customer':
+                customer_profile = CustomerProfile.objects.create(user = user)
+                customer_profile.save()
+            if user.user_type =='admin':
+                admin_profile = AdminProfile.objects.create(user=user)
+                admin_profile.save()               
 
             return user
 

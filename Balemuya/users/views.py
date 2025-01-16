@@ -25,15 +25,15 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User
+from .models import User,ProfessionalProfile,CustomerProfile,AdminProfile
 from .utils import send_sms,generate_otp,send_email_confirmation
 
 from .serializers import UserSerializer,LoginSerializer,ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
-class RegisterView(generics.CreateAPIView):
+class RegisterView(APIView):
     serializer_class = UserSerializer
     
-    def create(self, request, *args, **kwargs):
-        serializer_class = self.get_serializer_class()
+    def post(self, request, *args, **kwargs):
+        serializer_class = self.serializer_class
         serializer = serializer_class(data=request.data)
         if serializer.is_valid():
             user_instance = serializer.save()
@@ -202,7 +202,8 @@ class GoogleLoginCallbackView(APIView):
                 'code': code,
                 'client_id': settings.GOOGLE_CLIENT_ID,
                 'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'https://balemuya-project.vercel.app/api/users/auth/google-callback/',
+                'redirect_uri': 'http://localhost:8000/api/users/auth/google-callback/',
+
                 'grant_type': 'authorization_code',
             }
             token_response = requests.post(token_url, data=data)
@@ -320,3 +321,35 @@ class LogoutView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user is None:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if user.user_type == 'customer':
+            
+            customer = CustomerProfile.objects.filter(user=user).first()
+            if customer is None:
+                return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = CustomerProfileSerializer(customer)
+            return Response({'user': serializer.data}, status=status.HTTP_200_OK)
+        
+        if user.user_type =='professional':
+            professional = ProfessionalProfile.objects.filter(user=user).first()
+            if professional is None:
+                return Response({'error': 'professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = ProfessionalProfileSerializer(professional)
+            return Response({'user':serializer.data},status = status.HTTP_200_OK)
+        
+        if user.user_type == 'admin':
+            admin = AdminProfile.objects.filter(user = user).first()
+            serializer = AdminProfileSerializer(admin)
+            return Response({'user':serializer.data},status = status.HTTP_200_OK)
+
+        else:
+            return Response({'error':'user not found'},status=status.HTTP_404_NOT_FOUND)
+        
+
