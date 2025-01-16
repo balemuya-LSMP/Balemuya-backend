@@ -175,7 +175,7 @@ class UpdatePasswordView(APIView):
         user.save()
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
     
-class GoogleLoginCallbackView(APIView):
+class GoogleLoginView(APIView):
     def get(self, request):
         code = request.GET.get('code')  
         state = request.GET.get('state', '{}')
@@ -198,7 +198,7 @@ class GoogleLoginCallbackView(APIView):
                 'code': code,
                 'client_id': settings.GOOGLE_CLIENT_ID,
                 'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'http://localhost:3000/google-callback',  # Set to your frontend redirect URI in development
+                'redirect_uri': 'http://localhost:3000/auth/google-callback/', 
                 'grant_type': 'authorization_code',
             }
             token_response = requests.post(token_url, data=data)
@@ -281,6 +281,7 @@ class LoginView(APIView):
             refresh = str(refresh)
             return Response({'message': 'Successfully logged in.',
                              "user":{
+                            'id':user.id,
                             'email': user.email,
                             'user_type':user.user_type,
                             'access': access,
@@ -345,25 +346,150 @@ class ProfileView(APIView):
 
         else:
             return Response({'error':'user not found'},status=status.HTTP_404_NOT_FOUND)
-        
+    
+
+
+class ProfileUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, uuid):
+        try:
+            return CustomUser.objects.get(pk=uuid)
+        except CustomUser.DoesNotExist:
+            return None
+
+    def patch(self, request, uuid, *args, **kwargs):
+        user = self.get_object(uuid)
+
+        if user is None:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Determine the profile type
+        if user.user_type == 'customer':
+            profile = CustomerProfile.objects.get(user=user)
+            serializer = CustomerProfileSerializer(profile, data=request.data, partial=True)
+        elif user.user_type == 'professional':
+            profile = ProfessionalProfile.objects.get(user=user)
+            serializer = ProfessionalProfileSerializer(profile, data=request.data, partial=True)
+        elif user.user_type == 'admin':
+            profile = AdminProfile.objects.get(user=user)
+            serializer = AdminProfileSerializer(profile, data=request.data, partial=True)
+        else:
+            return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
 
 
 class UsersView(APIView):
+    permission_class = [IsAuthenticated]
     pass
+    
 
-class UserDetailView(APIView):
+class UserDetailView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
     permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_serializer_class(self):
+        user = self.get_object()
+
+        if user.user_type == 'professional':
+            return ProfessionalProfileSerializer
+        elif user.user_type == 'customer':
+            return CustomerProfileSerializer
+        elif user.user_type == 'admin':
+            return AdminProfileSerializer
+        else:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer_class = self.get_serializer_class()
+
+        if serializer_class is None:
+            return Response({'error': 'User type not recognized'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.user_type == 'professional':
+            professional_profile = ProfessionalProfile.objects.filter(user=user).first()
+            if professional_profile is None:
+                return Response({'error': 'Professional profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = serializer_class(professional_profile)
+
+        elif user.user_type == 'customer':
+            customer_profile = CustomerProfile.objects.filter(user=user).first()
+            if customer_profile is None:
+                return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = serializer_class(customer_profile)
+
+        elif user.user_type == 'admin':
+            admin_profile = AdminProfile.objects.filter(user=user).first()
+            if admin_profile is None:
+                return Response({'error': 'Admin profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = serializer_class(admin_profile)
+
+        return Response({
+            'message': "Profile fetched successfully",
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
     
+
+class UserDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return User.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return None
+
+    def delete(self, request, pk, *args, **kwargs):
+        user = self.get_object(pk)
+
+        if user is None:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.delete()
+        return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+     
     
-    def get_serializer_class(self,request):
-        pass
-    
-    def post(self,request,*args,**kwargs):
-        
-        if request.user is None:
-            return Response({"message":"user not found"},status = status.HTTP_404_NOT_FOUND)
-        if request.user.user_type =='customer':
-            pass
+class ProfessionalListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfessionalProfileSerializer
+
+    def get_queryset(self):
+        queryset = ProfessionalProfile.objects.all()
+        status_filter = self.request.query_params.get('status', None)
+
+        if status_filter:
+            if status_filter == 'active':
+                queryset = queryset.filter(user__is_active=True)
+            elif status_filter == 'verified':
+                queryset = queryset.filter(is_verified=True)
+            elif status_filter == 'available':
+                queryset = queryset.filter(is_available=True)
+            elif status_filter == 'blocked':
+                queryset = queryset.filter(user__is_blocked=True)
+
+        return queryset
+# View for listing Customers
+class CustomerListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomerProfileSerializer
+
+    def get_queryset(self):
+        return CustomerProfile.objects.filter(user__user_type='customer',user__is_active=True)
+
+# View for listing Admins
+class AdminListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AdminProfileSerializer
+
+    def get_queryset(self):
+        return AdminProfile.objects.filter(user__user_type='admin',user__is_active=True)
         
         
 

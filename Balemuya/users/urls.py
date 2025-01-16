@@ -1,7 +1,9 @@
 from django.urls import path
+import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPaswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginCallbackView,ProfileView,UserDetailView,UsersView
+UpdatePasswordView,GoogleLoginView,ProfileView,ProfileUpdateView,UserDetailView,UserDeleteView,UsersView,\
+ProfessionalListView,CustomerListView,AdminListView
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='user-register'),
@@ -16,9 +18,13 @@ urlpatterns = [
     path('auth/set-new-password/', SetPasswordView.as_view(), name='set-password'),
     path('auth/update-password/', UpdatePasswordView.as_view(), name='update-password'),
     
-    path('auth/google-callback/',GoogleLoginCallbackView.as_view(), name='google-login'),
+    path('auth/google-signin/',GoogleLoginView.as_view(), name='google-login'),
     
-    path('',UsersView.as_view(),name = 'users'),
     path('profile/',ProfileView.as_view(), name='profile'),
-    path('<pk:uuid/',UserDetailView.as_view(),name='user-detail'),     
+    path('profiles/<uuid:uuid>/update/', ProfileUpdateView.as_view(), name='profile-update'),
+    path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
+    path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
+    path('professionals/',ProfessionalListView.as_view(), name='professional-list'),
+    path('customers/',CustomerListView.as_view(), name='customer-list'),
+    path('admins/',AdminListView.as_view(), name='admin-list'),
 ]
