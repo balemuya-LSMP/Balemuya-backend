@@ -178,21 +178,21 @@ class UpdatePasswordView(APIView):
 class GoogleLoginView(APIView):
     def get(self, request):
         code = request.GET.get('code')  
-        state = request.GET.get('state', '{}')
-        print('state',state)
+        # state = request.GET.get('state', '{}')
+        # print('state',state)
         print('code',code)
 
-        try:
-            state = json.loads(state)
-        except json.JSONDecodeError:
-            return Response({'error': "Invalid state parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        #     state = json.loads(state)
+        # except json.JSONDecodeError:
+        #     return Response({'error': "Invalid state parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not code or not state:
-            return Response({'error': "Missing code or state parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        if not code:
+            return Response({'error': "Missing code  parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_type = state.get('user_type')
-        if not user_type:
-            return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        # user_type = state.get('user_type')
+        # if not user_type:
+        #     return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             token_url = 'https://oauth2.googleapis.com/token'
@@ -237,8 +237,8 @@ class GoogleLoginView(APIView):
                     'first_name': first_name,
                     'last_name': last_name,
                     'password': 'temporarypassword123',
-                    'is_active': True,
-                    'user_type': user_type,
+                    'is_active': True
+                    # 'user_type': user_type,
                 }
             )
 
@@ -249,7 +249,7 @@ class GoogleLoginView(APIView):
             return Response({
                 'access': str(access),
                 'refresh': str(refresh),
-                'user_type': user.user_type
+                # 'user_type': user.user_type
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
