@@ -202,8 +202,7 @@ class GoogleLoginCallbackView(APIView):
                 'code': code,
                 'client_id': settings.GOOGLE_CLIENT_ID,
                 'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'http://localhost:8000/api/users/auth/google-callback/',
-
+                'redirect_uri': 'https://balemuya-project.vercel.app/api/users/auth/google-callback/',
                 'grant_type': 'authorization_code',
             }
             token_response = requests.post(token_url, data=data)
@@ -351,5 +350,25 @@ class ProfileView(APIView):
 
         else:
             return Response({'error':'user not found'},status=status.HTTP_404_NOT_FOUND)
+        
+
+
+class UsersView(APIView):
+    pass
+
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    
+    def get_serializer_class(self,request):
+        pass
+    
+    def post(self,request,*args,**kwargs):
+        
+        if request.user is None:
+            return Response({"message":"user not found"},status = status.HTTP_404_NOT_FOUND)
+        if request.user.user_type =='customer':
+            pass
+        
         
 
