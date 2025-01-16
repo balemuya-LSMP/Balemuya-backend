@@ -176,15 +176,28 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ['user','rating']
-        
+        fields = ['user', 'rating']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+
+        if user_data:
+            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
+            user_serializer.is_valid(raise_exception=True)
+            user_serializer.save()
+
+        instance.rating = validated_data.get('rating', instance.rating)
+
+        instance.save()
+        return instance
+
     def create(self, validated_data):
         user_data = validated_data.pop('user', {})
         with transaction.atomic():
             user_serializer = UserSerializer(data=user_data)
             user_serializer.is_valid(raise_exception=True)
             user = user_serializer.save()
-            customer_profile = CustomerProfile.objects.create(user=user,**validated_data)
+            customer_profile = CustomerProfile.objects.create(user=user, **validated_data)
             return customer_profile
 
 
