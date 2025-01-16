@@ -38,7 +38,7 @@ class User(AbstractUser):
     middle_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     gender = models.CharField(max_length=30, choices=[('male', 'Male'), ('female', 'Female')])
-    email = models.EmailField(unique=True)
+    email = models.EmailField(max_length=200,unique=True)
     phone_number = models.CharField(max_length=30)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     is_active = models.BooleanField(default=False)
