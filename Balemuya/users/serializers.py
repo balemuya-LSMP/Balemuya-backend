@@ -154,7 +154,7 @@ class PermissionSerializer(serializers.ModelSerializer):
         
 class AdminProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
-    permissions = PermissionSerializer(many=True)
+    permissions = PermissionSerializer(many=True,required=False)
 
     class Meta:
         model = AdminProfile
