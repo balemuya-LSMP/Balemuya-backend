@@ -313,151 +313,43 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
         categories_data = validated_data.pop('categories', [])
 
         with transaction.atomic():
-            user_serializer = UserSerializer(data=user_data)
-            user_serializer.is_valid(raise_exception=True)
-            user = user_serializer.save()
-
+            user = self._handle_user_creation(user_data)
             professional_profile = ProfessionalProfile.objects.create(user=user, **validated_data)
 
-            self._create_or_update_related_objects(
-                professional_profile, 
-                skills_data, 
-                categories_data, 
-                educations_data, 
-                portfolios_data, 
-                certificates_data, 
-                is_update=False
-            )
+            # Handle nested creations
+            self._handle_nested_creations(professional_profile, skills_data, educations_data, portfolios_data, certificates_data, categories_data)
 
         return professional_profile
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
-        skills_data = validated_data.pop('skills', [])
-        categories_data = validated_data.pop('categories', [])
-        educations_data = validated_data.pop('educations', [])
-        portfolios_data = validated_data.pop('portfolios', [])
-        certificates_data = validated_data.pop('certificates', [])
-        
-        # Update user
+        skills_data = validated_data.pop('skills', None)
+        educations_data = validated_data.pop('educations', None)
+        portfolios_data = validated_data.pop('portfolios', None)
+        certificates_data = validated_data.pop('certificates', None)
+        categories_data = validated_data.pop('categories', None)
+
+        # Update user if provided
         if user_data:
             user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
 
-        # Handle portfolios (create or update)
-        if portfolios_data:
-            # instance.portfolios.all().delete()  # Delete existing portfolios
-            for portfolio_data in portfolios_data:
-                portfolio_id = portfolio_data.get('id')
-                if portfolio_id:
-                    portfolio = Portfolio.objects.filter(id=portfolio_id).first()
-                    if portfolio:
-                        portfolio_serializer = PortfolioSerializer(instance=portfolio, data=portfolio_data, partial=True)
-                        portfolio_serializer.is_valid(raise_exception=True)
-                        portfolio_serializer.save(professional=instance)
-                    else:
-                        # Create a new portfolio
-                        portfolio_serializer = PortfolioSerializer(data=portfolio_data)
-                        portfolio_serializer.is_valid(raise_exception=True)
-                        portfolio_serializer.save(professional=instance)
-                else:
-                    # Create a new portfolio if no ID provided
-                    portfolio_serializer = PortfolioSerializer(data=portfolio_data)
-                    portfolio_serializer.is_valid(raise_exception=True)
-                    portfolio_serializer.save(professional=instance)
+        # Handle nested updates conditionally
+        if skills_data is not None:
+            self._handle_nested_updates(instance, skills_data, 'skills')
 
-        # Handle skills (create or update)
-        if skills_data:
-            instance.skills.clear()  # Remove existing skills
-            for skill_data in skills_data:
-                skill_id = skill_data.get('id')
-                if skill_id:
-                    skill = Skill.objects.filter(id=skill_id).first()
-                    if skill:
-                        # Update existing skill
-                        skill_serializer = SkillSerializer(instance=skill, data=skill_data, partial=True)
-                        skill_serializer.is_valid(raise_exception=True)
-                        skill_serializer.save()
-                    else:
-                        # Create a new skill
-                        skill_serializer = SkillSerializer(data=skill_data)
-                        skill_serializer.is_valid(raise_exception=True)
-                        skill_serializer.save()
-                else:
-                    # Create a new skill if no ID provided
-                    skill_serializer = SkillSerializer(data=skill_data)
-                    skill_serializer.is_valid(raise_exception=True)
-                    skill_serializer.save()
+        if educations_data is not None:
+            self._handle_nested_updates(instance, educations_data, 'educations')
 
-        # Handle educations (create or update)
-        if educations_data:
-            instance.educations.all().delete()  # Delete existing educations
-            for education_data in educations_data:
-                education_id = education_data.get('id')
-                if education_id:
-                    education = Education.objects.filter(id=education_id).first()
-                    if education:
-                        # Update existing education
-                        education_serializer = EducationSerializer(instance=education, data=education_data, partial=True)
-                        education_serializer.is_valid(raise_exception=True)
-                        education_serializer.save()
-                    else:
-                        # Create a new education
-                        education_serializer = EducationSerializer(data=education_data)
-                        education_serializer.is_valid(raise_exception=True)
-                        education_serializer.save(professional=instance)
-                else:
-                    # Create a new education if no ID provided
-                    education_serializer = EducationSerializer(data=education_data)
-                    education_serializer.is_valid(raise_exception=True)
-                    education_serializer.save(professional=instance)
+        if portfolios_data is not None:
+            self._handle_nested_updates(instance, portfolios_data, 'portfolios')
 
-        # Handle certificates (create or update)
-        if certificates_data:
-            instance.certificates.all().delete()  # Delete existing certificates
-            for certificate_data in certificates_data:
-                certificate_id = certificate_data.get('id')
-                if certificate_id:
-                    certificate = Certificate.objects.filter(id=certificate_id).first()
-                    if certificate:
-                        # Update existing certificate
-                        certificate_serializer = CertificateSerializer(instance=certificate, data=certificate_data, partial=True)
-                        certificate_serializer.is_valid(raise_exception=True)
-                        certificate_serializer.save()
-                    else:
-                        # Create a new certificate
-                        certificate_serializer = CertificateSerializer(data=certificate_data)
-                        certificate_serializer.is_valid(raise_exception=True)
-                        certificate_serializer.save(professional=instance)
-                else:
-                    # Create a new certificate if no ID provided
-                    certificate_serializer = CertificateSerializer(data=certificate_data)
-                    certificate_serializer.is_valid(raise_exception=True)
-                    certificate_serializer.save(professional=instance)
+        if certificates_data is not None:
+            self._handle_nested_updates(instance, certificates_data, 'certificates')
 
-        # Handle categories (create or update)
-        if categories_data:
-            instance.categories.clear()  # Remove existing categories
-            for category_data in categories_data:
-                category_id = category_data.get('id')
-                if category_id:
-                    category = Category.objects.filter(id=category_id).first()
-                    if category:
-                        # Update existing category
-                        category_serializer = CategorySerializer(instance=category, data=category_data, partial=True)
-                        category_serializer.is_valid(raise_exception=True)
-                        category_serializer.save()
-                    else:
-                        # Create a new category
-                        category_serializer = CategorySerializer(data=category_data)
-                        category_serializer.is_valid(raise_exception=True)
-                        category_serializer.save()
-                else:
-                    # Create a new category if no ID provided
-                    category_serializer = CategorySerializer(data=category_data)
-                    category_serializer.is_valid(raise_exception=True)
-                    category_serializer.save()
+        if categories_data is not None:
+            self._handle_nested_updates(instance, categories_data, 'categories')
 
         # Update remaining fields
         for attr, value in validated_data.items():
@@ -465,3 +357,107 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+    def _handle_user_creation(self, user_data):
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        return user_serializer.save()
+
+    def _handle_nested_creations(self, profile, skills_data, educations_data, portfolios_data, certificates_data, categories_data):
+        # Create skills
+        for skill_data in skills_data:
+            skill_id = skill_data.get('id')
+            if skill_id:
+                skill = Skill.objects.filter(id=skill_id).first()
+                if skill:
+                    profile.skills.add(skill)
+            else:
+                skill_serializer = SkillSerializer(data=skill_data)
+                skill_serializer.is_valid(raise_exception=True)
+                skill = skill_serializer.save()
+                profile.skills.add(skill)
+
+        # Create educations
+        for education_data in educations_data:
+            education_serializer = EducationSerializer(data=education_data)
+            education_serializer.is_valid(raise_exception=True)
+            education = education_serializer.save(professional=profile)
+
+        # Create portfolios
+        for portfolio_data in portfolios_data:
+            portfolio_serializer = PortfolioSerializer(data=portfolio_data)
+            portfolio_serializer.is_valid(raise_exception=True)
+            portfolio = portfolio_serializer.save(professional=profile)
+
+        # Create certificates
+        for certificate_data in certificates_data:
+            certificate_serializer = CertificateSerializer(data=certificate_data)
+            certificate_serializer.is_valid(raise_exception=True)
+            certificate = certificate_serializer.save(professional=profile)
+
+        # Create categories
+        for category_data in categories_data:
+            category_id = category_data.get('id')
+            if category_id:
+                category = Category.objects.filter(id=category_id).first()
+                if category:
+                    profile.categories.add(category)
+            else:
+                category_serializer = CategorySerializer(data=category_data)
+                category_serializer.is_valid(raise_exception=True)
+                category = category_serializer.save()
+                profile.categories.add(category)
+
+    def _handle_nested_updates(self, profile, data, field_name):
+        # Clear existing relationships before updating to avoid duplicates
+        if field_name == 'skills':
+            profile.skills.clear()
+        elif field_name == 'educations':
+            profile.educations.all().delete()
+        elif field_name == 'portfolios':
+            profile.portfolios.all().delete()
+        elif field_name == 'certificates':
+            profile.certificates.all().delete()
+        elif field_name == 'categories':
+            profile.categories.clear()
+
+        # Update based on provided data
+        for item_data in data:
+            if field_name == 'skills':
+                skill_id = item_data.get('id')
+                if skill_id:
+                    skill = Skill.objects.filter(id=skill_id).first()
+                    if skill:
+                        profile.skills.add(skill)
+                else:
+                    skill_serializer = SkillSerializer(data=item_data)
+                    skill_serializer.is_valid(raise_exception=True)
+                    skill = skill_serializer.save()
+                    profile.skills.add(skill)
+
+            elif field_name == 'educations':
+                education_serializer = EducationSerializer(data=item_data)
+                education_serializer.is_valid(raise_exception=True)
+                education_serializer.save(professional=profile)
+
+            elif field_name == 'portfolios':
+                portfolio_serializer = PortfolioSerializer(data=item_data)
+                portfolio_serializer.is_valid(raise_exception=True)
+                portfolio_serializer.save(professional=profile)
+
+            elif field_name == 'certificates':
+                certificate_serializer = CertificateSerializer(data=item_data)
+                certificate_serializer.is_valid(raise_exception=True)
+                certificate_serializer.save(professional=profile)
+
+            elif field_name == 'categories':
+                category_id = item_data.get('id')
+                if category_id:
+                    category = Category.objects.filter(id=category_id).first()
+                    if category:
+                        profile.categories.add(category)
+                else:
+                    category_serializer = CategorySerializer(data=item_data)
+                    category_serializer.is_valid(raise_exception=True)
+                    category = category_serializer.save()
+                    profile.categories.add(category)
