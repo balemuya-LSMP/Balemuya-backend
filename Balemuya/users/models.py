@@ -164,9 +164,14 @@ class ProfessionalProfile(models.Model):
     kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='professional_profile/kebele_id_images/front_images')
     kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/back_images')
     years_of_experience = models.PositiveIntegerField(default=0)
-    portfolio_url = models.URLField(null=True, blank=True)
     is_available = models.BooleanField(default=True)
     bio = models.TextField(blank=True, null=True)
+    web_url = models.URLField(null=True, blank=True)
+    linkedin_url = models.URLField(null=True, blank=True)
+    twitter_url = models.URLField(null=True, blank=True)
+    facebook_url = models.URLField(null=True, blank=True)
+    instagram_url = models.URLField(null=True, blank=True)
+    github_url = models.URLField(null=True, blank=True)
 
 
     def __str__(self):
