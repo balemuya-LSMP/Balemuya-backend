@@ -298,11 +298,9 @@ class ProfessionalProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfessionalProfile
-        fields = [
-            'user', 'skills', 'educations', 'portfolios', 'certificates', 'categories',
-            'is_verified', 'business_logo', 'business_card', 'rating', 
-            'years_of_experience', 'portfolio_url', 'is_available', 'bio'
-        ]
+        fields = ['user', 'skills', 'educations', 'portfolios', 'certificates', 'categories', 'is_verified',
+                  'business_logo', 'business_card', 'rating', 'years_of_experience', 'web_url', 'linkedin_url',
+                  'twitter_url', 'facebook_url', 'instagram_url', 'github_url', 'is_available', 'bio']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user', {})

@@ -54,8 +54,8 @@ class CustomerProfileAdmin(admin.ModelAdmin):
 
 # Professional Profile Admin
 class ProfessionalProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified','profile_image','kebele_id_front_image','kebele_id_back_image', 'business_logo', 'business_card', 'rating', 'years_of_experience', 'portfolio_url', 'is_available')
-    search_fields = ('user__email', 'business_logo', 'business_card', 'portfolio_url')
+    list_display = ('user', 'is_verified','profile_image','kebele_id_front_image','kebele_id_back_image', 'business_logo', 'business_card', 'rating', 'years_of_experience',  'is_available')
+    search_fields = ('user__email', 'business_logo', 'business_card')
     list_filter = ('is_verified', 'is_available', 'rating')
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
 
