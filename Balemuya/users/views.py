@@ -372,7 +372,6 @@ class ProfileUpdateView(generics.UpdateAPIView):
             serializer = AdminProfileSerializer(profile, data=request.data, partial=True, context={
                 'request':request
             })
-            print('context is',request.method)
         else:
             return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
 
