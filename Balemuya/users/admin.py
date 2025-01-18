@@ -53,10 +53,10 @@ class ProfessionalAdmin(admin.ModelAdmin):
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
 
 # Register the models with the custom admin classes
-admin.site.register(User, CustomUserAdmin)
-admin.site.register(Admin, AdminAdmin)
-admin.site.register(Customer, CustomerAdmin)
-admin.site.register(Professional, ProfessionalAdmin)
+admin.site.register(User)
+admin.site.register(Admin)
+admin.site.register(Customer)
+admin.site.register(Professional)
 admin.site.register(Education) 
 admin.site.register(Skill)
 admin.site.register(Portfolio)
