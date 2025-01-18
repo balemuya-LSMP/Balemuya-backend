@@ -1,117 +1,117 @@
-import requests
-import json
-from django.core.cache import cache
-from django.contrib.auth import login
+# import requests
+# import json
+# from django.core.cache import cache
+# from django.contrib.auth import login
 
-from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.contrib.auth.hashers import check_password
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+# from rest_framework import generics
+# from rest_framework.permissions import AllowAny, IsAuthenticated
+# from rest_framework.response import Response
+# from rest_framework.views import APIView
+# from rest_framework import status
+# from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+# from django.contrib.auth.tokens import default_token_generator
+# from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+# from django.contrib.auth.hashers import check_password
+# from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
-from django.conf import settings
+# from django.conf import settings
 
-from allauth.account.models import get_adapter
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from allauth.socialaccount.providers.oauth2.client import OAuth2Error
-from allauth.socialaccount.helpers import complete_social_login
-from allauth.socialaccount.models import SocialLogin
-from allauth.socialaccount.models import SocialApp
+# from allauth.account.models import get_adapter
+# from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+# from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+# from allauth.socialaccount.helpers import complete_social_login
+# from allauth.socialaccount.models import SocialLogin
+# from allauth.socialaccount.models import SocialApp
 
-from urllib.parse import parse_qs
+# from urllib.parse import parse_qs
 
-from users.models import User, Professional, Customer, Admin
-from users.utils import send_sms, generate_otp, send_email_confirmation
+# from users.models import User, Professional, Customer, Admin
+# from users.utils import send_sms, generate_otp, send_email_confirmation
 
-from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
+# from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
 
-# Create your views here.
+# # Create your views here.
 
-class ProfessionalListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ProfessionalSerializer
+# class ProfessionalListView(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = ProfessionalSerializer
 
-    def get_queryset(self):
-        queryset = Professional.objects.all()
-        status_filter = self.request.query_params.get('status', None)
+#     def get_queryset(self):
+#         queryset = Professional.objects.all()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'verified':
-                queryset = queryset.filter(is_verified=True)
-            elif status_filter == 'available':
-                queryset = queryset.filter(is_available=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
+#         if status_filter:
+#             if status_filter == 'active':
+#                 queryset = queryset.filter(user__is_active=True)
+#             elif status_filter == 'verified':
+#                 queryset = queryset.filter(is_verified=True)
+#             elif status_filter == 'available':
+#                 queryset = queryset.filter(is_available=True)
+#             elif status_filter == 'blocked':
+#                 queryset = queryset.filter(user__is_blocked=True)
 
-        return queryset
+#         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if not queryset.exists():
-            return Response({"message": f"No {status_filter} professionals found."}, status=404)
+#         if not queryset.exists():
+#             return Response({"message": f"No {status_filter} professionals found."}, status=404)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+#         serializer = self.get_serializer(queryset, many=True)
+#         return Response(serializer.data)
 
-# View for listing Customers
-class CustomerListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CustomerSerializer
+# # View for listing Customers
+# class CustomerListView(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = CustomerSerializer
 
-    def get_queryset(self):
-        queryset = Customer.objects.all()
-        status_filter = self.request.query_params.get('status', None)
+#     def get_queryset(self):
+#         queryset = Customer.objects.all()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
+#         if status_filter:
+#             if status_filter == 'active':
+#                 queryset = queryset.filter(user__is_active=True)
+#             elif status_filter == 'blocked':
+#                 queryset = queryset.filter(user__is_blocked=True)
 
-        return queryset
+#         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if not queryset.exists():
-            return Response({"message": f"No {status_filter} customers found."}, status=404)
+#         if not queryset.exists():
+#             return Response({"message": f"No {status_filter} customers found."}, status=404)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+#         serializer = self.get_serializer(queryset, many=True)
+#         return Response(serializer.data)
 
-# View for listing Admins
-class AdminListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = AdminSerializer
+# # View for listing Admins
+# class AdminListView(generics.ListAPIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = AdminSerializer
 
-    def get_queryset(self):
-        queryset = Admin.objects.all()
-        status_filter = self.request.query_params.get('status', None)
+#     def get_queryset(self):
+#         queryset = Admin.objects.all()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
+#         if status_filter:
+#             if status_filter == 'active':
+#                 queryset = queryset.filter(user__is_active=True)
+#             elif status_filter == 'blocked':
+#                 queryset = queryset.filter(user__is_blocked=True)
 
-        return queryset
+#         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         status_filter = self.request.query_params.get('status', None)
 
-        if not queryset.exists():
-            return Response({"message": f"No {status_filter} Admin found."}, status=404)
+#         if not queryset.exists():
+#             return Response({"message": f"No {status_filter} Admin found."}, status=404)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+#         serializer = self.get_serializer(queryset, many=True)
+#         return Response(serializer.data)
