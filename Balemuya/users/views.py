@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.contrib.auth import login
 
 from rest_framework import generics
-from rest_framework.permissions import AllowAny,IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -12,7 +12,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.hashers import check_password
-from rest_framework_simplejwt.tokens import RefreshToken,AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from django.conf import settings
 
@@ -25,10 +25,11 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User,ProfessionalProfile,CustomerProfile,AdminProfile
-from .utils import send_sms,generate_otp,send_email_confirmation
+from .models import User, Professional, Customer, Admin
+from .utils import send_sms, generate_otp, send_email_confirmation
 
-from .serializers import UserSerializer,LoginSerializer,ProfessionalProfileSerializer,CustomerProfileSerializer,AdminProfileSerializer
+from .serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
+
 class RegisterView(APIView):
     serializer_class = UserSerializer
     
@@ -49,14 +50,14 @@ class RegisterView(APIView):
             
             # send confirmation email
             print('email send start')
-            send_email_confirmation(subject, message,recipient_list)
+            send_email_confirmation(subject, message, recipient_list)
             print('email send end')
             
             otp = generate_otp()
             cache.set(f"otp_{user_instance.email}", otp, timeout=300)
             
             cached = cache.get(f"otp_{user_instance.email}")
-            print('cached otp',cached)
+            print('cached otp', cached)
         
             phone_number = user_instance.phone_number
             message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
@@ -69,16 +70,14 @@ class RegisterView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-
 class VerifyEmailView(APIView):
-    def get(self,request):
+    def get(self, request):
         uidb64 = request.GET.get('uid')
         token = request.GET.get('token')
         
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
-            user = User.objects.get(pk = uid)
+            user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
         
@@ -88,16 +87,16 @@ class VerifyEmailView(APIView):
             return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
 class VerifyPhoneView(APIView):
     
-    def post(self,request):
-        otp = int( request.data.get('otp'))
-        print('otp',otp)
+    def post(self, request):
+        otp = int(request.data.get('otp'))
+        print('otp', otp)
         email = request.data.get('email')
-        print('email',email)
+        print('email', email)
         cached_otp = cache.get(f"otp_{email}")
-        print('cached otp',cached_otp)
+        print('cached otp', cached_otp)
         
         if cached_otp == otp:
             print('otp is valid')
@@ -107,9 +106,7 @@ class VerifyPhoneView(APIView):
             cache.delete(f"otp_{email}")
             return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid OTP please type again.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+            return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ResendOTPView(APIView):
     permission_classes = (AllowAny,)
@@ -127,8 +124,6 @@ class SetPasswordView(APIView):
             return Response({'message': 'Password set successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-            
 
 class ResetPasswordView(APIView):
     
@@ -144,8 +139,8 @@ class ResetPasswordView(APIView):
             return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-class VerifyPaswordResetOTPView(APIView):
+
+class VerifyPasswordResetOTPView(APIView):
     
     def post(self, request, *args, **kwargs):
         otp = int(request.data.get('otp'))
@@ -154,14 +149,14 @@ class VerifyPaswordResetOTPView(APIView):
         if cached_otp == otp:
             return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid OTP please type again.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class UpdatePasswordView(APIView):
     permission_classes = [IsAuthenticated]
+    
     def post(self, request, *args, **kwargs):
         user = request.user
-        print('user',user.password)
+        print('user', user.password)
         password = user.password
         old_password = request.data.get('old_password')
         new_password = request.data.get('new_password')
@@ -174,25 +169,24 @@ class UpdatePasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
-    
+
+class VerifyPasswordResetOTPView(APIView):
+    def post(self, request, *args, **kwargs):
+        otp = int(request.data.get('otp'))
+        email = request.data.get('email')
+        cached_otp = cache.get(f"otp_{email}")
+        if cached_otp == otp:
+            return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
+        
 class GoogleLoginView(APIView):
     def get(self, request):
         code = request.GET.get('code')  
-        # state = request.GET.get('state', '{}')
-        # print('state',state)
-        print('code',code)
-
-        # try:
-        #     state = json.loads(state)
-        # except json.JSONDecodeError:
-        #     return Response({'error': "Invalid state parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        print('code', code)
 
         if not code:
-            return Response({'error': "Missing code  parameters"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # user_type = state.get('user_type')
-        # if not user_type:
-        #     return Response({'error': "Missing user_type in state parameter"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': "Missing code parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             token_url = 'https://oauth2.googleapis.com/token'
@@ -238,7 +232,6 @@ class GoogleLoginView(APIView):
                     'last_name': last_name,
                     'password': 'temporarypassword123',
                     'is_active': True
-                    # 'user_type': user_type,
                 }
             )
 
@@ -249,12 +242,10 @@ class GoogleLoginView(APIView):
             return Response({
                 'access': str(access),
                 'refresh': str(refresh),
-                # 'user_type': user.user_type
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -282,18 +273,16 @@ class LoginView(APIView):
             access = str(refresh.access_token)
             refresh = str(refresh)
             return Response({'message': 'Successfully logged in.',
-                             "user":{
-                            'id':user.id,
-                            'email': user.email,
-                            'user_type':user.user_type,
-                            'access': access,
-                            'refresh': refresh,
-                            }
-                            },status=status.HTTP_200_OK)
+                             "user": {
+                                 'id': user.id,
+                                 'email': user.email,
+                                 'user_type': user.user_type,
+                                 'access': access,
+                                 'refresh': refresh,
+                             }
+                            }, status=status.HTTP_200_OK)
         
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-    
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -318,7 +307,7 @@ class LogoutView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -326,51 +315,47 @@ class ProfileView(APIView):
         user = request.user
         if user is None:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
         if user.user_type == 'customer': 
-            customer = CustomerProfile.objects.filter(user=user).first()
+            customer = Customer.objects.filter(user=user).first()
             if customer is None:
                 return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = CustomerProfileSerializer(customer)
+            serializer = CustomerSerializer(customer)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
         
-        if user.user_type =='professional':
-            professional = ProfessionalProfile.objects.filter(user=user).first()
+        if user.user_type == 'professional':
+            professional = Professional.objects.filter(user=user).first()
             if professional is None:
-                return Response({'error': 'professional not found.'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = ProfessionalProfileSerializer(professional)
-            return Response({'user':serializer.data},status = status.HTTP_200_OK)
+                return Response({'error': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = ProfessionalSerializer(professional)
+            return Response({'user': serializer.data}, status=status.HTTP_200_OK)
         
         if user.user_type == 'admin':
-            admin = AdminProfile.objects.filter(user = user).first()
-            serializer = AdminProfileSerializer(admin)
-            return Response({'user':serializer.data},status = status.HTTP_200_OK)
+            admin = Admin.objects.filter(user=user).first()
+            serializer = AdminSerializer(admin)
+            return Response({'user': serializer.data}, status=status.HTTP_200_OK)
 
         else:
-            return Response({'error':'user not found'},status=status.HTTP_404_NOT_FOUND)
-    
-
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Return the queryset of the currently authenticated user
         return User.objects.filter(pk=self.request.user.pk)
 
     def patch(self, request, *args, **kwargs):
         user = request.user
 
         if user.user_type == 'customer':
-            profile = CustomerProfile.objects.get(user=user)
-            serializer = CustomerProfileSerializer(profile, data=request.data, partial=True, context={'request':request})
+            profile = Customer.objects.get(user=user)
+            serializer = CustomerSerializer(profile, data=request.data, partial=True, context={'request': request})
         elif user.user_type == 'professional':
-            profile = ProfessionalProfile.objects.get(user=user)
-            serializer = ProfessionalProfileSerializer(profile, data=request.data, partial=True, context={'request':request})
+            profile = Professional.objects.get(user=user)
+            serializer = ProfessionalSerializer(profile, data=request.data, partial=True, context={'request': request})
         elif user.user_type == 'admin':
-            profile = AdminProfile.objects.get(user=user)
-            serializer = AdminProfileSerializer(profile, data=request.data, partial=True, context={
-                'request':request
-            })
+            profile = Admin.objects.get(user=user)
+            serializer = AdminSerializer(profile, data=request.data, partial=True, context={'request': request})
         else:
             return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -381,9 +366,8 @@ class ProfileUpdateView(generics.UpdateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UsersView(APIView):
-    permission_class = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     pass
-    
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
@@ -394,11 +378,11 @@ class UserDetailView(generics.RetrieveAPIView):
         user = self.get_object()
 
         if user.user_type == 'professional':
-            return ProfessionalProfileSerializer
+            return ProfessionalSerializer
         elif user.user_type == 'customer':
-            return CustomerProfileSerializer
+            return CustomerSerializer
         elif user.user_type == 'admin':
-            return AdminProfileSerializer
+            return AdminSerializer
         else:
             return None
 
@@ -410,19 +394,19 @@ class UserDetailView(generics.RetrieveAPIView):
             return Response({'error': 'User type not recognized'}, status=status.HTTP_400_BAD_REQUEST)
 
         if user.user_type == 'professional':
-            professional_profile = ProfessionalProfile.objects.filter(user=user).first()
+            professional_profile = Professional.objects.filter(user=user).first()
             if professional_profile is None:
                 return Response({'error': 'Professional profile not found'}, status=status.HTTP_404_NOT_FOUND)
             serializer = serializer_class(professional_profile)
 
         elif user.user_type == 'customer':
-            customer_profile = CustomerProfile.objects.filter(user=user).first()
+            customer_profile = Customer.objects.filter(user=user).first()
             if customer_profile is None:
                 return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
             serializer = serializer_class(customer_profile)
 
         elif user.user_type == 'admin':
-            admin_profile = AdminProfile.objects.filter(user=user).first()
+            admin_profile = Admin.objects.filter(user=user).first()
             if admin_profile is None:
                 return Response({'error': 'Admin profile not found'}, status=status.HTTP_404_NOT_FOUND)
             serializer = serializer_class(admin_profile)
@@ -431,7 +415,6 @@ class UserDetailView(generics.RetrieveAPIView):
             'message': "Profile fetched successfully",
             'data': serializer.data
         }, status=status.HTTP_200_OK)
-    
 
 class UserDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
@@ -450,69 +433,3 @@ class UserDeleteView(generics.DestroyAPIView):
 
         user.delete()
         return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-     
-    
-class ProfessionalListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ProfessionalProfileSerializer
-
-    def get_queryset(self):
-        queryset = ProfessionalProfile.objects.all()
-        status_filter = self.request.query_params.get('status', None)
-
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'verified':
-                queryset = queryset.filter(is_verified=True)
-            elif status_filter == 'available':
-                queryset = queryset.filter(is_available=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
-
-        return queryset
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        if not queryset.exists():
-            return Response({"message": "No users found matching the criteria."}, status=404)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-    
-# View for listing Customers
-class CustomerListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CustomerProfileSerializer
-
-    def get_queryset(self):
-        queryset = CustomerProfile.objects.all()
-        status_filter = self.request.query_params.get('status', None)
-
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
-
-        return queryset
-
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        if not queryset.exists():
-            return Response({"message": "No customers found."}, status=404)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-# View for listing Admins
-class AdminListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = AdminProfileSerializer
-
-    def get_queryset(self):
-        return AdminProfile.objects.filter(user__user_type='admin',user__is_active=True)
-        
-        
-

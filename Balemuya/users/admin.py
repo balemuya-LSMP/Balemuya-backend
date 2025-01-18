@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, AdminProfile, CustomerProfile, ProfessionalProfile, Education, Portfolio, Certificate, Address, Skill
+from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
@@ -12,16 +12,13 @@ class EducationInline(admin.StackedInline):
     model = Education
     extra = 1
 
-
 class SkillsInline(admin.StackedInline):
-    model = ProfessionalProfile.skills.through
+    model = Professional.skills.through
     extra = 1
-
 
 class PortfolioInline(admin.StackedInline):
     model = Portfolio
     extra = 1
-
 
 class CertificateInline(admin.StackedInline):
     model = Certificate
@@ -36,35 +33,30 @@ class CustomUserAdmin(admin.ModelAdmin):
     ordering = ('email',)
     
     inlines = [AddressInline]
-
-
-# Admin Profile Admin
-class AdminProfileAdmin(admin.ModelAdmin):
+# Admin Admin
+class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'admin_level')
     search_fields = ('user__email', 'admin_level')
     list_filter = ('admin_level',)
 
-
-# Customer Profile Admin
-class CustomerProfileAdmin(admin.ModelAdmin):
+# Customer Admin
+class CustomerAdmin(admin.ModelAdmin):
     list_display = ('user', 'rating')
     search_fields = ('user__email', 'rating')
     list_filter = ('rating',)
 
-
-# Professional Profile Admin
-class ProfessionalProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified','profile_image','kebele_id_front_image','kebele_id_back_image', 'business_logo', 'business_card', 'rating', 'years_of_experience',  'is_available')
-    search_fields = ('user__email', 'business_logo', 'business_card')
+# Professional Admin
+class ProfessionalAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_verified', 'profile_image', 'kebele_id_front_image', 'kebele_id_back_image', 'rating', 'years_of_experience', 'is_available')
+    search_fields = ('user__email',)
     list_filter = ('is_verified', 'is_available', 'rating')
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
 
-
 # Register the models with the custom admin classes
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(AdminProfile, AdminProfileAdmin)
-admin.site.register(CustomerProfile, CustomerProfileAdmin)
-admin.site.register(ProfessionalProfile, ProfessionalProfileAdmin)
+admin.site.register(Admin, AdminAdmin)
+admin.site.register(Customer, CustomerAdmin)
+admin.site.register(Professional, ProfessionalAdmin)
 admin.site.register(Education) 
 admin.site.register(Skill)
 admin.site.register(Portfolio)
