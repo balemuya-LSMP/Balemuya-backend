@@ -58,29 +58,33 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+    
 # Address Model
 class Address(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
-    country = models.CharField(max_length=100,default = 'ethiopia')
-    region = models.CharField(max_length=100,null = True, blank = True)
+    country = models.CharField(max_length=100, default='Ethiopia')
+    region = models.CharField(max_length=100, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    kebele = models.CharField(max_length=100,null=True, blank=True)
-    street = models.CharField(max_length=100, null=True, blank=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank= True, null=True)
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
     is_current = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.country}, {self.region}, {self.city}, {self.street}"
+        return f"{self.country}, {self.region}, {self.city}"
 
     class Meta:
         verbose_name = 'Address'
         verbose_name_plural = 'Addresses'
 
-# Permissions Model
+
+# Permission Model
 class Permission(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField()
 
@@ -91,10 +95,11 @@ class Permission(models.Model):
         verbose_name = 'Permission'
         verbose_name_plural = 'Permissions'
 
-# Admin Profile Model
-class AdminProfile(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
+
+# Admin Model
+class Admin(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin')
     permissions = models.ManyToManyField(Permission, blank=True, related_name='admins')
     admin_level = models.PositiveIntegerField(default=0)
 
@@ -108,10 +113,11 @@ class AdminProfile(models.Model):
     def has_perm(self, perm):
         return self.permissions.filter(name=perm).exists()
 
+
 # Admin Action Log
 class AdminLog(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    admin = models.ForeignKey(AdminProfile, on_delete=models.CASCADE, related_name='logs')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name='logs')
     action = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -122,13 +128,14 @@ class AdminLog(models.Model):
         verbose_name = 'Admin Log'
         verbose_name_plural = 'Admin Logs'
 
-# Customer Profile
-class CustomerProfile(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
-    profile_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/profile_images')
-    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/kebele_id_images/front_images')
-    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='CustomerProfile/kebele_id_images/back_images')
+
+# Customer Model
+class Customer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
+    profile_image = CloudinaryField(
+        'image', null=True, blank=True, folder='CustomerProfile/profile_images'
+    )
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
@@ -138,9 +145,10 @@ class CustomerProfile(models.Model):
         verbose_name = 'Customer'
         verbose_name_plural = 'Customers'
 
+
 # Skill Model for Professionals
 class Skill(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
 
     def __str__(self):
@@ -150,29 +158,29 @@ class Skill(models.Model):
         verbose_name = 'Skill'
         verbose_name_plural = 'Skills'
 
-# Professional Profile
-class ProfessionalProfile(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional_profile')
-    categories = models.ManyToManyField(Category, blank=True, related_name='professionals')
+
+# Professional Model
+class Professional(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional')
+    categories = models.ManyToManyField(
+        Category, blank=True, related_name='professionals'
+    )
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
-    is_verified = models.BooleanField(default=False)
-    business_logo = CloudinaryField('image', null=True, blank=True,folder='Professional/business_logos')
-    business_card = CloudinaryField('image', null=True, blank=True,folder='professional/business_cards')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    profile_image = CloudinaryField('image', null=True, blank=True,folder='Professional_profile/profile_images')
-    kebele_id_front_image = CloudinaryField('image', null=True, blank=True,folder='professional_profile/kebele_id_images/front_images')
-    kebele_id_back_image = CloudinaryField('image', null=True, blank=True,folder='kebele_id_images/back_images')
+    profile_image = CloudinaryField(
+        'image', null=True, blank=True, folder='Professional/profile_images'
+    )
+    kebele_id_front_image = CloudinaryField(
+        'image', null=True, blank=True, folder='Professional/kebele_id_images/front_images'
+    )
+    kebele_id_back_image = CloudinaryField(
+        'image', null=True, blank=True, folder='Professional/kebele_id_images/back_images'
+    )
     years_of_experience = models.PositiveIntegerField(default=0)
     is_available = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
     bio = models.TextField(blank=True, null=True)
-    web_url = models.URLField(null=True, blank=True)
-    linkedin_url = models.URLField(null=True, blank=True)
-    twitter_url = models.URLField(null=True, blank=True)
-    facebook_url = models.URLField(null=True, blank=True)
-    instagram_url = models.URLField(null=True, blank=True)
-    github_url = models.URLField(null=True, blank=True)
-
 
     def __str__(self):
         return self.user.email
@@ -181,36 +189,36 @@ class ProfessionalProfile(models.Model):
         verbose_name = 'Professional'
         verbose_name_plural = 'Professionals'
 
+
 # Education Model for Professionals
 class Education(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='educations')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    professional = models.ForeignKey(
+        Professional, on_delete=models.CASCADE, related_name='educations'
+    )
     school = models.CharField(max_length=100)
     degree = models.CharField(max_length=100, blank=True, null=True)
     field_of_study = models.CharField(max_length=100, blank=True, null=True)
-    location = models.CharField(max_length=100, blank=True, null=True)
-    document_url = models.URLField(null=True, blank=True, unique=True)
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(null=True, blank=True)
-    honors = models.CharField(max_length=255, blank=True, null=True)
-    is_current_student = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.school} - {self.degree}"
+        return f"{self.school} - {self.degree or 'N/A'}"
 
     class Meta:
         verbose_name = 'Education'
         verbose_name_plural = 'Educations'
-        ordering = ['-start_date']
+
 
 # Portfolio Model for Professionals
 class Portfolio(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='portfolios')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    professional = models.ForeignKey(
+        Professional, on_delete=models.CASCADE, related_name='portfolios'
+    )
     title = models.CharField(max_length=200)
     description = models.TextField()
-    image = CloudinaryField('image', null=True, blank=True,folder='portfolio_images')
-    video_url = models.URLField(null=True, blank=True)
+    image = CloudinaryField('image', null=True, blank=True, folder='PortfolioImages/')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -222,18 +230,19 @@ class Portfolio(models.Model):
         verbose_name_plural = 'Portfolios'
         ordering = ['-created_at']
 
+
 # Certificate Model for Professionals
 class Certificate(models.Model):
-    id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
-    professional = models.ForeignKey(ProfessionalProfile, on_delete=models.CASCADE, related_name='certificates')
-    name = models.CharField(max_length=100)
-    issued_by = models.CharField(max_length=100)
-    document_url = models.URLField()
-    date_issued = models.DateField()
-    expiration_date = models.DateField()
-    certificate_type = models.CharField(max_length=100, blank=True, null=True)
-    is_renewable = models.BooleanField(default=False)
-    renewal_period = models.PositiveIntegerField(null=True, blank=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    professional = models.ForeignKey(
+        Professional, on_delete=models.CASCADE, related_name='certificates'
+    )
+    image = CloudinaryField(
+        'certificate_image', null=True, blank=True, folder='Certificates'
+    )
+    name = models.TextField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return self.name or 'Unnamed Certificate'
