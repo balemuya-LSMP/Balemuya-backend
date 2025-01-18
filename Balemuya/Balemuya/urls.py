@@ -26,8 +26,8 @@ def hello(request):
 urlpatterns = [
     path('',hello,name='home'),
     path('admin/', admin.site.urls),
-    # path('api/users/',include('users.urls')),
-    # path('api/admin/',include('customAdmin.urls')),
+    path('api/users/',include('users.urls')),
+    path('api/admin/',include('customAdmin.urls')),
     # path('api/services/',include('services.urls')),
     # path('api/bookings/',include('bookings.urls')),
     # path('api/notifications/',include('notifications.urls')),
