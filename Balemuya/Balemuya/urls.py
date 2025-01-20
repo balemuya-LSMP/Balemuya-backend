@@ -29,9 +29,7 @@ urlpatterns = [
     path('api/users/',include('users.urls')),
     path('api/admin/',include('customAdmin.urls')),
     # path('api/services/',include('services.urls')),
-    # path('api/bookings/',include('bookings.urls')),
     # path('api/notifications/',include('notifications.urls')),
-    # path('api/subscriptions/',include('subscriptions.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
