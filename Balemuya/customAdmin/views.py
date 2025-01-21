@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -37,6 +38,9 @@ class ProfessionalListView(generics.ListAPIView):
     serializer_class = ProfessionalSerializer
 
     def get_queryset(self):
+        if self.request.user.user_type != 'admin':
+            raise PermissionDenied("You are not authorized to access this.")
+        
         queryset = Professional.objects.all()
         status_filter = self.request.query_params.get('status', None)
 
@@ -57,7 +61,9 @@ class ProfessionalListView(generics.ListAPIView):
         status_filter = self.request.query_params.get('status', None)
 
         if not queryset.exists():
-            return Response({"message": f"No {status_filter} professionals found."}, status=404)
+            if status_filter is None:
+                status_filter = ''
+            return Response({"message": f"No {status_filter} professionals found."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -68,6 +74,9 @@ class CustomerListView(generics.ListAPIView):
     serializer_class = CustomerSerializer
 
     def get_queryset(self):
+        if self.request.user.user_type != 'admin':
+            raise PermissionDenied("You are not authorized to access this.")
+        
         queryset = Customer.objects.all()
         status_filter = self.request.query_params.get('status', None)
 
@@ -84,6 +93,8 @@ class CustomerListView(generics.ListAPIView):
         status_filter = self.request.query_params.get('status', None)
 
         if not queryset.exists():
+            if status_filter ==None:
+                status_filter = ''
             return Response({"message": f"No {status_filter} customers found."}, status=404)
 
         serializer = self.get_serializer(queryset, many=True)
@@ -95,6 +106,8 @@ class AdminListView(generics.ListAPIView):
     serializer_class = AdminSerializer
 
     def get_queryset(self):
+        if self.request.user.user_type != 'admin':
+            raise PermissionDenied({"message":"You are not authorized to access this."})
         queryset = Admin.objects.all()
         status_filter = self.request.query_params.get('status', None)
 
@@ -111,6 +124,8 @@ class AdminListView(generics.ListAPIView):
         status_filter = self.request.query_params.get('status', None)
 
         if not queryset.exists():
+            if status_filter ==None:
+                status_filter = ''
             return Response({"message": f"No {status_filter} Admin found."}, status=404)
 
         serializer = self.get_serializer(queryset, many=True)
