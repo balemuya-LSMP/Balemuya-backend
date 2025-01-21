@@ -1,7 +1,9 @@
 from django.contrib import admin
-from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill,Payment,SubscriptionPlan
+from django.utils.html import mark_safe
+from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill, Payment, SubscriptionPlan
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 
 class AddressInline(admin.StackedInline):
@@ -27,12 +29,13 @@ class CertificateInline(admin.StackedInline):
 # Custom User Admin
 class CustomUserAdmin(admin.ModelAdmin):
     model = User
-    list_display = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number','gender', 'user_type', 'is_active', 'is_staff', 'is_superuser')
+    list_display = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number', 'gender', 'user_type', 'is_active', 'is_staff', 'is_superuser')
     list_filter = ('user_type', 'is_active', 'is_staff', 'is_superuser')
     search_fields = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number')
     ordering = ('email',)
     
     inlines = [AddressInline]
+
 # Admin Admin
 class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'admin_level')
@@ -41,17 +44,45 @@ class AdminAdmin(admin.ModelAdmin):
 
 # Customer Admin
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'rating')
+    list_display = ('user', 'rating', 'profile_image_preview')
     search_fields = ('user__email', 'rating')
     list_filter = ('rating',)
 
+    # Preview the profile image in admin list view
+    def profile_image_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.profile_image}" width="50" height="50" />')
+    profile_image_preview.allow_tags = True
+    profile_image_preview.short_description = 'Profile Image'
+    
+    def kebele_id_image_front_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_front_image}" width="50" height="50" />')
+    kebele_id_image_front_preview.allow_tags = True
+    kebele_id_image_front_preview.short_description = 'Id front Image'
+
+    def kebele_id_image_back_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_back_image}" width="50" height="50" />')
+    profile_image_preview.allow_tags = True
+    kebele_id_image_back_preview.short_description = 'Id back Image'
 # Professional Admin
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified', 'profile_image', 'kebele_id_front_image', 'kebele_id_back_image', 'rating', 'years_of_experience', 'is_available')
+    list_display = ('user', 'is_verified', 'profile_image_preview', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating', 'years_of_experience', 'is_available')
     search_fields = ('user__email',)
     list_filter = ('is_verified', 'is_available', 'rating')
+    def profile_image_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.profile_image}" width="50" height="50" />')
+    profile_image_preview.allow_tags = True
+    profile_image_preview.short_description = 'Profile Image'
+    def kebele_id_image_front_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_front_image}" width="50" height="50" />')
+    kebele_id_image_front_preview.allow_tags = True
+    kebele_id_image_front_preview.short_description = 'Id front Image'
+
+    def kebele_id_image_back_preview(self, obj):
+            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_back_image}" width="50" height="50" />')
+    profile_image_preview.allow_tags = True
+    kebele_id_image_back_preview.short_description = 'Id back Image'
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
-    
+
 class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_display = ('professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date', 'is_expired')
     list_filter = ('plan_type', 'duration')
@@ -70,10 +101,10 @@ class PaymentAdmin(admin.ModelAdmin):
     readonly_fields = ('payment_date',)
 
 # Register the models with the custom admin classes
-admin.site.register(User)
-admin.site.register(Admin)
-admin.site.register(Customer)
-admin.site.register(Professional)
+admin.site.register(User, CustomUserAdmin)
+admin.site.register(Admin, AdminAdmin)
+admin.site.register(Customer, CustomerAdmin)
+admin.site.register(Professional, ProfessionalAdmin)
 admin.site.register(Education) 
 admin.site.register(Skill)
 admin.site.register(Portfolio)
