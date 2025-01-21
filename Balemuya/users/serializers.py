@@ -121,10 +121,19 @@ class PermissionSerializer(serializers.ModelSerializer):
 class AdminSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     permissions = PermissionSerializer(many=True, required=False)
+    profile_image_url =serializers.SerializerMethodField()
 
     class Meta:
         model = Admin
-        fields = ['user', 'permissions', 'admin_level']
+        fields = ['user','permissions', 'profile_image', 'profile_image_url']
+        
+    
+    def get_profile_image_url(self,obj):
+        if obj.profile_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
+        return None
+
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
@@ -167,10 +176,19 @@ class AdminLogSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+    profile_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
-        fields = ['user', 'rating']
+        fields =['user', 'rating', 'profile_image', 'profile_image_url']
+        
+    
+    def get_profile_image_url(self, obj):
+        if obj.profile_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
+        return None
+    
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
@@ -212,14 +230,23 @@ class EducationSerializer(serializers.ModelSerializer):
         return instance
 
 
+
 class PortfolioSerializer(serializers.ModelSerializer):
+    portfolio_image_url = serializers.SerializerMethodField()
     class Meta:
         model = Portfolio
         fields = [
-            'id', 'title', 'description', 'image', 
+            'id', 'title', 'description', 'image','portfolio_image_url',
             'created_at', 'updated_at'
         ]
-
+    
+    
+    def get_portfolio_image_url(self,obj):
+        if obj.image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None
+    
     def create(self, validated_data):
         return Portfolio.objects.create(**validated_data)
 
@@ -231,13 +258,20 @@ class PortfolioSerializer(serializers.ModelSerializer):
 
 
 class CertificateSerializer(serializers.ModelSerializer):
+    certificate_image_url = serializers.SerializerMethodField()
     class Meta:
         model = Certificate
         fields = [
-            'id', 'professional', 'image', 'name', 
+            'id', 'professional', 'image', 'name','certificate_image_url',
             'created_at', 'updated_at'
         ]
-
+    
+    def get_certificate_image_url(self,obj):
+        if obj.image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return None
+    
     def create(self, validated_data):
         return Certificate.objects.create(**validated_data)
 
@@ -246,21 +280,39 @@ class CertificateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
-
-
 class ProfessionalSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     skills = SkillSerializer(many=True, required=False)
-    educations = EducationSerializer(many=True, required=False)
+    educations = EducationSerializer(many=True, required=False)  # Ensure these serializers are defined
     portfolios = PortfolioSerializer(many=True, required=False)
     certificates = CertificateSerializer(many=True, required=False)
-    categories = CategorySerializer(many=True, required=False)  # Add categories
+    categories = CategorySerializer(many=True, required=False)
+    profile_image_url = serializers.SerializerMethodField()
+    kebele_id_front_image_url = serializers.SerializerMethodField()
+    kebele_id_back_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Professional
-        fields = ['user', 'skills', 'educations', 'portfolios',
-                  'certificates', 'categories', 'is_verified', 
-                  'rating', 'years_of_experience', 'is_available', 'bio']
+        fields = '__all__'
+        
+    def get_profile_image_url(self, obj):
+        if obj.profile_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
+        return None
+    
+    def get_kebele_id_front_image_url(self, obj):
+        if obj.kebele_id_front_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.kebele_id_front_image.url) if request else obj.kebele_id_front_image.url
+        return None
+    
+    def get_kebele_id_back_image_url(self, obj):
+        if obj.kebele_id_back_image:  # Change from self.kebele_id_back_image to obj.kebele_id_back_image
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.kebele_id_back_image.url) if request else obj.kebele_id_back_image.url
+        return None
+        
 
     def create(self, validated_data):
         user_data = validated_data.pop('user', {})

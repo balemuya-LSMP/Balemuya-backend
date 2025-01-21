@@ -40,3 +40,6 @@ def send_email_confirmation(subject, message, recipient_list):
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return str(e)
+
+
+    
