@@ -1,94 +1,109 @@
-# import json
-# import requests
-# import chapa
-# from channels.generic.websocket import AsyncWebsocketConsumer
-# from django.conf import settings
-# from rest_framework_simplejwt.tokens import AccessToken
-# from django.contrib.auth.models import User
-# from django.core.exceptions import ObjectDoesNotExist
+import json
+import httpx  # Use httpx for async HTTP requests
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.conf import settings
+from rest_framework_simplejwt.tokens import AccessToken
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 
-# class PaymentInitiateConsumer(AsyncWebsocketConsumer):
-#     async def connect(self):
-#         token = self.scope['query_params'].get('token')
 
-#         if not token:
-#             await self.close()
-#             return
+class PaymentInitiateConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Parse the token from the query string
+        query_string = self.scope['query_string'].decode('utf-8')
+        token = dict(item.split('=') for item in query_string.split('&')).get('token')
 
-#         try:
-#             access_token = AccessToken(token)
-#             user_id = access_token['user_id']
-#             user = User.objects.get(id=user_id)
-#             self.user = user
-#         except (AccessToken.Error, ObjectDoesNotExist):
-#             await self.send(text_data=json.dumps({'error': 'Invalid or expired token.'}))
-#             await self.close()
-#             return
+        if not token:
+            await self.close()
+            return
 
-#         self.room_group_name = "payment_initiate"
-#         await self.accept()
+        try:
+            access_token = AccessToken(token)
+            user_id = access_token['user_id']
+            self.user = User.objects.get(id=user_id)
+        except (AccessToken.Error, ObjectDoesNotExist):
+            await self.send(text_data=json.dumps({'error': 'Invalid or expired token.'}))
+            await self.close()
+            return
 
-#     async def disconnect(self, close_code):
-#         pass
+        self.room_group_name = "payment_initiate"
+        await self.accept()
 
-#     async def receive(self, text_data):
-#         data = json.loads(text_data)
+    async def disconnect(self, close_code):
+        pass
 
-#         amount = data.get('amount')
-#         email = data.get('email')
-#         phone = data.get('phone')
-#         transaction_id = data.get('transaction_id')
+    async def receive(self, text_data):
+        data = json.loads(text_data)
 
-#         if not amount or not email or not phone or not transaction_id:
-#             await self.send(text_data=json.dumps({
-#                 'error': 'Missing required fields (amount, email, phone, transaction_id).'
-#             }))
-#             return
+        amount = data.get('amount')
+        email = data.get('email')
+        phone = data.get('phone')
+        transaction_id = data.get('transaction_id')
 
-#         payment_url = await self.initiate_payment(amount, email, phone, transaction_id)
+        if not amount or not email or not phone or not transaction_id:
+            await self.send(text_data=json.dumps({
+                'error': 'Missing required fields (amount, email, phone, transaction_id).'
+            }))
+            return
 
-#         if payment_url:
-#             await self.send(text_data=json.dumps({
-#                 'message': 'Payment initiation successful!',
-#                 'payment_url': payment_url,
-#             }))
-#         else:
-#             await self.send(text_data=json.dumps({
-#                 'error': 'Failed to initiate payment with Chapa.'
-#             }))
+        payment_url = await self.initiate_payment(amount, email, phone, transaction_id)
 
-#     async def initiate_payment(self, amount, email, phone, transaction_id):
-#         """
-#         Initiates a payment with Chapa API and returns the payment URL.
-#         """
-#         headers = {
-#             'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',  # Your Chapa API secret key
-#         }
+        if payment_url:
+            await self.send(text_data=json.dumps({
+                'message': 'Payment initiation successful!',
+                'payment_url': payment_url,
+            }))
+        else:
+            await self.send(text_data=json.dumps({
+                'error': 'Failed to initiate payment with Chapa.'
+            }))
 
-#         # Prepare the data for the payment request
-#         payment_data = {
-#             "amount": amount,
-#             "currency": "ETB", 
-#             "email": email,  
-#             "phone_number": phone,  
-#             "transaction_id": transaction_id,  #
-#             "callback_url": "https://your-website.com/payment/callback",
-#             "return_url": "https://your-website.com/payment/success",
-#         }
+    async def initiate_payment(self, amount, email, phone, transaction_id):
+        """
+        Initiates a payment with Chapa API and returns the payment URL.
+        """
+        headers = {
+            'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}', 
+        }
 
-#         try:
-#             response = requests.post(
-#                 "https://api.chapa.co/api/v1/transaction/initialize/", 
-#                 json=payment_data,
-#                 headers=headers
-#             )
+        # Prepare the data for the payment request
+        payment_data = {
+            "amount": amount,
+            "currency": "ETB", 
+            "email": email,  
+            "phone_number": phone,  
+            "transaction_id": transaction_id,  
+            "callback_url": "https://your-website.com/payment/callback",
+            "return_url": "https://your-website.com/payment/success",
+        }
 
-#             response_data = response.json()
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://api.chapa.co/api/v1/transaction/initialize/", 
+                    json=payment_data,
+                    headers=headers
+                )
 
-#             if response_data.get("status") == "success":
-#                 return response_data.get("data").get("payment_url")
-#             else:
-#                 return None
+            response_data = response.json()
 
-#         except requests.exceptions.RequestException as e:
-#             return None
+            if response_data.get("status") == "success":
+                return response_data.get("data").get("payment_url")
+            else:
+                return None
+
+        except httpx.RequestError as e:
+            return None
+
+
+class PaymentConfirmConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Implementation for payment confirmation
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        pass
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        # Handle the confirmation details here
