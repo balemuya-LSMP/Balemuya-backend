@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill
+from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill,Payment,SubscriptionPlan
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 
@@ -51,6 +51,23 @@ class ProfessionalAdmin(admin.ModelAdmin):
     search_fields = ('user__email',)
     list_filter = ('is_verified', 'is_available', 'rating')
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
+    
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date', 'is_expired')
+    list_filter = ('plan_type', 'duration')
+    search_fields = ('professional__name', 'plan_type')
+    readonly_fields = ('start_date', 'end_date', 'is_expired')
+    
+    def is_expired(self, obj):
+        return obj.is_expired()
+    is_expired.boolean = True
+    is_expired.short_description = 'Expired'
+
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'subscription', 'amount', 'payment_status', 'payment_method', 'payment_date')
+    list_filter = ('payment_status', 'payment_method')
+    search_fields = ('professional__name', 'payment_status', 'subscription__plan_type')
+    readonly_fields = ('payment_date',)
 
 # Register the models with the custom admin classes
 admin.site.register(User)
@@ -62,3 +79,5 @@ admin.site.register(Skill)
 admin.site.register(Portfolio)
 admin.site.register(Certificate) 
 admin.site.register(Address)
+admin.site.register(SubscriptionPlan, SubscriptionPlanAdmin)
+admin.site.register(Payment, PaymentAdmin)
