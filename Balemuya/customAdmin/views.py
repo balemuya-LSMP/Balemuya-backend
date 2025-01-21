@@ -107,7 +107,8 @@ class AdminListView(generics.ListAPIView):
 
     def get_queryset(self):
         if self.request.user.user_type != 'admin':
-            raise PermissionDenied({"message":"You are not authorized to access this."})
+            raise PermissionDenied({"message":
+                "You are not authorized to access this."})
         queryset = Admin.objects.all()
         status_filter = self.request.query_params.get('status', None)
 

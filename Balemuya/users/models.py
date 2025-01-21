@@ -1,5 +1,7 @@
 from django.db import models
 import uuid
+from datetime import timedelta
+from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from services.models import Category
@@ -246,3 +248,67 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.name or 'Unnamed Certificate'
+    
+    
+
+
+class SubscriptionPlan(models.Model):
+    PLAN_CHOICES = [
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
+        ('diamond', 'Diamond'),
+    ]
+    
+    DURATION_CHOICES = [
+        (1, '1 Month'),
+        (3, '3 Months'),
+        (6, '6 Months'),
+        (12, '1 Year'),
+    ]
+    
+    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='subscriptions')
+    plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    duration = models.IntegerField(choices=DURATION_CHOICES)
+    cost = models.DecimalField(max_digits=6, decimal_places=2)
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.end_date:
+            self.end_date = self.start_date + timedelta(days=self.duration * 30)
+        super().save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() > self.end_date
+
+    def __str__(self):
+        return f"{self.professional} - {self.get_plan_type_display()} - {self.get_duration_display()} Plan"
+
+    class Meta:
+        verbose_name = 'Subscription Plan'
+        verbose_name_plural = 'Subscription Plans'
+
+
+
+class Payment(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    subscription = models.ForeignKey('SubscriptionPlan', on_delete=models.CASCADE, related_name='payments')
+    professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(default=timezone.now)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=50)
+    transaction_id = models.CharField(max_length=100, unique=True)
+    
+    def __str__(self):
+        return f"Payment {self.transaction_id} for {self.professional} - {self.amount}"
+
+    class Meta:
+        verbose_name = 'Payment'
+        verbose_name_plural = 'Payments'
