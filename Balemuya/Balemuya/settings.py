@@ -63,7 +63,10 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
 
-
+    'chapa',
+    # 'django_chapa'
+    'channels',
+    
     'users',
     'customAdmin',
     'services',
@@ -149,6 +152,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Balemuya.wsgi.application'
+ASGI_APPLICATION = 'Balemuya.asgi.application'
 
 
 # Database
@@ -256,3 +260,7 @@ cloudinary.config(
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
+
+
+CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY')
+CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY')
