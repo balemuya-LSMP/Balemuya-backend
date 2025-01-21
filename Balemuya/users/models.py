@@ -4,7 +4,6 @@ from datetime import timedelta
 from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from services.models import Category
 # Custom User Manager
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -166,7 +165,7 @@ class Professional(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional')
     categories = models.ManyToManyField(
-        Category, blank=True, related_name='professionals'
+        'services.Category', blank=True, related_name='professionals'
     )
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
