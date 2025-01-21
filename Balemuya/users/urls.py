@@ -23,7 +23,7 @@ urlpatterns = [
     path('profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
-    # path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
+    path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
 
     # path('professionals/',ProfessionalListView.as_view(), name='professional-list'),
     # path('customers/',CustomerListView.as_view(), name='customer-list'),

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
@@ -63,8 +64,6 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
 
-    'chapa',
-    # 'django_chapa'
     'channels',
     
     'users',
@@ -152,6 +151,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Balemuya.wsgi.application'
+
 ASGI_APPLICATION = 'Balemuya.asgi.application'
 
 
