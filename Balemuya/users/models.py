@@ -39,7 +39,7 @@ class User(AbstractUser):
     middle_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     gender = models.CharField(max_length=30, choices=[('male', 'Male'), ('female', 'Female')])
-    email = models.EmailField(max_length=200,unique=True)
+    email = models.EmailField(max_length=200, unique=True)
     phone_number = models.CharField(max_length=30)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     is_active = models.BooleanField(default=False)
@@ -49,7 +49,7 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['first_name', 'middle_name', 'last_name', 'phone_number']
+    REQUIRED_FIELDS = ['first_name', 'middle_name', 'last_name','phone_number']
 
     objects = CustomUserManager()
 
@@ -182,6 +182,7 @@ class Professional(models.Model):
     is_available = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     bio = models.TextField(blank=True, null=True)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return self.user.email
@@ -278,7 +279,11 @@ class SubscriptionPlan(models.Model):
         super().save(*args, **kwargs)
 
     def is_expired(self):
-        return timezone.now() > self.end_date
+        if self.end_date:
+            return timezone.now() > self.end_date
+        else:
+            return False
+        
 
     def __str__(self):
         return f"{self.professional} - {self.get_plan_type_display()} - {self.get_duration_display()} Plan"

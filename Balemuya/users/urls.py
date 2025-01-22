@@ -2,8 +2,8 @@ from django.urls import path
 import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginView,ProfileView,ProfileUpdateView,UserDetailView,UserDeleteView
-from . import consumers
+UpdatePasswordView,GoogleLoginView,ProfileView,ProfileUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
+    InitiatePaymentView, TrackPaymentView, PaymentCallbackView
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='user-register'),
     path('auth/verify-email/', VerifyEmailView.as_view(), name='account_email_verification_sent'),
@@ -23,9 +23,11 @@ urlpatterns = [
     path('profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
-    path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
+    path('<uuid:pk>/block/',UserBlockView.as_view(),name='user-block'),
+    # path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
 
-    # path('professionals/',ProfessionalListView.as_view(), name='professional-list'),
-    # path('customers/',CustomerListView.as_view(), name='customer-list'),
-    # path('admins/',AdminListView.as_view(), name='admin-list'),
+    path('payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
+    path('payment/track/<str:transaction_id>/', TrackPaymentView.as_view(), name='track_payment'),
+    path('payment/callback/', PaymentCallbackView.as_view(), name='payment_callback'),
+
 ]

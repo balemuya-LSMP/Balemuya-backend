@@ -1,8 +1,15 @@
+# # balemuya/routing.py
+# from django.urls import re_path
+# from users.consumers import InitiatePaymentConsumer
+
+# websocket_urlpatterns = [
+#     re_path(r"ws/payment/initiate/", InitiatePaymentConsumer.as_asgi()),
+# ]
+
 from django.urls import path
-from .consumers import PaymentInitiateConsumer,PaymentConfirmConsumer
+from users.consumers import InitiatePaymentConsumer
 
-websocket_urlpatterns = [
-    path('ws/initiate-payment/',PaymentInitiateConsumer.as_asgi()),
-    path("ws/confirm-payment/",PaymentConfirmConsumer.as_asgi()), 
+websocket_urlpatterns= [
+        path('ws/payment/initiate/', InitiatePaymentConsumer.as_asgi()),
+    ]
 
-]
