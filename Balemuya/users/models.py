@@ -68,10 +68,10 @@ class Address(models.Model):
     region = models.CharField(max_length=100, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
     latitude = models.DecimalField(
-        max_digits=9, decimal_places=6, null=True, blank=True
+        max_digits=10, decimal_places=8, null=True, blank=True
     )
     longitude = models.DecimalField(
-        max_digits=9, decimal_places=6, null=True, blank=True
+        max_digits=11, decimal_places=8, null=True, blank=True
     )
     is_current = models.BooleanField(default=False)
 
