@@ -304,17 +304,23 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
     def get_profile_image_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.profile_image.url) if obj.profile_image else None
+        if obj.profile_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
+        return None
     
     def get_kebele_id_front_image_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.kebele_id_front_image.url) if obj.kebele_id_front_image else None
+        if obj.kebele_id_front_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.kebele_id_front_image.url) if request else obj.kebele_id_front_image.url
+        return None
     
     def get_kebele_id_back_image_url(self, obj):
-        request = self.context.get('request')
-        return request.build_absolute_uri(obj.kebele_id_back_image.url) if obj.kebele_id_back_image else None
-
+        if obj.kebele_id_back_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.kebele_id_back_image.url) if request else obj.kebele_id_back_image.url
+        return None
+    
     def create(self, validated_data):
         print('validated data',validated_data)
         user_data = validated_data.pop('user', {})
