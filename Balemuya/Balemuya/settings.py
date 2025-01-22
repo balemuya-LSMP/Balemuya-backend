@@ -41,6 +41,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = []
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
+
+print(os.getenv('DJANGO_SETTINGS_MODULE'))
 
 
 # Application definition
@@ -63,7 +66,6 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'django_twilio',
     'cloudinary',
-
     'channels',
     
     'users',
@@ -154,6 +156,12 @@ WSGI_APPLICATION = 'Balemuya.wsgi.application'
 
 ASGI_APPLICATION = 'Balemuya.asgi.application'
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -231,7 +239,7 @@ CORS_ALLOW_METHODS = [
     'PUT',
     'PATCH',
     'DELETE',
-    'OPTIONS',  # Always include OPTIONS for preflight requests
+    'OPTIONS', 
 ]
 
 # Default primary key field type
@@ -249,6 +257,8 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', True)
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 # EMAIL_TIMEOUT = 30
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
+
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
@@ -257,6 +267,9 @@ cloudinary.config(
     cloudinary_url=CLOUDINARY_URL
 )
 
+
+
+
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
@@ -264,3 +277,6 @@ TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
 
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY')
+
+print('secret',CHAPA_SECRET_KEY)
+print('public',CHAPA_PUBLIC_KEY)

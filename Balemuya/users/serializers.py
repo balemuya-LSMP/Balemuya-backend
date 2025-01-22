@@ -29,7 +29,7 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True, required=False)
-
+    email = serializers.EmailField()
     class Meta:
         model = User
         fields = ['id', 'first_name', 'middle_name', 'last_name', 'gender',
@@ -40,13 +40,13 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def validate_email(self, value):
+        
+        print('email', value)
         try:
             validate_email(value)
         except ValidationError:
             raise serializers.ValidationError(_("Invalid email format."))
 
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("User with this Email already exists.")
         return value
 
     def validate_phone_number(self, value):
@@ -74,23 +74,31 @@ class UserSerializer(serializers.ModelSerializer):
                 address.is_current = True
                 address.save()
 
+        # Create user type-specific instances
         if user.user_type == 'professional':
             Professional.objects.create(user=user)
-
-        if user.user_type == 'customer':
+        elif user.user_type == 'customer':
             Customer.objects.create(user=user)
-
-        if user.user_type == 'admin':
+        elif user.user_type == 'admin':
             Admin.objects.create(user=user)
 
         return user
 
     def update(self, instance, validated_data):
         addresses_data = validated_data.pop('addresses', None)
+        new_email = validated_data.get('email', instance.email)
 
-        # Update user fields
+        # Validate the incoming email first
+        try:
+            self.validate_email(new_email)
+        except serializers.ValidationError as e:
+            raise e
+        if instance.email != new_email and User.objects.filter(email=new_email).exists():
+            raise serializers.ValidationError(_("User with this email already exists."))
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
         instance.save()
 
         # Update addresses if provided
@@ -102,9 +110,8 @@ class UserSerializer(serializers.ModelSerializer):
                     Address.objects.filter(user=instance, is_current=True).update(is_current=False)
                     address.is_current = True
                     address.save()
-
+        print('instance', instance)
         return instance
-
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
@@ -155,7 +162,6 @@ class AdminSerializer(serializers.ModelSerializer):
 
     def _update_permissions(self, instance, validated_data):
         if 'permissions' in validated_data:
-            # Clear existing permissions
             instance.permissions.clear()
 
             # Add new permissions
@@ -293,7 +299,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Professional
-        fields = '__all__'
+        fields ='__all__'
         
     def get_profile_image_url(self, obj):
         if obj.profile_image:
@@ -341,31 +347,44 @@ class ProfessionalSerializer(serializers.ModelSerializer):
 
         # Update user if provided
         if user_data:
+            print('instance data',user_data)
             user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
+            print('user serializer is valid') if user_serializer.is_valid() else print('user serializer is not valid')
+
+            
 
         # Handle nested updates
         if skills_data is not None:
+            print('skills called')
             self._handle_nested_updates(instance, skills_data, 'skills')
 
         if educations_data is not None:
+            print('deducations called')
             self._handle_nested_updates(instance, educations_data, 'educations')
 
         if portfolios_data is not None:
+            print('portfolios called')
             self._handle_nested_updates(instance, portfolios_data, 'portfolios')
 
         if certificates_data is not None:
+            print('ceritficatiions called')
             self._handle_nested_updates(instance, certificates_data, 'certificates')
+            print('certifications finished')
 
         if categories_data is not None:
+            print('categories called')
             self._handle_nested_updates(instance, categories_data, 'categories')  # Handle categories update
-
+        
+        print('validated datas',validated_data.items())
         # Update remaining fields
         for attr, value in validated_data.items():
+            print('attr',attr,': value',value)
             setattr(instance, attr, value)
 
         instance.save()
+        print('profile instnce',instance)
         return instance
 
     def _handle_user_creation(self, user_data):

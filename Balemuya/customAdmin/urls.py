@@ -4,6 +4,7 @@ from .views import ProfessionalListView,CustomerListView,AdminListView
 
 from .views import (
     ProfessionalListView,
+    VerifyProfessional,
     CustomerListView,
     AdminListView
     
@@ -12,8 +13,7 @@ from .views import (
 urlpatterns = [
     # List all professionals
     path('professionals/', ProfessionalListView.as_view(), name='professional-list'),
-    # path('professionals/<uuid:id>/', ProfessionalDetailView.as_view(), name='professional-detail'),
-    # path('professionals/create/', ProfessionalCreateView.as_view(), name='professional-create'),
+    path('professionals/<uuid:id>/verify/', VerifyProfessional.as_view(), name='verify-professional'),
     # path('professionals/<uuid:id>/update/', ProfessionalUpdateView.as_view(), name='professional-update'),
     # path('professionals/<uuid:id>/delete/', ProfessionalDeleteView.as_view(), name='professional-delete'),
     

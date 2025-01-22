@@ -68,6 +68,11 @@ class ProfessionalListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+
+class VerifyProfessional(APIView):
+    pass
+
+
 # View for listing Customers
 class CustomerListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
