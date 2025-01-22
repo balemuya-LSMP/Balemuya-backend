@@ -346,14 +346,13 @@ class ProfileUpdateView(generics.UpdateAPIView):
 
     def put(self, request, *args, **kwargs):
         user = request.user
-        print('user',user)
-
+        serialzer = None
         # Get the profile based on user type
         if user.user_type == 'customer':
             profile = Customer.objects.get(user=user)
             serializer = CustomerSerializer(profile, data=request.data, partial=True, context={'request': request})
         elif user.user_type == 'professional':
-            print('user',user)
+            # print('data is ',request.data)
             profile = Professional.objects.get(user=user)
             serializer = ProfessionalSerializer(profile, data=request.data, partial=True, context={'request': request})
             print('professional',profile)
