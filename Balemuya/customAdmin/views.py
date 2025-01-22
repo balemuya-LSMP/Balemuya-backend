@@ -136,3 +136,21 @@ class AdminListView(generics.ListAPIView):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    
+
+class VerifyProfessional(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, id):
+        if request.user.user_type != 'admin':
+            return Response({"message":"You are not authorized to access this."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            professional = Professional.objects.get(id=id) 
+        except Professional.DoesNotExist:
+            return Response({'error': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        professional.is_verified = True
+        professional.save()
+        serializer = ProfessionalSerializer(professional)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
