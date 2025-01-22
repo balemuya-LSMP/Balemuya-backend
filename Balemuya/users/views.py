@@ -25,7 +25,7 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin
+from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan
 from .utils import send_sms, generate_otp, send_email_confirmation
 
 from .serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
@@ -342,29 +342,33 @@ class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return User.objects.filter(pk=self.request.user.pk)
+        return User.objects.filter(id=self.request.user.id)
 
-    def patch(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         user = request.user
+        print('user',user)
 
+        # Get the profile based on user type
         if user.user_type == 'customer':
             profile = Customer.objects.get(user=user)
             serializer = CustomerSerializer(profile, data=request.data, partial=True, context={'request': request})
         elif user.user_type == 'professional':
+            print('user',user)
             profile = Professional.objects.get(user=user)
             serializer = ProfessionalSerializer(profile, data=request.data, partial=True, context={'request': request})
+            print('professional',profile)
         elif user.user_type == 'admin':
             profile = Admin.objects.get(user=user)
             serializer = AdminSerializer(profile, data=request.data, partial=True, context={'request': request})
         else:
             return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validate and save the profile
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class UsersView(APIView):
     permission_classes = [IsAuthenticated]
     pass
@@ -433,3 +437,162 @@ class UserDeleteView(generics.DestroyAPIView):
 
         user.delete()
         return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    
+class UserBlockView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk):
+        try:
+            return User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return None
+
+    def patch(self, request, pk, *args, **kwargs):
+        user = self.get_object(pk)
+        print('user is',user)
+
+        if user is None:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if user.is_blocked:
+            user.is_blocked=False
+            return Response({'message': 'User Unblocked successfully'}, status=status.HTTP_200_OK)
+        
+        elif not user.is_blocked:
+            user.is_blocked=True
+            return Response({'message': 'User blocked successfully'}, status=status.HTTP_200_OK)
+
+
+
+class InitiatePaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+        amount = data.get("amount")
+        plan_type = data.get("plan_type")
+        duration = data.get("duration")
+        txt_ref =  uuid.uuid4()
+
+        if not amount:
+            return Response(
+                {"error": "Amount and transaction required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        professional = Professional.objects.get(user=user)
+        if professional is None:
+            return Response(
+                {"error": "Professional not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        subscription_plan, created = SubscriptionPlan.objects.get_or_create(professional=professional, plan_type=plan_type,duration = duration)
+        if professional.balance < subscription_plan.cost:
+            return Response(
+                {"error": "Insufficient balance please deposit enough amount."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        # Chapa API interaction
+        chapa_url = "https://api.chapa.co/v1/transaction/initialize"
+        chapa_api_key = settings.CHAPA_SECRET_KEY
+        payload = {
+            "amount": amount,
+            "currency": "ETB",
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "tx_ref": txt_ref,
+            "callback_url": "http://localhost:8000/api/users/payment/callback/",
+            "return_url": "http://localhost:3000/payment/success/"
+        }
+        headers = {
+            "Authorization": f"Bearer {chapa_api_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(chapa_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                result = response.json()
+
+                subscription_plan = SubscriptionPlan.objects.get(professional=professional)
+                Payment.objects.create(
+                    professional=professional,
+                    subscription=subscription_plan,
+                    transaction_id=txt_ref,
+                    amount=amount,
+                    payment_status='pending'
+                )
+
+                return Response(
+                    {
+                        "response": "Payment initiated successfully.",
+                        "payment_url": result.get("data", {}).get("checkout_url"),
+                        "transaction_id": txt_ref
+                    },
+                    status=status.HTTP_200_OK
+                )
+            else:
+                error_message = response.json().get("message", "Failed to initiate payment.")
+                return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            return Response(
+                {"error": f"Payment request failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class TrackPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, transaction_id):
+        try:
+            payment = Payment.objects.get(transaction_id=transaction_id)
+            return Response(
+                {
+                    "transaction_id": transaction_id,
+                    "payment_status": payment.payment_status
+                },
+                status=status.HTTP_200_OK
+            )
+        except Payment.DoesNotExist:
+            return Response(
+                {"error": "Transaction not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+
+class PaymentCallbackView(APIView):
+    def post(self, request):
+        try:
+            data = request.data
+            transaction_id = data.get("transaction_id")
+            status_value = data.get("status")
+
+            if not transaction_id or not status_value:
+                return Response(
+                    {"error": "Invalid callback data."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                payment = Payment.objects.get(transaction_id=transaction_id)
+                payment.payment_status = 'completed'
+                payment.save()
+                return Response({"status": "success"}, status=status.HTTP_200_OK)
+            except Payment.DoesNotExist:
+                return Response(
+                    {"error": "Transaction not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
