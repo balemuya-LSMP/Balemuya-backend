@@ -42,6 +42,9 @@ class User(AbstractUser):
     email = models.EmailField(max_length=200, unique=True)
     phone_number = models.CharField(max_length=30)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
+    profile_image = CloudinaryField(
+        'image', null=True, blank=True, folder='Profile/profile_images'
+    )
     is_active = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)
     last_login = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -134,9 +137,6 @@ class AdminLog(models.Model):
 class Customer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
-    profile_image = CloudinaryField(
-        'image', null=True, blank=True, folder='CustomerProfile/profile_images'
-    )
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
@@ -150,7 +150,7 @@ class Customer(models.Model):
 # Skill Model for Professionals
 class Skill(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
@@ -169,9 +169,6 @@ class Professional(models.Model):
     )
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    profile_image = CloudinaryField(
-        'image', null=True, blank=True, folder='Professional/profile_images'
-    )
     kebele_id_front_image = CloudinaryField(
         'image', null=True, blank=True, folder='Professional/kebele_id_images/front_images'
     )
@@ -316,3 +313,45 @@ class Payment(models.Model):
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
+        
+        
+
+class VerificationRequest(models.Model):
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    professional = models.OneToOneField(Professional, on_delete=models.CASCADE, related_name='verification_requests')
+    verified_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    
+    class Meta:
+         unique_together = ('professional', 'status')
+         
+         
+    def save(self, *args, **kwargs):
+        if self.status in ['approved', 'rejected'] and not self.verified_by:
+            raise ValueError("An admin must verify the request before approving or rejecting.")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Verification Request for {self.professional} staus {self.status}"
+    
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        sender_info = f"from {self.sender}" if self.sender else "from System"
+        return f"Notification for {self.recipient} {sender_info}: {self.message[:20]}"

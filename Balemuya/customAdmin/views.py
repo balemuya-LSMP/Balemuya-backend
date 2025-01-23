@@ -26,10 +26,11 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from users.models import User, Professional, Customer, Admin
-from users.utils import send_sms, generate_otp, send_email_confirmation
+from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest, Notification
+from users.utils import send_sms, generate_otp, send_email_confirmation,send_push_notification
 
-from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
+from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
+  VerificationRequestSerializer, NotificationSerializer
 
 # Create your views here.
 
@@ -137,20 +138,55 @@ class AdminListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
-
-class VerifyProfessional(APIView):
+    
+    
+class AdminVerifyProfessionalView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, id):
-        if request.user.user_type != 'admin':
-            return Response({"message":"You are not authorized to access this."}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            professional = Professional.objects.get(id=id) 
-        except Professional.DoesNotExist:
-            return Response({'error': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+    def patch(self, request, pk):
+        if not request.user.user_type == 'admin':
+            return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
-        professional.is_verified = True
-        professional.save()
-        serializer = ProfessionalSerializer(professional)
+        try:
+            verification_request = VerificationRequest.objects.get(pk=pk)
+        except VerificationRequest.DoesNotExist:
+            return Response({"error": "Verification request not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the verification request is still pending
+        if verification_request.status != "pending":
+            return Response({"error": "This request has already been processed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        action = request.data.get("action")
+        admin_comment = request.data.get("admin_comment", "")
+
+        if action not in ["approved", "rejected"]:
+            return Response({"error": "Invalid action. Must be 'approved' or 'rejected'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the verification request
+        verification_request.status = action
+        verification_request.admin_comment = admin_comment
+        verification_request.verified_by = request.user 
+        verification_request.save()
         
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if verification_request.status == "approved":
+            professional = verification_request.professional
+            professional.is_verified = True
+            professional.save()
+            
+            subject = "Verification Approved"
+            message = "Congratulations! Your verification request has been approved by the admin."
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [professional.user.email]
+            send_mail(subject, message, email_from, recipient_list)
+            send_push_notification(professional.user, "Congratulations! Your verification request has been approved by the admin.")
+
+        elif verification_request.status == "rejected":
+            subject = "Verification Rejected"
+            message = f"Your verification request has been rejected by the admin. Reason: {admin_comment}"
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [verification_request.professional.user.email]
+            send_mail(subject, message, email_from, recipient_list)
+            send_push_notification(verification_request.professional.user, f"Your verification request has been rejected by the admin. Reason: {admin_comment}")
+            
+        serializer = VerificationRequestSerializer(verification_request)
+        return Response({"message": f"Request successfully {action}.", "data": serializer.data}, status=status.HTTP_200_OK)

@@ -4,6 +4,9 @@ from django_twilio.client import twilio_client
 from django.http import JsonResponse
 import random
 
+from fcm_django.models import FCMDevice
+
+
 def generate_otp():
     """Generates a 6-digit random OTP."""
     return random.randint(100000, 999999)
@@ -40,6 +43,16 @@ def send_email_confirmation(subject, message, recipient_list):
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return str(e)
+    
+    
+
+def send_push_notification(user, title, message):
+    devices = FCMDevice.objects.filter(user=user)
+    if devices.exists():
+        device = devices.first()
+        device.send_message(title=title, body=message)
+    else:
+        print("No devices found for this user.")
 
 
     
