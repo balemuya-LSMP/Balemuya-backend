@@ -67,7 +67,6 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
     'channels',
-    'fcm_django',
 
     
     'users',

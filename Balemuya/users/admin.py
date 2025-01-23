@@ -56,13 +56,10 @@ class CustomerAdmin(admin.ModelAdmin):
 
 # Professional Admin
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified', 'profile_image_preview', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating', 'years_of_experience', 'is_available')
+    list_display = ('user', 'is_verified', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating', 'years_of_experience', 'is_available')
     search_fields = ('user__email',)
     list_filter = ('is_verified', 'is_available', 'rating')
-    def profile_image_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.profile_image}" width="50" height="50" />')
-    profile_image_preview.allow_tags = True
-    profile_image_preview.short_description = 'Profile Image'
+
     def kebele_id_image_front_preview(self, obj):
             return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_front_image}" width="50" height="50" />')
     kebele_id_image_front_preview.allow_tags = True
@@ -70,7 +67,7 @@ class ProfessionalAdmin(admin.ModelAdmin):
 
     def kebele_id_image_back_preview(self, obj):
             return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_back_image}" width="50" height="50" />')
-    profile_image_preview.allow_tags = True
+    kebele_id_image_back_preview.allow_tags = True
     kebele_id_image_back_preview.short_description = 'Id back Image'
     inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
 
