@@ -6,15 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from django.db import transaction
 from .models import User, Address, Permission, Admin, AdminLog, Customer, Skill, Professional, Education, Portfolio, Certificate,\
     Payment, SubscriptionPlan, VerificationRequest, Notification
-from services.models import Category
-from services.serializers import CategorySerializer  # Import the existing CategorySerializer
-
-
-class AddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Address
-        fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude', 'is_current']
-
+from common.models import Category
+from common.serializers import CategorySerializer,UserSerializer
 
 
 class LoginSerializer(serializers.Serializer):
@@ -44,69 +37,11 @@ class VerificationRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['status', 'admin_comment', 'created_at', 'updated_at']
 
 
-class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
-    email = serializers.EmailField(max_length=200)
-    profile_image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = User
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 'profile_image','profile_image_url','gender', 
-                  'email', 'phone_number', 'user_type', 'is_active', 'is_blocked', 
-                  'created_at', 'updated_at', 'addresses']
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
-        
-    def get_profile_image_url(self,obj):
-        if obj.profile_image:
-            request = self.context.get('request')
-            return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
-        return None
-
-    def validate_email(self, value):
-        # Custom email validation logic
-        try:
-            validate_email(value)
-        except ValidationError:
-            raise serializers.ValidationError("Invalid email format.")
-        return value
-
-    def validate_phone_number(self, value):
-        # Custom phone number validation logic
-        if not re.match(r'^\+?1?\d{9,15}$', value):
-            raise serializers.ValidationError("Phone number must be in a valid format.")
-        return value
-
-    def create(self, validated_data):
-        user = User.objects.create(**validated_data)
-        user.set_password(validated_data['password'])
-        user.save()
-
-        if user.user_type == 'professional':
-            Professional.objects.create(user=user)
-        elif user.user_type == 'customer':
-            Customer.objects.create(user=user)
-        elif user.user_type == 'admin':
-            Admin.objects.create(user=user)
-
-        return user
-
-    def update(self, instance, validated_data):
-        email = validated_data.pop('email', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        if instance.email != email:
-            instance.email = email
-            
-        instance.save()
-
-        return instance
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Skill
-        fields = '__all__'
+        fields = ['id', 'name']
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -256,8 +191,8 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=False)  # Allow user to be set during creation
     kebele_id_front_image_url = serializers.SerializerMethodField()
     kebele_id_back_image_url = serializers.SerializerMethodField()
-    categories = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), many=True, required=False)
-    skills = serializers.PrimaryKeyRelatedField(queryset=Skill.objects.all(), many=True, required=False)
+    categories = CategorySerializer(many=True,read_only=True)
+    skills = SkillSerializer(many=True,read_only=True)
     educations = EducationSerializer(many=True, read_only=True)  
     portfolios = PortfolioSerializer(many=True, read_only=True) 
     certificates = CertificateSerializer(many=True, read_only=True) 

@@ -28,13 +28,13 @@ from allauth.socialaccount.models import SocialApp
 from urllib.parse import parse_qs
 
 from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,Notification
-from services.models import Category
+from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation
 
-from .serializers import UserSerializer, LoginSerializer,AddressSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
+from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer
     
-    
+from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 class RegisterFCMDeviceView(APIView):
     permission_classes = [IsAuthenticated]
 

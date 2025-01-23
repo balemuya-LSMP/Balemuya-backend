@@ -68,10 +68,11 @@ INSTALLED_APPS = [
     'cloudinary',
     'channels',
 
-    
+    'services',
+    'common',
     'users',
     'customAdmin',
-    'services',
+    
 ]
 
 AUTHENTICATION_BACKENDS = (
