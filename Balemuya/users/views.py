@@ -23,12 +23,34 @@ from allauth.socialaccount.helpers import complete_social_login
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.models import SocialApp
 
+from fcm_django.models import FCMDevice
+
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan
+from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,Notification
+from services.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation
 
-from .serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer
+from .serializers import UserSerializer, LoginSerializer,AddressSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
+    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer
+    
+    
+class RegisterFCMDeviceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get("token")
+        device_type = request.data.get("type")  # e.g., "web", "android", or "ios"
+
+        if token:
+            device, created = FCMDevice.objects.update_or_create(
+                user=request.user, 
+                registration_id=token,
+                defaults={"type": device_type}
+            )
+            return Response({"message": "Device registered successfully."})
+        return Response({"error": "Token is required."}, status=400)
+
 
 class RegisterView(APIView):
     serializer_class = UserSerializer
@@ -338,39 +360,47 @@ class ProfileView(APIView):
         else:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-class ProfileUpdateView(generics.UpdateAPIView):
+class UserUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
 
-    def get_queryset(self):
-        return User.objects.filter(id=self.request.user.id)
-
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         user = request.user
-        serialzer = None
-        # Get the profile based on user type
-        if user.user_type == 'customer':
-            profile = Customer.objects.get(user=user)
-            serializer = CustomerSerializer(profile, data=request.data, partial=True, context={'request': request})
-        elif user.user_type == 'professional':
-            # print('data is ',request.data)
-            profile = Professional.objects.get(user=user)
-            serializer = ProfessionalSerializer(profile, data=request.data, partial=True, context={'request': request})
-            print('professional',profile)
-        elif user.user_type == 'admin':
-            profile = Admin.objects.get(user=user)
-            serializer = AdminSerializer(profile, data=request.data, partial=True, context={'request': request})
-        else:
-            return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
-
+        serializer = self.serializer_class(user, data=request.data, partial=True)
         # Validate and save the profile
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class UsersView(APIView):
-    permission_classes = [IsAuthenticated]
-    pass
+
+class AddressView(APIView):
+    permission_class = [IsAuthenticated]
+    serializer_class = AddressSerializer
+    
+    def post(self,request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self,request,pk):
+        print('pk is',pk)
+        address = Address.objects.get(id=pk,user=request.user)
+        serializer = self.serializer_class(address,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self,request,pk):
+        address = Address.objects.get(id=pk,user=request.user)
+        address.delete()
+        return Response({"message":"Address deleted successfully"},status=status.HTTP_200_OK)
+    
+        
+
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
@@ -460,6 +490,238 @@ class UserBlockView(generics.UpdateAPIView):
         elif not user.is_blocked:
             user.is_blocked=True
             return Response({'message': 'User blocked successfully'}, status=status.HTTP_200_OK)
+
+
+# views related to professional
+class ProfessionalSkillView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            professional = Professional.objects.get(user=request.user)
+            skill_names = request.data.get("names", [])  # Accept a list of skill names
+
+            if not skill_names or not isinstance(skill_names, list):
+                return Response({"detail": "A list of skill names is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            added_skills = []
+            for name in skill_names:
+                skill, created = Skill.objects.get_or_create(name=name)
+                professional.skills.add(skill)
+                added_skills.append({"id": skill.id, "name": skill.name})
+
+            return Response(
+                {"detail": "Skills added successfully.", "skills": added_skills},
+                status=status.HTTP_201_CREATED
+            )
+        except Professional.DoesNotExist:
+            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request):
+        """
+        Remove a skill from the authenticated professional.
+        """
+        try:
+            professional = Professional.objects.get(user=request.user)
+            skill_id = request.data.get("id")
+
+            if not skill_id:
+                return Response({"detail": "Skill ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            skill = Skill.objects.get(id=skill_id)
+            professional.skills.remove(skill)
+
+            return Response(
+                {"detail": "Skill removed successfully.", "skill": {"id": skill.id, "name": skill.name}},
+                status=status.HTTP_200_OK
+            )
+        except Professional.DoesNotExist:
+            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Skill.DoesNotExist:
+            return Response({"detail": "Skill not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class ProfessionalCategoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            professional = Professional.objects.get(user=request.user)
+            category_names = request.data.get("names", [])  # Accept a list of category names
+
+            if not category_names or not isinstance(category_names, list):
+                return Response({"detail": "A list of category names is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            added_categories = []
+            for name in category_names:
+                category, created = Category.objects.get_or_create(name=name)
+                professional.categories.add(category)
+                added_categories.append({"id": category.id, "name": category.name})
+
+            return Response(
+                {"detail": "Categories added successfully.", "categories": added_categories},
+                status=status.HTTP_201_CREATED
+            )
+        except Professional.DoesNotExist:
+            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request):
+        try:
+            professional = Professional.objects.get(user=request.user)
+            category_id = request.data.get("id")
+
+            if not category_id:
+                return Response({"detail": "Category ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            category = Category.objects.get(id=category_id)
+            professional.categories.remove(category)
+
+            return Response(
+                {"detail": "Category removed successfully.", "category": {"id": category.id, "name": category.name}},
+                status=status.HTTP_200_OK
+            )
+        except Professional.DoesNotExist:
+            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Category.DoesNotExist:
+            return Response({"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CertificateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CertificateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(professional=request.user.professional)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        try:
+            certificate = Certificate.objects.get(id=pk, professional=request.user.professional)
+        except Certificate.DoesNotExist:
+            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CertificateSerializer(certificate, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            certificate = Certificate.objects.get(id=pk, professional=request.user.professional)
+        except Certificate.DoesNotExist:
+            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        certificate.delete()
+        return Response({"detail": "Certificate deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+class EducationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Get the authenticated professional
+            professional = request.user.professional
+            # Add professional ID to the validated data
+            request.data['professional'] = professional.id
+            serializer = EducationSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None):
+        try:
+            professional = request.user.professional
+            education = Education.objects.get(pk=pk, professional=professional)
+            serializer = EducationSerializer(education, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Education.DoesNotExist:
+            return Response({"detail": "Education not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None):
+        try:
+            # Get the professional and the education record to delete
+            professional = request.user.professional
+            education = Education.objects.get(pk=pk, professional=professional)
+            education.delete()
+            return Response({"detail": "Education deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Education.DoesNotExist:
+            return Response({"detail": "Education not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class PortfolioView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            professional = request.user.professional
+            request.data['professional'] = professional.id
+            serializer = PortfolioSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None):
+        try:
+            professional = request.user.professional
+            portfolio = Portfolio.objects.get(pk=pk, professional=professional)
+            serializer = PortfolioSerializer(portfolio, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Portfolio.DoesNotExist:
+            return Response({"detail": "Portfolio not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None):
+        try:
+            # Get the professional and the portfolio record to delete
+            professional = request.user.professional
+            portfolio = Portfolio.objects.get(pk=pk, professional=professional)
+            portfolio.delete()
+            return Response({"detail": "Portfolio deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Portfolio.DoesNotExist:
+            return Response({"detail": "Portfolio not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfessionalVerificationRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        try:
+            professional = Professional.objects.get(user=user)
+        except Professional.DoesNotExist:
+            return Response({"error": "You must be a professional to request verification."}, status=status.HTTP_403_FORBIDDEN)
+
+        if VerificationRequest.objects.filter(professional=professional, status='pending').exists():
+            return Response({"error": "A pending verification request already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        verification_request = VerificationRequest.objects.create(professional=professional)
+        serializer = VerificationRequestSerializer(verification_request)
+
+        return Response({"message": "Verification request submitted successfully.", "data": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 
@@ -595,3 +857,36 @@ class PaymentCallbackView(APIView):
                 {"error": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+            
+            
+class NotificationListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        notifications = request.user.notifications.all().order_by('-created_at')
+        data = [
+            {
+                "id": notification.id,
+                "message": notification.message,
+                "sender": notification.sender.first_name if notification.sender else "System",
+                "is_read": notification.is_read,
+                "created_at": notification.created_at,
+            }
+            for notification in notifications
+        ]
+        return Response(data)
+    
+
+class MarkNotificationAsReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            notification = Notification.objects.get(pk=pk, recipient=request.user)
+        except Notification.DoesNotExist:
+            return Response({"error": "Notification not found."}, status=404)
+        
+        notification.is_read = True
+        notification.save()
+        return Response({"message": "Notification marked as read."})
