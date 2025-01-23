@@ -589,9 +589,10 @@ class CertificateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        professional = request.user.professional
         serializer = CertificateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(professional=request.user.professional)
+            serializer.save(professional=professional)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -623,13 +624,12 @@ class EducationView(APIView):
 
     def post(self, request):
         try:
-            # Get the authenticated professional
             professional = request.user.professional
-            # Add professional ID to the validated data
-            request.data['professional'] = professional.id
-            serializer = EducationSerializer(data=request.data)
+            serializer = EducationSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
-                serializer.save()
+                print('serializer is valid')
+                serializer.save(professional=professional)
+                print('professional saved',serializer.data)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -668,10 +668,9 @@ class PortfolioView(APIView):
     def post(self, request):
         try:
             professional = request.user.professional
-            request.data['professional'] = professional.id
-            serializer = PortfolioSerializer(data=request.data)
+            serializer = PortfolioSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(professional=professional)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
