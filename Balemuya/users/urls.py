@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
 UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
     ProfessionalVerificationRequestView,InitiatePaymentView, TrackPaymentView, PaymentCallbackView,MarkNotificationAsReadView,NotificationListView,\
-        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView
+        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView
 urlpatterns = [
     
     path('register-device/', RegisterFCMDeviceView.as_view(), name='register_device'),
@@ -31,6 +31,8 @@ urlpatterns = [
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
     path('<uuid:pk>/block/',UserBlockView.as_view(),name='user-block'),
     
+    
+    path('professional/profile/update/',ProfessionalProfileUpdateView.as_view(), name='professional-update'),
     path('professional/profile/skills/', ProfessionalSkillView.as_view(), name='skill-create-update-delete'),
     path('professional/profile/categories/', ProfessionalCategoryView.as_view(), name='category-create-delete'),
     

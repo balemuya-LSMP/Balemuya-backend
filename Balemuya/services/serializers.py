@@ -12,7 +12,7 @@ class ServicePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServicePost
         fields = [
-            "id", "customer", "customer_name", "category", "description", 
+            "id", "customer", "category", "description", 
             "status", "urgency", "work_due_date", "created_at", "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at","customer"]
@@ -41,7 +41,6 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
     def update(self, instance, validated_data):
-        # Prevent changing the application status
         if 'status' in validated_data:
             raise serializers.ValidationError("You cannot change the application status.")
         return super().update(instance, validated_data)

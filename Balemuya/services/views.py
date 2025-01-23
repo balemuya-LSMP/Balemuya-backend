@@ -18,6 +18,8 @@ class ServicePostAPIView(APIView):
                 return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             service_posts = ServicePost.objects.all()
+            if not service_posts:
+                return Response({"detail": "No service posts found."}, status=status.HTTP_404_NOT_FOUND)
             serializer = ServicePostSerializer(service_posts, many=True)
             return Response(serializer.data)
 

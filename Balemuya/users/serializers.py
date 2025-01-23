@@ -188,7 +188,7 @@ class CertificateSerializer(serializers.ModelSerializer):
 
 
 class ProfessionalSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=False)  # Allow user to be set during creation
+    user = UserSerializer(read_only=False)
     kebele_id_front_image_url = serializers.SerializerMethodField()
     kebele_id_back_image_url = serializers.SerializerMethodField()
     categories = CategorySerializer(many=True,read_only=True)
@@ -221,7 +221,14 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         return None
 
     def create(self, validated_data):
-        # Automatically associate the user from the request context
         user = self.context['request'].user
-        validated_data['user'] = user  # Associate the professional with the current user
+        validated_data['user'] = user
         return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        instance.kebele_id_front_image = validated_data.get('kebele_id_front_image', instance.kebele_id_front_image)
+        instance.kebele_id_back_image = validated_data.get('kebele_id_back_image', instance.kebele_id_back_image)
+        instance.bio = validated_data.get('bio', instance.bio)
+        instance.balance = validated_data.get('balance', instance.balance)
+        instance.save()
+        return instance
