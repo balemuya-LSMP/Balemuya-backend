@@ -4,7 +4,7 @@ from django_twilio.client import twilio_client
 from django.http import JsonResponse
 import random
 
-from fcm_django.models import FCMDevice
+# from fcm_django.models import FCMDevice
 
 
 def generate_otp():
@@ -47,7 +47,8 @@ def send_email_confirmation(subject, message, recipient_list):
     
 
 def send_push_notification(user, title, message):
-    devices = FCMDevice.objects.filter(user=user)
+    device = None
+    # devices = FCMDevice.objects.filter(user=user)
     if devices.exists():
         device = devices.first()
         device.send_message(title=title, body=message)

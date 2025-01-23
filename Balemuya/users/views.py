@@ -23,7 +23,7 @@ from allauth.socialaccount.helpers import complete_social_login
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.models import SocialApp
 
-from fcm_django.models import FCMDevice
+# from fcm_django.models import FCMDevice
 
 from urllib.parse import parse_qs
 
