@@ -42,7 +42,7 @@ urlpatterns = [
     path('professional/profile/educations/<uuid:pk>/update/', EducationView.as_view(), name='education-update'),  # PUT
     path('professional/profile/educations/<uuid:pk>/delete/', EducationView.as_view(), name='education-delete'),  # DELETE
     
-    path('professional/profile/portfolio/add/', PortfolioView.as_view(), name='portfolio-create'),  # POST
+    path('professional/profile/portfolios/add/', PortfolioView.as_view(), name='portfolio-create'),  # POST
     path('professional/profile/portfolios/<uuid:pk>/update/', PortfolioView.as_view(), name='portfolio-update'),  # PUT
     path('professional/profile/portfolios/<uuid:pk>/delete/', PortfolioView.as_view(), name='portfolio-delete'),  # DELETE
     path('professional/verification-requests/', ProfessionalVerificationRequestView.as_view(), name='professional-verification-request'),

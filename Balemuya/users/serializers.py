@@ -193,12 +193,12 @@ class CustomerSerializer(serializers.ModelSerializer):
 class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Education
-        fields = ['id', 'professional', 'school', 'degree', 'field_of_study', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'professional', 'created_at', 'updated_at']
+        fields = ['id','school', 'degree', 'field_of_study', 'created_at', 'updated_at']
+        read_only_fields = ['id','created_at', 'updated_at']
+        write_only_fields = ['professional']
     
     def create(self, validated_data):
-        validated_data['professional'] = self.context['request'].user.professional
-        return super().create(validated_data)
+        return Education.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         validated_data['professional'] = instance.professional
@@ -210,8 +210,9 @@ class PortfolioSerializer(serializers.ModelSerializer):
     portfolio_image_url = serializers.SerializerMethodField()
     class Meta:
         model = Portfolio
-        fields = ['id', 'professional', 'title', 'description', 'image', 'portfolio_image_url','created_at', 'updated_at']
-        read_only_fields = ['id', 'professional', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'description', 'image', 'portfolio_image_url','created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        write_only_fields = ['professional']
      
     def get_portfolio_image_url(self,obj):
         if obj.image:
@@ -219,8 +220,7 @@ class PortfolioSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return None
     def create(self, validated_data):
-        validated_data['professional'] = self.context['request'].user.professional
-        return super().create(validated_data)
+       return Portfolio.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         validated_data['professional'] = instance.professional
@@ -233,8 +233,9 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Certificate
-        fields = ['id', 'professional', 'image', 'name', 'certificate_image_url', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'professional', 'created_at', 'updated_at']
+        fields = ['id', 'image', 'name', 'certificate_image_url', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        write_only_fields = ['professional']
 
     def get_certificate_image_url(self, obj):
         if obj.image:
@@ -243,8 +244,7 @@ class CertificateSerializer(serializers.ModelSerializer):
         return None
 
     def create(self, validated_data):
-        validated_data['professional'] = self.context['request'].user.professional
-        return super().create(validated_data)
+        return Certificate.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         validated_data['professional'] = instance.professional
