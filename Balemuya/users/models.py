@@ -165,7 +165,7 @@ class Professional(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional')
     categories = models.ManyToManyField(
-        'services.Category', blank=True, related_name='professionals'
+        'common.Category', blank=True, related_name='professionals'
     )
     skills = models.ManyToManyField(Skill, blank=True, related_name='professionals')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
