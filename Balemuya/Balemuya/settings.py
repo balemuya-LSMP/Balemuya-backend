@@ -67,6 +67,8 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
     'channels',
+    'fcm_django',
+
     
     'users',
     'customAdmin',
@@ -278,5 +280,8 @@ TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY')
 
-print('secret',CHAPA_SECRET_KEY)
-print('public',CHAPA_PUBLIC_KEY)
+FCM_DJANGO_SETTINGS = {
+    "FCM_SERVER_KEY": os.getenv("FCM_SERVER_KEY"),  
+    "FIREBASE_SENDER_ID": os.getenv("FIREBASE_SENDER_ID"), 
+    "ONE_DEVICE_PER_USER": False, 
+}
