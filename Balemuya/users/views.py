@@ -485,10 +485,12 @@ class UserBlockView(generics.UpdateAPIView):
         
         if user.is_blocked:
             user.is_blocked=False
+            user.save()
             return Response({'message': 'User Unblocked successfully'}, status=status.HTTP_200_OK)
         
         elif not user.is_blocked:
             user.is_blocked=True
+            user.save()
             return Response({'message': 'User blocked successfully'}, status=status.HTTP_200_OK)
 
 
