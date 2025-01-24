@@ -27,7 +27,7 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,Notification
+from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation
 
@@ -476,7 +476,7 @@ class UserBlockView(generics.UpdateAPIView):
         except User.DoesNotExist:
             return None
 
-    def patch(self, request, pk, *args, **kwargs):
+    def put(self, request, pk, *args, **kwargs):
         user = self.get_object(pk)
         print('user is',user)
 
@@ -716,6 +716,7 @@ class PortfolioView(APIView):
 class ProfessionalVerificationRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
+
     def post(self, request):
         user = request.user
 
@@ -868,34 +869,4 @@ class PaymentCallbackView(APIView):
             )
             
             
-            
-class NotificationListView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        notifications = request.user.notifications.all().order_by('-created_at')
-        data = [
-            {
-                "id": notification.id,
-                "message": notification.message,
-                "sender": notification.sender.first_name if notification.sender else "System",
-                "is_read": notification.is_read,
-                "created_at": notification.created_at,
-            }
-            for notification in notifications
-        ]
-        return Response(data)
-    
-
-class MarkNotificationAsReadView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def patch(self, request, pk):
-        try:
-            notification = Notification.objects.get(pk=pk, recipient=request.user)
-        except Notification.DoesNotExist:
-            return Response({"error": "Notification not found."}, status=404)
-        
-        notification.is_read = True
-        notification.save()
-        return Response({"message": "Notification marked as read."})
+ 

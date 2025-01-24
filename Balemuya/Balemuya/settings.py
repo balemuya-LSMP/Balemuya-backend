@@ -41,9 +41,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = []
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
 
-print(os.getenv('DJANGO_SETTINGS_MODULE'))
 
 
 # Application definition
@@ -68,10 +66,14 @@ INSTALLED_APPS = [
     'cloudinary',
     'channels',
 
+
+    'notifications',
     'services',
     'common',
     'users',
     'customAdmin',
+    
+
     
 ]
 
@@ -128,7 +130,6 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -292,3 +293,14 @@ FCM_DJANGO_SETTINGS = {
     "FIREBASE_SENDER_ID": os.getenv("FIREBASE_SENDER_ID"), 
     "ONE_DEVICE_PER_USER": False, 
 }
+
+CLOUDINARY_CLOUD_NAME = "df5gzlw6m"
+CLOUDINARY_API_KEY = "687326949413637"
+CLOUDINARY_API_SECRET = "63N1V3qcXoS0UiRo2x0GrlsuzfQ"
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True  # Ensures HTTPS for uploaded assets
+)
