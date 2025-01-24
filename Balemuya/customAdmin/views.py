@@ -26,11 +26,13 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest, Notification
+from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest
 from users.utils import send_sms, generate_otp, send_email_confirmation,send_push_notification
+from notifications.models import Notification
 
 from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
-  VerificationRequestSerializer, NotificationSerializer
+  VerificationRequestSerializer
+from notifications.serializers import NotificationSerializer
 
 # Create your views here.
 
@@ -152,7 +154,6 @@ class AdminVerifyProfessionalView(APIView):
         except VerificationRequest.DoesNotExist:
             return Response({"error": "Verification request not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if the verification request is still pending
         if verification_request.status != "pending":
             return Response({"error": "This request has already been processed."}, status=status.HTTP_400_BAD_REQUEST)
 
