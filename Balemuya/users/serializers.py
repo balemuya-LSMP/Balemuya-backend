@@ -5,7 +5,7 @@ from django.core.validators import validate_email
 from django.utils.translation import gettext_lazy as _
 from django.db import transaction
 from .models import User, Address, Permission, Admin, AdminLog, Customer, Skill, Professional, Education, Portfolio, Certificate,\
-    Payment, SubscriptionPlan, VerificationRequest, Notification
+    Payment, SubscriptionPlan, VerificationRequest
 from common.models import Category
 from common.serializers import CategorySerializer,UserSerializer
 
@@ -21,12 +21,6 @@ class LoginSerializer(serializers.Serializer):
             'password': {'write_only': True}
         }
 
-
-class NotificationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notification
-        fields = ['id', 'recipient','sender', 'message', 'is_read', 'created_at']
-        
 
 class VerificationRequestSerializer(serializers.ModelSerializer):
     professional_name = serializers.CharField(source='professional.user.username', read_only=True)

@@ -10,9 +10,10 @@ from users.models import User, Address
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=True)
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = ['name']
         
  
  
@@ -44,7 +45,6 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def validate_email(self, value):
-        # Custom email validation logic
         try:
             validate_email(value)
         except ValidationError:

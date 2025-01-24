@@ -7,7 +7,7 @@ from users.serializers import CustomerSerializer,ProfessionalSerializer
             
 class ServicePostSerializer(serializers.ModelSerializer):
     customer = serializers.CharField(read_only=True)
-    category = CategorySerializer(read_only=True)
+    category = CategorySerializer(read_only=False)
 
     class Meta:
         model = ServicePost
@@ -21,8 +21,32 @@ class ServicePostSerializer(serializers.ModelSerializer):
         """Validate that the work due date is not in the past."""
         if value and value < timezone.now():
             raise serializers.ValidationError("The work due date cannot be in the past.")
-        return value  
+        return value 
+    
+    def create(self, validated_data):
+        print('validated_data', validated_data)
+        category_data = validated_data.pop('category', None)
         
+        if category_data:
+            category_name = category_data.get('name')
+            
+            if not category_name:
+                raise serializers.ValidationError("Category name must be provided.")
+            
+            # Get or create the category
+            category, created = Category.objects.get_or_create(name=category_name)
+            
+            # If the category already exists, 'created' will be False
+            if created:
+                print(f"Created new category: {category_name}")
+            else:
+                print(f"Using existing category: {category_name}")
+            
+            validated_data['category'] = category
+        else:
+            raise serializers.ValidationError("Category data must be provided.")
+        
+        return super().create(validated_data)
 
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
     service = ServicePostSerializer(read_only=False)
