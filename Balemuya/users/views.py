@@ -727,7 +727,10 @@ class ProfessionalVerificationRequestView(APIView):
             professional = Professional.objects.get(user=user)
         except Professional.DoesNotExist:
             return Response({"error": "You must be a professional to request verification."}, status=status.HTTP_403_FORBIDDEN)
-
+        
+        if professional.is_verified:
+            return Response({"error": "You are already verified."}, status=status.HTTP_400_BAD_REQUEST)
+        
         if VerificationRequest.objects.filter(professional=professional, status='pending').exists():
             return Response({"error": "A pending verification request already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
