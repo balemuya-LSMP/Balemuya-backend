@@ -145,7 +145,7 @@ class AdminListView(generics.ListAPIView):
 class AdminVerifyProfessionalView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, pk):
+    def put(self, request, pk):
         if not request.user.user_type == 'admin':
             return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
