@@ -3,10 +3,11 @@ from rest_framework import serializers
 from rest_framework import exceptions
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 import re
 
 from services.models import Category    
-from users.models import User, Address
+from users.models import User, Address,Professional,Customer,Admin
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -28,10 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True, read_only=True)
     email = serializers.EmailField(max_length=200)
     profile_image_url = serializers.SerializerMethodField()
-    
+    password = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 'profile_image','profile_image_url','gender', 
+        fields = ['id', 'first_name', 'middle_name', 'last_name', 'password','profile_image','profile_image_url','gender', 
                   'email', 'phone_number', 'user_type', 'is_active', 'is_blocked', 
                   'created_at', 'updated_at', 'addresses']
         extra_kwargs = {
@@ -46,10 +48,22 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email is required.")
         try:
             validate_email(value)
         except ValidationError:
             raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return value
+    
+    def validate_password(self, value):
+        if not value:
+            raise serializers.ValidationError("Password is required.")
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
         return value
 
     def validate_phone_number(self, value):
@@ -59,18 +73,25 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        user = User.objects.create(**validated_data)
-        user.set_password(validated_data['password'])
-        user.save()
+        
+        password = validated_data.pop('password', None)
+        if not password:
+                raise ValidationError("Password is required.")
+        self.validate_password(password)
+        
+        with transaction.atomic():
+            user = User.objects.create(**validated_data)
+            user.set_password(password)
+            user.save()
 
-        if user.user_type == 'professional':
-            Professional.objects.create(user=user)
-        elif user.user_type == 'customer':
-            Customer.objects.create(user=user)
-        elif user.user_type == 'admin':
-            Admin.objects.create(user=user)
+            if user.user_type == 'professional':
+                Professional.objects.create(user=user)
+            elif user.user_type == 'customer':
+                Customer.objects.create(user=user)
+            elif user.user_type == 'admin':
+                Admin.objects.create(user=user)
 
-        return user
+            return user
 
     def update(self, instance, validated_data):
         email = validated_data.pop('email', None)
