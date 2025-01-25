@@ -2,6 +2,7 @@ import requests
 import json
 from django.core.cache import cache
 from django.contrib.auth import login
+from django.core.mail import send_mail
 
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -27,7 +28,7 @@ from allauth.socialaccount.models import SocialApp
 from urllib.parse import parse_qs
 
 from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest
-from users.utils import send_sms, generate_otp, send_email_confirmation,send_push_notification
+from users.utils import send_sms, generate_otp,send_push_notification
 from notifications.models import Notification
 
 from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
@@ -72,8 +73,6 @@ class ProfessionalListView(generics.ListAPIView):
         return Response(serializer.data)
 
 
-class VerifyProfessional(APIView):
-    pass
 
 
 # View for listing Customers
@@ -166,7 +165,7 @@ class AdminVerifyProfessionalView(APIView):
         # Update the verification request
         verification_request.status = action
         verification_request.admin_comment = admin_comment
-        verification_request.verified_by = request.user 
+        verification_request.verified_by = request.user.admin 
         verification_request.save()
         
         if verification_request.status == "approved":
@@ -179,7 +178,7 @@ class AdminVerifyProfessionalView(APIView):
             email_from = settings.EMAIL_HOST_USER
             recipient_list = [professional.user.email]
             send_mail(subject, message, email_from, recipient_list)
-            send_push_notification(professional.user, "Congratulations! Your verification request has been approved by the admin.")
+            # send_push_notification(professional.user, "Congratulations! Your verification request has been approved by the admin.")
 
         elif verification_request.status == "rejected":
             subject = "Verification Rejected"
@@ -187,7 +186,23 @@ class AdminVerifyProfessionalView(APIView):
             email_from = settings.EMAIL_HOST_USER
             recipient_list = [verification_request.professional.user.email]
             send_mail(subject, message, email_from, recipient_list)
-            send_push_notification(verification_request.professional.user, f"Your verification request has been rejected by the admin. Reason: {admin_comment}")
+            # send_push_notification(verification_request.professional.user, f"Your verification request has been rejected by the admin. Reason: {admin_comment}")
             
         serializer = VerificationRequestSerializer(verification_request)
         return Response({"message": f"Request successfully {action}.", "data": serializer.data}, status=status.HTTP_200_OK)
+    
+class ProfessionalVerificationRequestListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.user_type == 'admin':
+            return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            verification_requests = VerificationRequest.objects.filter(status='pending')
+        except VerificationRequest.DoesNotExist:
+            return Response({"error": "Verification request not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = VerificationRequestSerializer(verification_requests, many=True)
+        return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+    
+    
