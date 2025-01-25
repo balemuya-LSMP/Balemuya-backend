@@ -2,6 +2,7 @@ from django.db import models
 import uuid
 from users.models import Customer,Professional
 from common.models import Category
+from users.models import Address
 
 # Create your models here.
 
@@ -21,6 +22,8 @@ class ServicePost(models.Model):
         ('high', 'High'),
     ], default='normal') 
     work_due_date = models.DateTimeField(null=True, blank=True)
+    location = models.OneToOneField(Address, on_delete=models.CASCADE,default=None, related_name='service_post')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
     def __str__(self):

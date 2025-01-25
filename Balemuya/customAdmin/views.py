@@ -202,6 +202,8 @@ class ProfessionalVerificationRequestListView(APIView):
         except VerificationRequest.DoesNotExist:
             return Response({"error": "Verification request not found."}, status=status.HTTP_404_NOT_FOUND)
         
+        if verification_requests.count() == 0:
+            return Response({"error": "No verification requests found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = VerificationRequestSerializer(verification_requests, many=True)
         return Response({"data": serializer.data}, status=status.HTTP_200_OK)
     
