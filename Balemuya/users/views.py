@@ -29,7 +29,7 @@ from urllib.parse import parse_qs
 
 from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest
 from common.models import Category
-from .utils import send_sms, generate_otp, send_email_confirmation
+from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer
@@ -350,6 +350,7 @@ class ProfileView(APIView):
             if professional is None:
                 return Response({'error': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
             serializer = ProfessionalSerializer(professional)
+            notify_user(user.id,'professional logs in successfully!!!')
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
         
         if user.user_type == 'admin':

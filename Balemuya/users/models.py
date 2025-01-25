@@ -262,7 +262,7 @@ class SubscriptionPlan(models.Model):
         (6, '6 Months'),
         (12, '1 Year'),
     ]
-    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='subscriptions')
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
@@ -298,7 +298,7 @@ class Payment(models.Model):
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
     ]
-    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subscription = models.ForeignKey('SubscriptionPlan', on_delete=models.CASCADE, related_name='payments')
     professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -323,7 +323,7 @@ class VerificationRequest(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.OneToOneField(Professional, on_delete=models.CASCADE, related_name='verification_requests')
     verified_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

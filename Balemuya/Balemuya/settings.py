@@ -67,10 +67,11 @@ INSTALLED_APPS = [
     'channels',
 
 
-    'notifications',
-    'services',
+     #user defined apps
     'common',
     'users',
+    'services',
+    'notifications',
     'customAdmin',
     
 

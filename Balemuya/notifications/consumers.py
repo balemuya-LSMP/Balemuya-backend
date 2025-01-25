@@ -67,3 +67,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     def get_user(self, user_id):
         User = get_user_model()
         return User.objects.get(id=user_id)
+    
+    async def send_notification(self, event):
+        notification = event['message']
+        await self.send(text_data=json.dumps({
+            'notification': notification
+        }))

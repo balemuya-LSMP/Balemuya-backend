@@ -38,6 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
         
+   
     def get_profile_image_url(self,obj):
         if obj.profile_image:
             request = self.context.get('request')
