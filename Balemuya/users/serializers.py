@@ -23,13 +23,13 @@ class LoginSerializer(serializers.Serializer):
 
 
 class VerificationRequestSerializer(serializers.ModelSerializer):
-    professional_name = serializers.CharField(source='professional.user.username', read_only=True)
+    user = UserSerializer(read_only=True, source='professional.user')
 
     class Meta:
         model = VerificationRequest
-        fields = ['id', 'professional', 'professional_name', 'status', 'admin_comment', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'status', 'admin_comment', 'created_at', 'updated_at']
         read_only_fields = ['status', 'admin_comment', 'created_at', 'updated_at']
-
+        write_only_fields = ['professional']
 
 
 class SkillSerializer(serializers.ModelSerializer):
