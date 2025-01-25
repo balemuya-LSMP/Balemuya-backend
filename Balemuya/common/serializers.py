@@ -24,7 +24,6 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude', 'is_current']
 
 
-        
 class UserSerializer(serializers.ModelSerializer):
     addresses = AddressSerializer(many=True, read_only=True)
     email = serializers.EmailField(max_length=200)
@@ -33,15 +32,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'middle_name', 'last_name', 'password','profile_image','profile_image_url','gender', 
-                  'email', 'phone_number', 'user_type', 'is_active', 'is_blocked', 
-                  'created_at', 'updated_at', 'addresses']
+        fields = [
+            'id', 'first_name', 'middle_name', 'last_name', 'password', 'profile_image', 
+            'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 
+            'is_active', 'is_blocked', 'created_at', 'updated_at', 'addresses'
+        ]
         extra_kwargs = {
             'password': {'write_only': True}
         }
-        
-   
-    def get_profile_image_url(self,obj):
+
+    def get_profile_image_url(self, obj):
         if obj.profile_image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
@@ -50,15 +50,18 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         if not value:
             raise serializers.ValidationError("Email is required.")
+
         try:
             validate_email(value)
         except ValidationError:
             raise serializers.ValidationError("Invalid email format.")
-        
-        if User.objects.filter(email=value).exists():
+
+        user_id = getattr(self.instance, 'id', None) 
+        if User.objects.filter(email=value).exclude(id=user_id).exists():
             raise serializers.ValidationError("Email already exists.")
+        
         return value
-    
+
     def validate_password(self, value):
         if not value:
             raise serializers.ValidationError("Password is required.")
@@ -67,18 +70,16 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_phone_number(self, value):
-        # Custom phone number validation logic
         if not re.match(r'^\+?1?\d{9,15}$', value):
             raise serializers.ValidationError("Phone number must be in a valid format.")
         return value
 
     def create(self, validated_data):
-        
         password = validated_data.pop('password', None)
         if not password:
-                raise ValidationError("Password is required.")
+            raise ValidationError("Password is required.")
         self.validate_password(password)
-        
+
         with transaction.atomic():
             user = User.objects.create(**validated_data)
             user.set_password(password)
@@ -94,12 +95,12 @@ class UserSerializer(serializers.ModelSerializer):
             return user
 
     def update(self, instance, validated_data):
-        email = validated_data.pop('email', None)
+        email = validated_data.get('email', instance.email)  # Preserve existing email if not updated
+        validated_data['email'] = self.validate_email(email)  # Re-validate email if changed
+
+        # Update instance attributes
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if instance.email != email:
-            instance.email = email
-            
+        
         instance.save()
-
         return instance

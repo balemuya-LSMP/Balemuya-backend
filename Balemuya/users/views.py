@@ -367,7 +367,7 @@ class UserUpdateView(generics.UpdateAPIView):
 
     def put(self, request):
         user = request.user
-        serializer = self.serializer_class(user, data=request.data, partial=True)
+        serializer = self.serializer_class(instance=user, data=request.data, partial=True)
         # Validate and save the profile
         if serializer.is_valid():
             serializer.save()
