@@ -150,7 +150,7 @@ class AdminVerifyProfessionalView(APIView):
             return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            verification_request = VerificationRequest.objects.get(pk=pk)
+            verification_request = VerificationRequest.objects.get(id=pk)
         except VerificationRequest.DoesNotExist:
             return Response({"error": "Verification request not found."}, status=status.HTTP_404_NOT_FOUND)
 
