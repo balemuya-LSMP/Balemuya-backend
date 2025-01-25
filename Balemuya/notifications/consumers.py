@@ -3,6 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework_simplejwt.tokens import AccessToken
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from geopy.distance import geodesic
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -62,13 +63,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         })
 
     async def notify_professionals_about_service_post(self, service_post):
-        group_name = f"category_{service_post.category.id}_notifications"
-        message = f"New service post in your category: {service_post.title}"
-        
-        await self.channel_layer.group_send(group_name, {
-            'type': 'send_notification',
-            'message': message
-        })
+        professionals_in_range = await self.get_professionals_in_proximity_and_category(service_post)
+        for professional in professionals_in_range:
+            group_name = f"professional_{professional.id}_notifications"
+            message = f"New service post in your category: {service_post.title}"
+            
+            await self.channel_layer.group_send(group_name, {
+                'type': 'send_notification',
+                'message': message
+            })
 
     async def notify_customer_about_application(self, service_post, professional):
         group_name = f"user_{service_post.customer.id}_notifications"
@@ -87,3 +90,34 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'type': 'send_notification',
             'message': message
         })
+
+    @database_sync_to_async
+    def get_professionals_in_proximity_and_category(self, service_post):
+        from users.models import Professional, Address 
+        service_post_location = (service_post.location.latitude, service_post.location.longitude)
+        proximity_radius = 50  # in km
+        category = service_post.category 
+
+        professionals = Professional.objects.all()
+        professionals_in_range_and_category = []
+
+        for professional in professionals:
+            if professional.category != category:
+                continue  
+
+            current_address = professional.user.addresses.filter(is_current=True).first()
+
+            if not current_address:
+                continue  
+
+            # Get the latitude and longitude from the user's current address
+            professional_location = (current_address.latitude, current_address.longitude)
+
+            # Calculate distance between the professional and the service post
+            distance = geodesic(service_post_location, professional_location).kilometers
+            
+            # Check if the professional is within the proximity radius
+            if distance <= proximity_radius:
+                professionals_in_range_and_category.append(professional)
+
+        return professionals_in_range_and_categoryin_range_and_category
