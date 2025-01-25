@@ -4,6 +4,9 @@ from django_twilio.client import twilio_client
 from django.http import JsonResponse
 import random
 
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 # from fcm_django.models import FCMDevice
 
 
@@ -56,4 +59,15 @@ def send_push_notification(user, title, message):
         print("No devices found for this user.")
 
 
+
+
+def notify_user(user_id, message):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"user_{user_id}",
+        {
+            'type': 'send_notification',
+            'message': message
+        }
+    )
     
