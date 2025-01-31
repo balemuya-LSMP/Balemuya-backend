@@ -226,3 +226,23 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         instance.balance = validated_data.get('balance', instance.balance)
         instance.save()
         return instance
+
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = ['plan_type', 'duration']  # Only allow plan_type and duration for input
+        read_only_fields = ['id', 'professional', 'start_date', 'end_date']  # Keep these fields read-only
+
+    def create(self, validated_data):
+        professional = validated_data.pop('professional') 
+        subscription_plan = SubscriptionPlan.objects.create(professional=professional, **validated_data)
+        subscription_plan.save()
+        return subscription_plan
+    
+class PaymentSerializer(serializers.ModelSerializer):
+    subscription_plan = SubscriptionPlanSerializer(read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']

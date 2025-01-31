@@ -3,8 +3,8 @@ import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
 UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
-    ProfessionalVerificationRequestView,InitiatePaymentView, TrackPaymentView, PaymentCallbackView,\
-        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView
+    ProfessionalVerificationRequestView,InitiatePaymentView, TrackPaymentView,\
+        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView
 urlpatterns = [
     
     path('register-device/', RegisterFCMDeviceView.as_view(), name='register_device'),
@@ -48,13 +48,14 @@ urlpatterns = [
     path('professional/profile/portfolios/<uuid:pk>/update/', PortfolioView.as_view(), name='portfolio-update'),  # PUT
     path('professional/profile/portfolios/<uuid:pk>/delete/', PortfolioView.as_view(), name='portfolio-delete'),  # DELETE
     path('professional/verification-requests/', ProfessionalVerificationRequestView.as_view(), name='professional-verification-request'),
+    path('professional/subscription/history/',ProfessionalSubscriptionHistoryView.as_view(), name='professional-subscription-history'),
 
     # path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
 
     #payment related
-    path('payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
+    path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
     path('payment/track/<str:transaction_id>/', TrackPaymentView.as_view(), name='track_payment'),
-    path('payment/callback/', PaymentCallbackView.as_view(), name='payment_callback'),
+    # path('payment/callback/', PaymentCallbackView.as_view(), name='payment_callback'),
     
    
 ]
