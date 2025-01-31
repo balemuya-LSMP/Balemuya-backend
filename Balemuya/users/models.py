@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from decimal import Decimal
 # Custom User Manager
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -179,7 +180,7 @@ class Professional(models.Model):
     is_available = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     bio = models.TextField(blank=True, null=True)
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
 
     def __str__(self):
         return self.user.email
@@ -251,44 +252,48 @@ class Certificate(models.Model):
 
 class SubscriptionPlan(models.Model):
     PLAN_CHOICES = [
-        ('gold', 'Gold'),
         ('silver', 'Silver'),
+        ('gold', 'Gold'),
         ('diamond', 'Diamond'),
     ]
     
+    MONTHLY_COSTS = {
+        'silver': Decimal('100.00'),
+        'gold': Decimal('200.00'),
+        'diamond': Decimal('300.00'),
+    }
+
     DURATION_CHOICES = [
         (1, '1 Month'),
         (3, '3 Months'),
         (6, '6 Months'),
         (12, '1 Year'),
     ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='subscriptions')
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
-    cost = models.DecimalField(max_digits=6, decimal_places=2)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField()
+    end_date = models.DateTimeField(editable=False)
 
     def save(self, *args, **kwargs):
-        if not self.end_date:
-            self.end_date = self.start_date + timedelta(days=self.duration * 30)
+        if self.plan_type in self.MONTHLY_COSTS:
+            monthly_cost = self.MONTHLY_COSTS[self.plan_type]
+            self.cost = monthly_cost * self.duration
+            self.end_date = self.start_date + timedelta(days=self.duration * 30)  # Consider using relativedelta
         super().save(*args, **kwargs)
 
     def is_expired(self):
-        if self.end_date:
-            return timezone.now() > self.end_date
-        else:
-            return False
-        
+        return timezone.now() > self.end_date if self.end_date else False
 
     def __str__(self):
-        return f"{self.professional} - {self.get_plan_type_display()} - {self.get_duration_display()} Plan"
+        return f"{self.professional} - {self.plan_type} - {self.duration} Plan"
 
     class Meta:
         verbose_name = 'Subscription Plan'
         verbose_name_plural = 'Subscription Plans'
-
 
 
 class Payment(models.Model):
@@ -298,22 +303,22 @@ class Payment(models.Model):
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
     ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    subscription = models.ForeignKey('SubscriptionPlan', on_delete=models.CASCADE, related_name='payments')
-    professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='payments')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='payments')    
+    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False)  # Changed to DecimalField
     payment_date = models.DateTimeField(default=timezone.now)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
-    payment_method = models.CharField(max_length=50)
+    payment_method = models.CharField(max_length=50, default='chapa', null=True, blank=True)
     transaction_id = models.CharField(max_length=100, unique=True)
-    
+
     def __str__(self):
         return f"Payment {self.transaction_id} for {self.professional} - {self.amount}"
 
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
-        
         
 
 class VerificationRequest(models.Model):

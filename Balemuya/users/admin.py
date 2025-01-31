@@ -83,7 +83,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     is_expired.short_description = 'Expired'
 
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'subscription', 'amount', 'payment_status', 'payment_method', 'payment_date')
+    list_display = ('professional', 'subscription_plan', 'amount', 'payment_status', 'payment_method', 'payment_date')
     list_filter = ('payment_status', 'payment_method')
     search_fields = ('professional__name', 'payment_status', 'subscription__plan_type')
     readonly_fields = ('payment_date',)
