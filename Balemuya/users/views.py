@@ -35,7 +35,7 @@ from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
-    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer
+    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 class RegisterFCMDeviceView(APIView):
@@ -837,7 +837,7 @@ class InitiatePaymentView(APIView):
                         payment = Payment.objects.filter(
                             professional=professional,
                             subscription_plan=active_subscription).first()
-                        if payment is not None  and payment.payment_status == 'pending':
+                        if payment is not None  and payment.payment_status !='completed':
                             print('payment is updated')
                             payment.subscription_plan = active_subscription
                             payment.amount = amount
@@ -887,25 +887,59 @@ class InitiatePaymentView(APIView):
                     {"error": f"Payment request failed: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-
-class TrackPaymentView(APIView):
+class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, transaction_id):
         try:
             payment = Payment.objects.get(transaction_id=transaction_id)
-            return Response(
-                {
-                    "transaction_id": transaction_id,
-                    "payment_status": payment.payment_status
-                },
-                status=status.HTTP_200_OK
-            )
         except Payment.DoesNotExist:
             return Response(
                 {"error": "Transaction not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+        chapa_api_url = f"https://api.chapa.co/v1/transaction/verify/{transaction_id}"
+        headers = {
+            'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',
+        }
+            
+        try:
+            response = requests.get(chapa_api_url, headers=headers)
+            response_data = response.json()
+            if response.status_code == 200:
+                payment.payment_status = 'completed'
+                payment.save()
+                
+                payment.professional.balance -= payment.amount
+                payment.professional.save()
+                
+                payment_data = PaymentSerializer(payment).data
+                
+                return Response({
+                        "message": "Payment status checked successfully.",
+                        "data":{
+                            "payment":payment_data},
+                            "first_name":response_data.get("data", {}).get("first_name"),
+                            "last_name":response_data.get("data", {}).get("last_name"),
+                            "email":response_data.get("data", {}).get("email"),
+                            "amount":response_data.get("data", {}).get("amount"),
+                            "currency":response_data.get("data", {}).get("currency")
+                         },status=status.HTTP_200_OK)
+            else:
+                payment.payment_status ='failed'
+                payment.save()
+                return Response(
+                    {"error": "Failed to retrieve payment status from Chapa."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+       
 
 
 

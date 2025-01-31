@@ -231,7 +231,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPlan
-        fields = ['plan_type', 'duration']  # Only allow plan_type and duration for input
+        fields = ['plan_type', 'duration','start_date','end_date']  # Only allow plan_type and duration for input
         read_only_fields = ['id', 'professional', 'start_date', 'end_date']  # Keep these fields read-only
 
     def create(self, validated_data):
