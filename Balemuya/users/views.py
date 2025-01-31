@@ -912,6 +912,7 @@ class CheckPaymentView(APIView):
                 payment.save()
                 
                 payment.professional.balance -= payment.amount
+                payment.professional.is_available=True
                 payment.professional.save()
                 
                 payment_data = PaymentSerializer(payment).data
