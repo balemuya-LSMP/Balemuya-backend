@@ -3,7 +3,7 @@ import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
 UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
-    ProfessionalVerificationRequestView,InitiatePaymentView, TrackPaymentView,\
+    ProfessionalVerificationRequestView,InitiatePaymentView, CheckPaymentView,\
         CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView
 urlpatterns = [
     
@@ -54,7 +54,7 @@ urlpatterns = [
 
     #payment related
     path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
-    path('payment/track/<str:transaction_id>/', TrackPaymentView.as_view(), name='track_payment'),
+    path('professional/subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
     # path('payment/callback/', PaymentCallbackView.as_view(), name='payment_callback'),
     
    
