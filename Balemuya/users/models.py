@@ -282,7 +282,7 @@ class SubscriptionPlan(models.Model):
         if self.plan_type in self.MONTHLY_COSTS:
             monthly_cost = self.MONTHLY_COSTS[self.plan_type]
             self.cost = monthly_cost * self.duration
-            self.end_date = self.start_date + timedelta(days=self.duration * 30)  # Consider using relativedelta
+            self.end_date = self.start_date + timedelta(days=self.duration * 30)
         super().save(*args, **kwargs)
 
     def is_expired(self):
