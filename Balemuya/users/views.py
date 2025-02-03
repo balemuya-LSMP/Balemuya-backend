@@ -751,6 +751,9 @@ class ProfessionalSubscriptionHistoryView(APIView):
         subscription_history = SubscriptionPlan.objects.filter(professional=professional)
         serializer = SubscriptionPlanSerializer(subscription_history, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    
 class InitiatePaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -763,7 +766,12 @@ class InitiatePaymentView(APIView):
         print('duration',duration)
         return_url = data.get("return_url")
         txt_ref = uuid.uuid4()
-
+        
+        if not plan_type or not duration:
+            return Response(
+                {"error": "Plan type and duration are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if not amount:
             return Response(
                 {"error": "Amount is required."},

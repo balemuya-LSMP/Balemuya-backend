@@ -40,7 +40,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
 
 
 
@@ -237,11 +236,11 @@ CORS_ALLOW_HEADERS =  [
     'Accept',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # React local development
-    'http://127.0.0.1:3000',
-    'https://balemuya-project.vercel.app',  # Deployed frontend
-]
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost:3000',  # React local development
+#     'http://127.0.0.1:3000',
+#     'https://balemuya-project.vercel.app',  # Deployed frontend
+# ]
 
 
 CORS_ALLOW_METHODS = [
@@ -303,5 +302,5 @@ cloudinary.config(
     cloud_name=CLOUDINARY_CLOUD_NAME,
     api_key=CLOUDINARY_API_KEY,
     api_secret=CLOUDINARY_API_SECRET,
-    secure=True  # Ensures HTTPS for uploaded assets
+    secure=True
 )

@@ -50,12 +50,9 @@ urlpatterns = [
     path('professional/verification-requests/', ProfessionalVerificationRequestView.as_view(), name='professional-verification-request'),
     path('professional/subscription/history/',ProfessionalSubscriptionHistoryView.as_view(), name='professional-subscription-history'),
 
-    # path("ws/initiate-payment/", consumers.PaymentInitiateConsumer.as_asgi()), 
-
     #payment related
     path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
     path('professional/subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
-    # path('payment/callback/', PaymentCallbackView.as_view(), name='payment_callback'),
     
    
 ]
