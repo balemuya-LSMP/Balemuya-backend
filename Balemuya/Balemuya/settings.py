@@ -228,7 +228,17 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
 
-CORS_ALLOW_ALL_ORIGINS = True 
+CSRF_TRUSTED_ORIGINS = [
+    'https://balemuya-project.onrender.com',
+    'http://localhost',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'https://balemuya-project.onrender.com',
+    'http://localhost',
+
+]
+
 CORS_ALLOW_HEADERS =  [
     'Content-Type',
     'Authorization',
