@@ -821,7 +821,7 @@ class InitiatePaymentView(APIView):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "tx_ref": str(txt_ref),
-                "return_url": return_url
+                "return_url": f'{return_url}?transaction_id={txt_ref}'
             }
             headers = {
                 "Authorization": f"Bearer {chapa_api_key}",
