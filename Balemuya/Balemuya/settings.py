@@ -226,7 +226,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
 
 CORS_ALLOW_ALL_ORIGINS = True 
 CORS_ALLOW_HEADERS =  [
@@ -236,11 +236,6 @@ CORS_ALLOW_HEADERS =  [
     'Accept',
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-#     'http://localhost:3000',  # React local development
-#     'http://127.0.0.1:3000',
-#     'https://balemuya-project.vercel.app',  # Deployed frontend
-# ]
 
 
 CORS_ALLOW_METHODS = [
