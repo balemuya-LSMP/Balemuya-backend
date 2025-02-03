@@ -4,49 +4,72 @@ from .models import  ServicePost, ServicePostApplication, ServiceBooking
 from common.models import Category
 from common.serializers import UserSerializer,CategorySerializer
 from users.serializers import CustomerSerializer,ProfessionalSerializer
+from common.serializers import AddressSerializer
             
 class ServicePostSerializer(serializers.ModelSerializer):
     customer = serializers.CharField(read_only=True)
-    category = CategorySerializer(read_only=False)
+    category = serializers.CharField()
+    location = AddressSerializer(required=False)
 
     class Meta:
         model = ServicePost
         fields = [
-            "id", "customer", "category", "description", 
+            "id", "customer", "category", "description", "location",
             "status", "urgency", "work_due_date", "created_at", "updated_at"
         ]
-        read_only_fields = ["id", "created_at", "updated_at","customer"]
+        read_only_fields = ["id", "created_at", "updated_at", "customer"]
 
     def validate_work_due_date(self, value):
         """Validate that the work due date is not in the past."""
         if value and value < timezone.now():
             raise serializers.ValidationError("The work due date cannot be in the past.")
         return value 
-    
+
     def create(self, validated_data):
-        print('validated_data', validated_data)
-        category_data = validated_data.pop('category', None)
-        
-        if category_data:
-            category_name = category_data.get('name')
-            
-            if not category_name:
-                raise serializers.ValidationError("Category name must be provided.")
-            
-            # Get or create the category
-            category, created = Category.objects.get_or_create(name=category_name)
-            
-            # If the category already exists, 'created' will be False
-            if created:
-                print(f"Created new category: {category_name}")
-            else:
-                print(f"Using existing category: {category_name}")
-            
-            validated_data['category'] = category
+        user = self.context['request'].user 
+        category = self.get_or_create_category(validated_data.pop('category', None))
+
+        location_data = validated_data.pop('location', None)
+
+        if location_data:
+            location = self.create_location(location_data, user)
         else:
-            raise serializers.ValidationError("Category data must be provided.")
+            location = self.get_default_address(user)
+
+        validated_data['category'] = category
+        validated_data['location'] = location
         
         return super().create(validated_data)
+
+    def get_or_create_category(self, category_name):
+        """Get or create a category instance."""
+        if not category_name:
+            raise serializers.ValidationError("Category data must be provided with a name.")
+
+        category, created = Category.objects.get_or_create(name=category_name)
+
+        if created:
+            print(f"Created new category: {category_name}")
+        else:
+            print(f"Using existing category: {category_name}")
+
+        return category
+
+    def create_location(self, location_data, user):
+        """Create and validate an address instance."""
+        location_serializer = AddressSerializer(data=location_data)
+        if location_serializer.is_valid():
+            address_instance = location_serializer.save(user=user) 
+            return address_instance
+        else:
+            raise serializers.ValidationError(location_serializer.errors)
+
+    def get_default_address(self, user):
+        """Retrieve the default address for the user."""
+        default_address = user.addresses.filter(user=user, is_current=True).first()
+        if not default_address:
+            raise serializers.ValidationError("User does not have a default address.")
+        return default_address
 
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
     service = ServicePostSerializer(read_only=False)
