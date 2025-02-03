@@ -3,8 +3,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework_simplejwt.tokens import AccessToken
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from geopy.distance import geodesic
-
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -17,17 +15,23 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         self.user = await self.authenticate_user(token)
         if not self.user:
             return await self.reject_connection("Unauthorized: Invalid or missing token.")
-        
-        self.group_name = f"user_{self.user.id}_notifications"
-        
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
+
+        # Get group names based on user type
+        self.group_names = await self.get_group_names_by_user_type(self.user)
+
+        # Add the user to each group
+        for group_name in self.group_names:
+            await self.channel_layer.group_add(group_name, self.channel_name)
+
+        print(f'User connected to groups: {self.group_names}')
         await self.send(text_data=json.dumps({
-            "message": f"Connected to group: {self.group_name}"
+            "message": f"Connected to groups: {self.group_names}"
         }))
 
     async def disconnect(self, close_code):
-        if self.group_name:
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        # Remove the user from each group
+        for group_name in self.group_names:
+            await self.channel_layer.group_discard(group_name, self.channel_name)
 
     def get_token_from_query_string(self):
         query_string = self.scope["query_string"].decode("utf-8")
@@ -43,6 +47,24 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         except Exception:
             return None
 
+    @database_sync_to_async
+    def get_group_names_by_user_type(self, user):
+        group_names = []
+        if user.user_type == 'professional':
+            group_names.append(f"professional_{user.id}_notifications")
+            for category in user.professional.categories.all():  
+                group_names.append(f"category_{category.id}_notifications")
+
+        elif user.user_type == 'customer':
+            group_names.append(f"customer_{user.id}_service_applications")
+            group_names.append("customer_general_notifications")
+
+        elif user.user_type == 'admin':
+            group_names.append("admin_notifications")
+            group_names.append("admin_general_notifications")
+
+        return group_names
+
     async def reject_connection(self, message):
         await self.send(text_data=json.dumps({"error": message}))
         await self.close(code=4000)
@@ -52,72 +74,3 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'notification': notification
         }))
-
-    async def notify_user_about_service_post(self, service_post):
-        group_name = f"user_{service_post.customer.id}_notifications"
-        message = f"New service post created: {service_post.title}"
-        
-        await self.channel_layer.group_send(group_name, {
-            'type': 'send_notification',
-            'message': message
-        })
-
-    async def notify_professionals_about_service_post(self, service_post):
-        professionals_in_range = await self.get_professionals_in_proximity_and_category(service_post)
-        for professional in professionals_in_range:
-            group_name = f"professional_{professional.id}_notifications"
-            message = f"New service post in your category: {service_post.title}"
-            
-            await self.channel_layer.group_send(group_name, {
-                'type': 'send_notification',
-                'message': message
-            })
-
-    async def notify_customer_about_application(self, service_post, professional):
-        group_name = f"user_{service_post.customer.id}_notifications"
-        message = f"Professional {professional.name} has applied for your service post."
-        
-        await self.channel_layer.group_send(group_name, {
-            'type': 'send_notification',
-            'message': message
-        })
-
-    async def notify_professional_about_verification(self, professional):
-        group_name = f"professional_{professional.id}_notifications"
-        message = "Your account has been verified!"
-        
-        await self.channel_layer.group_send(group_name, {
-            'type': 'send_notification',
-            'message': message
-        })
-
-    @database_sync_to_async
-    def get_professionals_in_proximity_and_category(self, service_post):
-        from users.models import Professional, Address 
-        service_post_location = (service_post.location.latitude, service_post.location.longitude)
-        proximity_radius = 50  # in km
-        category = service_post.category 
-
-        professionals = Professional.objects.all()
-        professionals_in_range_and_category = []
-
-        for professional in professionals:
-            if professional.category != category:
-                continue  
-
-            current_address = professional.user.addresses.filter(is_current=True).first()
-
-            if not current_address:
-                continue  
-
-            # Get the latitude and longitude from the user's current address
-            professional_location = (current_address.latitude, current_address.longitude)
-
-            # Calculate distance between the professional and the service post
-            distance = geodesic(service_post_location, professional_location).kilometers
-            
-            # Check if the professional is within the proximity radius
-            if distance <= proximity_radius:
-                professionals_in_range_and_category.append(professional)
-
-        return professionals_in_range_and_categoryin_range_and_category

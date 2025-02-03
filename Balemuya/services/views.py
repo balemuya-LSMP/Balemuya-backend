@@ -33,26 +33,9 @@ class ServicePostAPIView(APIView):
         if request.user.user_type != "customer":
             return Response({"detail": "Only customers can create service posts."}, status=status.HTTP_403_FORBIDDEN)
         
-        serializer = ServicePostSerializer(data=request.data)
+        serializer = ServicePostSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             service_post = serializer.save(customer=request.user.customer)
-            
-            
-            # # Notify professionals in the same category
-            # category_name = service_post.category.name  # Assuming 'category' has a 'name' field
-            # async_to_sync(channel_layer.group_send)(
-            #     f"category_{category_name}",
-            #     {
-            #         "type": "send_notification",
-            #         "data": {
-            #             "title": "New Service Posted",
-            #             "description": service_post.description,
-            #             "urgency": service_post.urgency,
-            #             "due_date": service_post.work_due_date.isoformat() if service_post.work_due_date else None,
-            #             "customer": service_post.customer.user.username,
-            #         },
-            #     },
-            # )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
