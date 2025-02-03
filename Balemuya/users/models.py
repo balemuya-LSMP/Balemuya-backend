@@ -279,10 +279,12 @@ class SubscriptionPlan(models.Model):
     end_date = models.DateTimeField(editable=False)
 
     def save(self, *args, **kwargs):
-        if self.plan_type in self.MONTHLY_COSTS:
+        if self.plan_type in self.MONTHLY_COSTS and self.duration:
             monthly_cost = self.MONTHLY_COSTS[self.plan_type]
             self.cost = monthly_cost * self.duration
             self.end_date = self.start_date + timedelta(days=self.duration * 30)
+        else:
+            raise ValueError("Missing plan_type or duration for cost calculation.")
         super().save(*args, **kwargs)
 
     def is_expired(self):
