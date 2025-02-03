@@ -9,26 +9,29 @@ from common.models import Category
 from .serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
 from uuid import UUID
+from .utils import get_professionals_in_proximity_and_category
 
 User = get_user_model()
+
 
 @receiver(post_save, sender=ServicePost)
 def notify_professionals_about_new_post(sender, instance, created, **kwargs):
     if created:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        from notifications.consumers import NotificationConsumer
-
-        category = instance.category
         channel_layer = get_channel_layer()
-        consumer = NotificationConsumer(scope=None)  # Create an instance of the consumer
+        message = f"New job posted: {instance.description[:50]}..."
 
-        # Notify professionals in the category
-        async_to_sync(consumer.notify_professionals_about_service_post)(instance)
+        # Get professionals in proximity and category
+        professionals = get_professionals_in_proximity_and_category(instance)
 
-        print(f"Notifications for category '{category.name}' sent via NotificationConsumer.")
-    
-    
+        # Notify each professional within proximity
+        for professional in professionals:
+            group_name = f"professional_{professional.user.id}_notifications"
+            async_to_sync(channel_layer.group_send)(group_name, {
+                'type': 'send_notification',
+                'message': message
+            })
+
+        print(f"Notifications sent to professionals for job: {instance.description[:50]}...")
     #  if created:
     #     category = instance.category
     #     channel_layer = get_channel_layer()
