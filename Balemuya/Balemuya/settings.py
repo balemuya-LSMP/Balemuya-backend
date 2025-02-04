@@ -231,11 +231,15 @@ ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
 CSRF_TRUSTED_ORIGINS = [
     'https://balemuya-project.onrender.com',
     'http://localhost',
+    'http://127.0.0.1:3000',
+
 ]
 
 CORS_ALLOWED_ORIGINS = [
     'https://balemuya-project.onrender.com',
     'http://localhost',
+    'http://127.0.0.1:3000',
+
 
 ]
 
