@@ -225,25 +225,21 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
 ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://balemuya-project.onrender.com',
-    'http://localhost',
+    'http://localhost:3000',
     'http://127.0.0.1:3000',
-
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
     'https://balemuya-project.onrender.com',
-    'http://localhost',
-    'http://127.0.0.1:3000',
-
-
 ]
 
-CORS_ALLOW_HEADERS =  [
+CORS_ALLOW_HEADERS = [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
