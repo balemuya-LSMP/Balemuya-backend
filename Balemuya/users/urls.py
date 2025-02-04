@@ -5,7 +5,11 @@ from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,
 UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
     ProfessionalVerificationRequestView,InitiatePaymentView, CheckPaymentView,\
         CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView
+        
+# from .address import get_address_from_coordinates
 urlpatterns = [
+        # path('get-address/', get_address_from_coordinates, name='get_address'),
+
     
     path('register-device/', RegisterFCMDeviceView.as_view(), name='register_device'),
 

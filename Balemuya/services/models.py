@@ -2,13 +2,14 @@ from django.db import models
 import uuid
 from users.models import Customer,Professional
 from common.models import Category
-from users.models import Address
+from users.models import Address, User
 
 # Create your models here.
 
 class ServicePost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.CASCADE, related_name='services')
+    title = models.CharField(max_length=100,null=True, blank=True)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name='services')
     description = models.TextField(null=True, blank=True)  
     status = models.CharField(max_length=20, choices=[
@@ -27,7 +28,7 @@ class ServicePost(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
     def __str__(self):
-        return f'Service {self.id} by {self.customer} in {self.category} (Urgency: {self.urgency})'
+        return f'Service {self.title} by {self.customer} in {self.category} (Urgency: {self.urgency})'
     
 
 
@@ -73,3 +74,39 @@ class ServiceBooking(models.Model):
 
     def __str__(self):
         return f'Booking {self.id} for {self.application.service} by {self.application.professional} (Status: {self.status}, Price: {self.agreed_price})'
+    
+class Complain(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.ForeignKey(ServiceBooking, on_delete=models.CASCADE, related_name='complains')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='complains')
+    message = models.TextField(null=True, blank=True)
+    status = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Complain'
+        verbose_name_plural = 'Complains'
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f'Complain {self.id} for {self.booking} by {self.user} (Status: {self.status})'
+    
+    
+class Review(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    booking = models.ForeignKey(ServiceBooking, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.PositiveIntegerField()
+    comment = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Review'
+        verbose_name_plural = 'Reviews'
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f'Review {self.id} for {self.booking} by {self.user} (Rating: {self.rating})'
+    

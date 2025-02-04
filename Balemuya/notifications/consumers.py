@@ -51,15 +51,18 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     def get_group_names_by_user_type(self, user):
         group_names = []
         if user.user_type == 'professional':
-            group_names.append(f"professional_{user.id}_notifications")
+            group_names.append(f"professional_{user.id}_subscription_notifications")
+            group_names.append("professional_general_notifications")
             for category in user.professional.categories.all():  
-                group_names.append(f"category_{category.id}_notifications")
+                group_names.append(f"professional_{user.id}_new_jobs")
 
         elif user.user_type == 'customer':
-            group_names.append(f"customer_{user.id}_service_applications")
+            group_names.append(f"customer_{user.id}_service_applications_requests")
             group_names.append("customer_general_notifications")
 
         elif user.user_type == 'admin':
+            group_names.append("admin_verification_notifications")
+            group_names.append("admin_booking_complain_notifications")
             group_names.append("admin_notifications")
             group_names.append("admin_general_notifications")
 

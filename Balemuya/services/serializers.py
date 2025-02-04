@@ -14,7 +14,7 @@ class ServicePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServicePost
         fields = [
-            "id", "customer", "category", "description", "location",
+            "id", "customer","title", "category", "description", "location",
             "status", "urgency", "work_due_date", "created_at", "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at", "customer"]

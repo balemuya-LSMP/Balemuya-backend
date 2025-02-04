@@ -25,7 +25,7 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
 
         # Notify each professional within proximity
         for professional in professionals:
-            group_name = f"professional_{professional.user.id}_notifications"
+            group_name = f"professional_{professional.user.id}_new_jobs"
             async_to_sync(channel_layer.group_send)(group_name, {
                 'type': 'send_notification',
                 'message': message
