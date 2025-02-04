@@ -1,11 +1,41 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import  ServicePost, ServicePostApplication, ServiceBooking
+from .models import  ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
 from common.models import Category
 from common.serializers import UserSerializer,CategorySerializer
 from users.serializers import CustomerSerializer,ProfessionalSerializer
 from common.serializers import AddressSerializer
-            
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'customer', 'professional', 'rating', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['customer'] = user
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+        
+class ComplainSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complain
+        fields = ['id', 'customer', 'professional', 'complain', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['customer'] = user
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
 class ServicePostSerializer(serializers.ModelSerializer):
     customer = serializers.CharField(read_only=True)
     category = serializers.CharField()

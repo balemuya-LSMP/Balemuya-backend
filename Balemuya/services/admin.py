@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServicePost, ServicePostApplication, ServiceBooking
+from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
 
 @admin.register(ServicePost)
 class ServicePostAdmin(admin.ModelAdmin):
@@ -9,6 +9,7 @@ class ServicePostAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
     
+
 
 
 @admin.register(ServicePostApplication)
@@ -27,3 +28,20 @@ class ServiceBookingAdmin(admin.ModelAdmin):
     search_fields = ('id', 'application__service__id', 'application__professional__user__username')
     ordering = ('-created_at',)
     autocomplete_fields = ('application',)
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('id', 'booking', 'rating', 'comment', 'created_at')
+    list_filter = ('rating', 'created_at')
+    search_fields = ('id', 'booking__id')
+    ordering = ('-created_at',)
+    autocomplete_fields = ('booking',)
+
+@admin.register(Complain)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ('id', 'booking', 'user', 'message', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('id', 'booking__id', 'user__username')
+    ordering = ('-created_at',)
+    autocomplete_fields = ('booking', 'user')
