@@ -246,7 +246,7 @@ CORS_ALLOW_HEADERS =  [
     'Accept',
 ]
 
-
+APPEND_SLASH=False
 
 CORS_ALLOW_METHODS = [
     'GET',

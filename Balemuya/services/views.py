@@ -117,7 +117,7 @@ class ServicePostApplicationAPIView(APIView):
     
 
 class ServiceBookingAPIView(APIView):
-
+    permission_classes = [IsAuthenticated]
     def get(self, request, pk=None):
         if pk:
             try:
@@ -167,3 +167,18 @@ class ServiceBookingAPIView(APIView):
         
         booking.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class ReviewBookingAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self,request,*args,**kwargs):
+        serializer = ReviewBookingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ComplainBookingAPIView(APIView):
+    pass
