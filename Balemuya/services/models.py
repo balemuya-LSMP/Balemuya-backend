@@ -19,8 +19,7 @@ class ServicePost(models.Model):
     ], default='active') 
     urgency = models.CharField(max_length=10, choices=[
         ('normal', 'Normal'),
-        ('urgent', 'Urgent'),
-        ('high', 'High'),
+        ('urgent', 'Urgent')
     ], default='normal') 
     work_due_date = models.DateTimeField(null=True, blank=True)
     location = models.ForeignKey(Address, on_delete=models.CASCADE,default=None, related_name='service_post')
