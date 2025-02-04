@@ -8,6 +8,7 @@ class ServicePostAdmin(admin.ModelAdmin):
     search_fields = ('id', 'description', 'customer__user__username', 'category__name')
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
+    
 
 
 @admin.register(ServicePostApplication)

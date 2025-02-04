@@ -15,6 +15,7 @@ class ServicePostAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk=None):
+        service_posts = []
         if pk:
             try:
                 service_post = ServicePost.objects.get(id=pk)
@@ -23,7 +24,14 @@ class ServicePostAPIView(APIView):
             except ServicePost.DoesNotExist:
                 return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            service_posts = ServicePost.objects.all()
+            if request.user.user_type =='customer':
+                print('user is customer')
+                service_posts = ServicePost.objects.filter(customer=request.user.customer)[:10]
+            elif request.user.user_type =='professional':
+                service_posts = ServicePost.objects.filter(category=request.user.professional.categories)
+            elif request.user.user_type =='admin':
+                service_posts = ServicePost.objects.all()[:20]
+                
             if not service_posts:
                 return Response({"detail": "No service posts found."}, status=status.HTTP_404_NOT_FOUND)
             serializer = ServicePostSerializer(service_posts, many=True)
@@ -77,6 +85,8 @@ class ServicePostApplicationAPIView(APIView):
             return Response(serializer.data)
 
     def post(self, request, service_post_id=None):
+        if request.user.user_type != "professional":
+            return Response({"detail": "Only professionals can apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
         serializer = ServicePostApplicationSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(service_id=service_post_id, customer=request.user.customer)
