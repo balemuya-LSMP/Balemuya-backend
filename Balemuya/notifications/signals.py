@@ -32,75 +32,37 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
             })
 
         print(f"Notifications sent to professionals for job: {instance.description[:50]}...")
-    #  if created:
-    #     category = instance.category
-    #     channel_layer = get_channel_layer()
-    #     group_name = f"category_{category.name}"  # Use category ID to identify the group
-    #     print('group name is', group_name)
-
-    #     notification_message = f'A new service post has been created in the {category.name} category.'
-        
-    #     print('category is',category)
-    #     # Fetch professionals associated with the category (many-to-many relationship)
-    #     professionals = Professional.objects.filter(categories=category.id)
-    #     print('professionals:', professionals)
-
-    #     recipients = []
-    #     for professional in professionals:
-    #         recipients.append(professional.user)
-
-    #     # Create the notification (sending it to all recipients)
-    #     notification = Notification.objects.create(
-    #         sender=instance.customer.user,
-    #         message=notification_message,
-    #         notification_type="service_post",
-    #     )
-    #     # Set the recipients for the notification
-    #     notification.recipient.set(recipients)
-    #     notification.save()
-
-    #     # Serialize the notification using the NotificationSerializer
-    #     serializer = NotificationSerializer(notification)
-    #     notification_data = serializer.data
-    #     print('notification data',notification_data)
-    #     # Send serialized notification to the group
-    #     async_to_sync(channel_layer.group_send)(
-    #         group_name,
-    #         {
-    #             'type': 'send_notification',
-    #             'message': notification_data
-    #         }
-    #     )
-
-    #     print('Notifications sent to professionals')
 
 @receiver(post_save, sender=ServicePostApplication)
 def notify_customer_about_application(sender, instance, created, **kwargs):
     if created:
-        customer = instance.customer  # The customer associated with the application
+        print('instance is ', instance)
+        customer = instance.service.customer.user
         channel_layer = get_channel_layer()
-        group_name = f"customer_{customer.id}"  # Group name based on customer ID
+        group_name = f"customer_{customer.id}_applications_requests"
 
         # The sender is the professional who applied
         notification_message = f"A professional has applied to your service post."
         notification = Notification.objects.create(
-            recipient=customer,  # The customer is the recipient
-            sender=instance.professional.user,  # The professional who applied
+            sender=instance.professional.user,  
             message=notification_message,
-            notification_type="application",  # Add the notification type
-            application_id=instance.id  # Store the ID of the application
+            notification_type="application",  
+            metadata={"name":"hay yike"},
+            title='notification'
         )
-
-        # Serialize the notification using the NotificationSerializer
+        notification.recipient.set([customer])
+        notification.save()
+        print('i am called ')
+        
         serializer = NotificationSerializer(notification)
 
         # Send serialized notification to the group
         async_to_sync(channel_layer.group_send)(
-            group_name,
-            {
-                'type': 'send_notification',
-                'message': serializer.data  # Use the serialized data
-            }
-        )
+                group_name,
+                {
+                    'type': 'send_notification',
+                    'message': serializer.data 
+                }
+            )
 
         print('Notification sent to customer')
