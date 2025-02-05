@@ -9,7 +9,7 @@ def get_professionals_in_proximity_and_category(service_post, proximity_radius_k
     professionals_in_proximity = []
 
     # Filter professionals by category
-    professionals = Professional.objects.filter(categories__name__icontains=service_post.category)   
+    professionals = Professional.objects.filter(categories__name__icontains=service_post.category.name)
     print('professional in category is',professionals)
 
     for professional in professionals:

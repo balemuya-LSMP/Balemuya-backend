@@ -72,7 +72,7 @@ class ServicePostAPIView(APIView):
 class ServicePostApplicationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, service_post_id=None, pk=None):
+    def get(self, request,service_id=None ,pk=None):
         if pk:
             try:
                 application = ServicePostApplication.objects.get(id=pk)
@@ -81,16 +81,23 @@ class ServicePostApplicationAPIView(APIView):
             except ServicePostApplication.DoesNotExist:
                 return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            applications = ServicePostApplication.objects.filter(service_id=service_post_id)
+            applications = ServicePostApplication.objects.filter(service=service_id)
+            if request.user.user_type == "professional":
+                applications = applications.filter(professional=request.user.professional)
+            elif request.user.user_type == "customer":
+                applications = applications.order_by('-created_at')
+            if not applications:
+                return Response({"detail": "No applications found."}, status=status.HTTP_404_NOT_FOUND)
             serializer = ServicePostApplicationSerializer(applications, many=True)
-            return Response(serializer.data)
+            return Response({"message":"success","data":serializer.data},status=status.HTTP_200_OK) 
 
-    def post(self, request):
+    def post(self, request,service_id=None):
         if request.user.user_type != "professional":
             return Response({"detail": "Only professionals can apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
         try:
-           service_post_id = request.data.get('service_id')
-           service_post = ServicePost.objects.get(id=service_post_id)
+           service_id = request.data.get('service_id')
+           print('service id is',service_id)
+           service_post = ServicePost.objects.get(id=service_id)
         except ServicePost.DoesNotExist:
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = ServicePostApplicationSerializer(data=request.data, context={'request': request})
