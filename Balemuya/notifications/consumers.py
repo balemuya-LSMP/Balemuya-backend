@@ -52,13 +52,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         group_names = []
         if user.user_type == 'professional':
             group_names.append(f"professional_{user.id}_subscription_notifications")
-            group_names.append(f"professional_{application_acepted}_notifications")
+            group_names.append(f"professional_{user.id}_application_accepted_notifications")
             group_names.append("professional_general_notifications")
             for category in user.professional.categories.all():  
                 group_names.append(f"professional_{user.id}_new_jobs")
 
         elif user.user_type == 'customer':
-            group_names.append(f"customer_{user.id}_service_application_requests")
+            group_names.append(f"customer_{user.id}_application_requests")
             group_names.append("customer_general_notifications")
 
         elif user.user_type == 'admin':

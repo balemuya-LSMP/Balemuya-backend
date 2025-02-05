@@ -2,9 +2,9 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import ServicePost, ServicePostApplication, ServiceBooking
+from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
 from common.models import Category
-from .serializers import ServicePostSerializer
+from .serializers import ServicePostSerializer,ServicePostApplicationSerializer,ServiceBookingSerializer,ComplainSerializer,ServiceBookingSerializer
 from users.models import Professional, Customer
 
 from django.http import JsonResponse
@@ -28,7 +28,8 @@ class ServicePostAPIView(APIView):
                 print('user is customer')
                 service_posts = ServicePost.objects.filter(customer=request.user.customer)[:10]
             elif request.user.user_type =='professional':
-                service_posts = ServicePost.objects.filter(category=request.user.professional.categories)
+                print('professional category',request.user.professional.categories.all())
+                service_posts = ServicePost.objects.filter(category__in=request.user.professional.categories.all())
             elif request.user.user_type =='admin':
                 service_posts = ServicePost.objects.all()[:20]
                 
@@ -84,12 +85,17 @@ class ServicePostApplicationAPIView(APIView):
             serializer = ServicePostApplicationSerializer(applications, many=True)
             return Response(serializer.data)
 
-    def post(self, request, service_post_id=None):
+    def post(self, request):
         if request.user.user_type != "professional":
             return Response({"detail": "Only professionals can apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
-        serializer = ServicePostApplicationSerializer(data=request.data)
+        try:
+           service_post_id = request.data.get('service_id')
+           service_post = ServicePost.objects.get(id=service_post_id)
+        except ServicePost.DoesNotExist:
+            return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ServicePostApplicationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(service_id=service_post_id, customer=request.user.customer)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -173,8 +179,18 @@ class ServiceBookingAPIView(APIView):
 class ReviewBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
-    def post(self,request,*args,**kwargs):
-        serializer = ReviewBookingSerializer(data=request.data)
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+            
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        review,created = Review.objects.get_or_create(booking=booking,user=user)
+        if not created:
+            return Response({"error":"Review already exists"},status=status.HTTP_400_BAD_REQUEST)
+        serializer = ReviewBookingSerializer(data=request.data,booking=booking,user=request.user)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
