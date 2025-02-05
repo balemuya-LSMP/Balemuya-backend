@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import  ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
+from users.models import Customer, Professional
 from common.models import Category
 from common.serializers import UserSerializer,CategorySerializer
 from users.serializers import CustomerSerializer,ProfessionalSerializer
@@ -10,12 +11,13 @@ from common.serializers import AddressSerializer
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ['id', 'customer', 'professional', 'rating', 'comment', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'booking', 'rating', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at','booking']
         
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['customer'] = user
+        user = validated_data.pop('user', self.context['request'].user)
+        
+        validated_data['user'] = user
         return super().create(validated_data)
     
     def update(self, instance, validated_data):
@@ -101,29 +103,38 @@ class ServicePostSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("User does not have a default address.")
         return default_address
 
+
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
-    service = ServicePostSerializer(read_only=False)
-    professional = ProfessionalSerializer(read_only=False)
+    service_id = serializers.UUIDField(write_only=True)
+    professional_id = serializers.PrimaryKeyRelatedField(queryset=Professional.objects.all(), write_only=True, required=False)
+
+    service = ServicePostSerializer(read_only=True)
+    professional = ProfessionalSerializer(read_only=True)
+
     class Meta:
         model = ServicePostApplication
-        fields = ['id', 'service', 'professional', 'message', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'service_id', 'professional_id', 'service', 'professional', 'message', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate(self, attrs):
+        # Set professional_id from context if not provided
+        if 'professional_id' not in attrs:
+            professional = self.context['request'].user.professional
+            if professional is None:
+                raise serializers.ValidationError("Professional not found for the user.")
+            attrs['professional_id'] = professional.id  # Set the professional ID
+        return attrs
+
     def create(self, validated_data):
-        # Prevent duplicate applications
-        service = validated_data['service']
-        professional = validated_data['professional']
+        service = validated_data.get('service_id').id  # This should be a ServicePost instance
+        
+        # Ensure the professional ID is correctly set
+        professional = self.context['request'].user.professional
+        
         if ServicePostApplication.objects.filter(service=service, professional=professional).exists():
             raise serializers.ValidationError("You have already applied for this service.")
-        return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        if 'status' in validated_data:
-            raise serializers.ValidationError("You cannot change the application status.")
-        return super().update(instance, validated_data)
-    
-    
 
+        return super().create(validated_data)
 
 class ServiceBookingSerializer(serializers.ModelSerializer):
     application = ServicePostApplicationSerializer(read_only=True)
