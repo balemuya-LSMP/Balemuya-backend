@@ -59,7 +59,7 @@ class AdminAdmin(admin.ModelAdmin):
 # Customer Admin
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'rating')
+    list_display = ('user', 'rating','number_of_services_booked')
     search_fields = ('user__email', 'rating')
     list_filter = ('rating',)
 
@@ -139,6 +139,10 @@ class CertificateAdmin(admin.ModelAdmin):
     image_preview.allow_tags = True
     image_preview.short_description = 'Image'
     
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'country', 'region', 'city', 'latitude', 'longitude') 
+    search_fields = ('user__email', 'country', 'region', 'city')
     
 
 

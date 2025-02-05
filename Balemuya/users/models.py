@@ -67,7 +67,7 @@ class User(AbstractUser):
 # Address Model
 class Address(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='address')
     country = models.CharField(max_length=100, default='Ethiopia')
     region = models.CharField(max_length=100, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
@@ -77,7 +77,6 @@ class Address(models.Model):
     longitude = models.DecimalField(
         max_digits=11, decimal_places=8, null=True, blank=True
     )
-    is_current = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.country}, {self.region}, {self.city}"
@@ -152,6 +151,7 @@ class Customer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    number_of_services_booked = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.user.email
@@ -159,6 +159,8 @@ class Customer(models.Model):
     class Meta:
         verbose_name = 'Customer'
         verbose_name_plural = 'Customers'
+    
+    
 
 
 # Skill Model for Professionals

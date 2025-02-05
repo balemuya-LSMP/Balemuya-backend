@@ -21,11 +21,13 @@ class CategorySerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude', 'is_current']
+        fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude']
+        
+        
 
 
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
+    address = AddressSerializer(read_only=True)
     email = serializers.EmailField(max_length=200)
     profile_image_url = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=True)
@@ -35,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 'password', 'profile_image', 
             'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 
-            'is_active', 'is_blocked', 'created_at', 'updated_at', 'addresses'
+            'is_active', 'is_blocked', 'created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
             'password': {'write_only': True}
