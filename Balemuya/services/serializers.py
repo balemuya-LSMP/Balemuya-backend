@@ -24,6 +24,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
         
 class ComplainSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = Complain
         fields = ['id', 'customer', 'professional', 'complain', 'created_at', 'updated_at']
@@ -39,17 +40,23 @@ class ComplainSerializer(serializers.ModelSerializer):
 
 
 class ServicePostSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer(read_only=True)
-    category = serializers.CharField()
+    customer_id = serializers.UUIDField(source='customer.id',read_only=True)
+    customer_name = serializers.CharField(source='customer.first_name', read_only=True)
+    customer_rating = serializers.DecimalField(source='customer.rating', read_only=True, max_digits=3, decimal_places=2)
+    customer_service_booked_count = serializers.IntegerField(source='customer.service_booked', read_only=True)
+    customer_profile_image = serializers.ImageField(source='customer.user.profile_image', read_only=True)
+    category =  serializers.CharField(source='category.name')
     location = AddressSerializer(required=False)
 
     class Meta:
         model = ServicePost
         fields = [
-            "id", "customer","title", "category", "description", "location",
-            "status", "urgency", "work_due_date", "created_at", "updated_at"
+            "id","title", "category", "description", "location",
+            "status", "urgency", "work_due_date", "created_at", "updated_at",'customer_id',
+            "customer_name", "customer_rating", "customer_service_booked_count", "customer_profile_image"
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "customer"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+        
 
     def validate_work_due_date(self, value):
         """Validate that the work due date is not in the past."""
@@ -118,28 +125,30 @@ class ServicePostSerializer(serializers.ModelSerializer):
 
 
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
-    service_id = serializers.UUIDField(write_only=True)
-    professional_id = serializers.PrimaryKeyRelatedField(queryset=Professional.objects.all(), write_only=True, required=False)
-
+    professional_id = serializers.UUIDField(source='professional.id',read_only=True)
     service = ServicePostSerializer(read_only=True)
-    professional = ProfessionalSerializer(read_only=True)
-
+    professional_name = serializers.CharField(source='professional.user.get_full_name', read_only=True)
+    professional_profile_image = serializers.ImageField(source='professional.user.profile_image', read_only=True)
+    rating = serializers.FloatField(source='professional.rating', read_only=True)
+    
+    
     class Meta:
         model = ServicePostApplication
-        fields = ['id', 'service_id', 'professional_id', 'service', 'professional', 'message', 'status', 'created_at', 'updated_at']
+        fields = ['id','service','professional_id','professional','professional_name', 'professional_profile_image', 'rating', 'professional_id', 'message', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+        write_only_fields = ['professional']
 
     def validate(self, attrs):
         # Set professional_id from context if not provided
-        if 'professional_id' not in attrs:
+        if 'professional' not in attrs:
             professional = self.context['request'].user.professional
             if professional is None:
                 raise serializers.ValidationError("Professional not found for the user.")
-            attrs['professional_id'] = professional.id  # Set the professional ID
+            attrs['professional'] = professional  # Set the professional ID
         return attrs
 
     def create(self, validated_data):
-        service = validated_data.get('service_id').id  
+        service = validated_data.get('service_id')  
         professional = self.context['request'].user.professional
         
         if ServicePostApplication.objects.filter(service=service, professional=professional).exists():
