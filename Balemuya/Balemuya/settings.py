@@ -20,7 +20,7 @@ import cloudinary.uploader
 import cloudinary.api
 
 import os
-
+from celery.schedules import crontab
 from datetime import timedelta
 
 #load environment variable from .env file
@@ -122,6 +122,14 @@ SOCIALACCOUNT_PROVIDERS = {
             ],
         }
     }
+}
+
+
+CELERY_BEAT_SCHEDULE = {
+    'notify-expiring-subscriptions-every-day': {
+        'task': 'users.tasks.notify_expiring_subscriptions',
+        'schedule': crontab(hour=0, minute=0),
+    },
 }
 
 MIDDLEWARE = [
@@ -257,8 +265,12 @@ CORS_ALLOW_METHODS = [
     'OPTIONS', 
 ]
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+# settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

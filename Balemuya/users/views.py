@@ -383,19 +383,20 @@ class AddressView(APIView):
     serializer_class = AddressSerializer
     
     def post(self,request):
-        existing_address = Address.objects.filter(user=request.user)
+        existing_address = request.user.address
         if existing_address:
             return Response({"error": "User already has an address."}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
+            request.user.address = serializer.save()
+            request.user.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
     def put(self,request,pk):
         try:
-            address = Address.objects.get(id=pk,user=request.user)
-        except Address.ObjectNotFound:
+            address = request.user.address.get(id=pk)
+        except Address.DoesNotExist:
             Response({"error":"address not found to update"},status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(address,data=request.data,partial=True)
         if serializer.is_valid():
@@ -404,7 +405,10 @@ class AddressView(APIView):
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
     def delete(self,request,pk):
-        address = Address.objects.get(id=pk,user=request.user)
+        try:
+           address = request.user.address.get(id=pk)
+        except Address.DoesNotExist:
+            return Response({"error":"address not found to delete"},status=status.HTTP_400_BAD_REQUEST)
         address.delete()
         return Response({"message":"Address deleted successfully"},status=status.HTTP_200_OK)
     

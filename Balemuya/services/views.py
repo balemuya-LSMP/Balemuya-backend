@@ -67,7 +67,7 @@ class ServicePostAPIView(APIView):
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
 
         service_post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"message":"post deleted successfully!"},status=status.HTTP_204_NO_CONTENT)
 
 class ServicePostApplicationAPIView(APIView):
     permission_classes = [IsAuthenticated]
