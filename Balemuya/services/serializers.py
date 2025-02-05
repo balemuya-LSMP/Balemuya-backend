@@ -39,7 +39,7 @@ class ComplainSerializer(serializers.ModelSerializer):
 
 
 class ServicePostSerializer(serializers.ModelSerializer):
-    customer = serializers.CharField(read_only=True)
+    customer = CustomerSerializer(read_only=True)
     category = serializers.CharField()
     location = AddressSerializer(required=False)
 
