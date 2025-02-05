@@ -7,10 +7,6 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
 
-class AddressInline(admin.StackedInline):
-    model = Address
-    extra = 1 
-
 class EducationInline(admin.StackedInline):
     model = Education
     extra = 1
@@ -37,12 +33,12 @@ class FeedbackAdmin(admin.ModelAdmin):
 @admin.register(User)
 class CustomUserAdmin(admin.ModelAdmin):
     model = User
-    list_display = ('email', 'first_name', 'middle_name', 'last_name','profile_image_preview', 'phone_number', 'gender', 'user_type', 'is_active', 'is_staff', 'is_superuser')
+    list_display = ('email', 'first_name', 'middle_name', 'last_name','profile_image_preview', 'phone_number', 'gender', 'user_type','address', 'is_active', 'is_staff', 'is_superuser')
     list_filter = ('user_type', 'is_active', 'is_staff', 'is_superuser')
     search_fields = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number')
     ordering = ('email',)
     
-    inlines = [AddressInline]
+    
     
     def profile_image_preview(self, obj):
             return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.profile_image}" width="50" height="50" />')
@@ -141,8 +137,8 @@ class CertificateAdmin(admin.ModelAdmin):
     
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ('user', 'country', 'region', 'city', 'latitude', 'longitude') 
-    search_fields = ('user__email', 'country', 'region', 'city')
+    list_display = ('country', 'region', 'city', 'latitude', 'longitude') 
+    search_fields = ( 'country', 'region', 'city')
     
 
 

@@ -5,6 +5,29 @@ from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from decimal import Decimal
+
+
+# Address Model
+class Address(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    country = models.CharField(max_length=100, default='Ethiopia')
+    region = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    latitude = models.DecimalField(
+        max_digits=10, decimal_places=8, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=11, decimal_places=8, null=True, blank=True
+    )
+
+    def __str__(self):
+        return f"{self.country}, {self.region}, {self.city}"
+
+    class Meta:
+        verbose_name = 'Address'
+        verbose_name_plural = 'Addresses'
+
+
 # Custom User Manager
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -46,6 +69,8 @@ class User(AbstractUser):
     profile_image = CloudinaryField(
         'image', null=True, blank=True, folder='Profile/profile_images'
     )
+    address = models.ForeignKey(Address, on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
+
     is_active = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)
     last_login = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -64,26 +89,6 @@ class User(AbstractUser):
         return self.email
 
     
-# Address Model
-class Address(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='address')
-    country = models.CharField(max_length=100, default='Ethiopia')
-    region = models.CharField(max_length=100, null=True, blank=True)
-    city = models.CharField(max_length=100, null=True, blank=True)
-    latitude = models.DecimalField(
-        max_digits=10, decimal_places=8, null=True, blank=True
-    )
-    longitude = models.DecimalField(
-        max_digits=11, decimal_places=8, null=True, blank=True
-    )
-
-    def __str__(self):
-        return f"{self.country}, {self.region}, {self.city}"
-
-    class Meta:
-        verbose_name = 'Address'
-        verbose_name_plural = 'Addresses'
 
 
 class Feedback(models.Model):
