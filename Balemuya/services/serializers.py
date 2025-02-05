@@ -58,13 +58,13 @@ class ServicePostSerializer(serializers.ModelSerializer):
         return value 
 
     def create(self, validated_data):
-        user = self.context['request'].user 
+        user = self.context['request'].user
         category = self.get_or_create_category(validated_data.pop('category', None))
 
         location_data = validated_data.pop('location', None)
 
         if location_data:
-            location = self.create_location(location_data, user)
+            location = self.create_location(location_data)
         else:
             location = self.get_default_address(user)
 
@@ -72,6 +72,18 @@ class ServicePostSerializer(serializers.ModelSerializer):
         validated_data['location'] = location
         
         return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        location_data = validated_data.pop('location', None)
+        category = self.get_or_create_category(validated_data.pop('category', None))
+        if location_data:
+            location = self.create_location(location_data)
+        else:
+            location = self.get_default_address(instance.customer.user)
+        
+        validated_data['location'] = location
+        validated_data['category'] = category
+        return super().update(instance, validated_data)
 
     def get_or_create_category(self, category_name):
         """Get or create a category instance."""
@@ -87,21 +99,22 @@ class ServicePostSerializer(serializers.ModelSerializer):
 
         return category
 
-    def create_location(self, location_data, user):
+    def create_location(self, location_data):
         """Create and validate an address instance."""
         location_serializer = AddressSerializer(data=location_data)
         if location_serializer.is_valid():
-            address_instance = location_serializer.save(user=user) 
+            address_instance = location_serializer.save() 
             return address_instance
         else:
             raise serializers.ValidationError(location_serializer.errors)
 
     def get_default_address(self, user):
         """Retrieve the default address for the user."""
-        default_address = user.addresses.filter(user=user, is_current=True).first()
+        default_address = user.address
         if not default_address:
             raise serializers.ValidationError("User does not have a default address.")
         return default_address
+    
 
 
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
@@ -126,9 +139,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        service = validated_data.get('service_id').id  # This should be a ServicePost instance
-        
-        # Ensure the professional ID is correctly set
+        service = validated_data.get('service_id').id  
         professional = self.context['request'].user.professional
         
         if ServicePostApplication.objects.filter(service=service, professional=professional).exists():

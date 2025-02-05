@@ -27,7 +27,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    address = AddressSerializer(read_only=True)
+    address = AddressSerializer(required=False)
     email = serializers.EmailField(max_length=200)
     profile_image_url = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=True)
