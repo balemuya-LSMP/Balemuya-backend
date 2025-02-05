@@ -96,7 +96,8 @@ class CustomerSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     class Meta:
         model = Customer
-        fields =['user', 'rating']
+        fields =['user', 'rating','number_of_services_booked']
+        read_only_fields = ['number_of_services_booked']
         
 
     def update(self, instance, validated_data):
@@ -199,7 +200,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             'categories', 'skills', 'rating', 'years_of_experience', 'is_available', 
             'is_verified', 'bio', 'balance', 'educations', 'portfolios', 'certificates'
         ]
-        read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url', 'educations', 'portfolios', 'certificates', 'addresses']
+        read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url', 'educations', 'portfolios', 'certificates']
 
 
     def get_kebele_id_front_image_url(self, obj):
