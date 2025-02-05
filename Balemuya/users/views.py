@@ -383,6 +383,9 @@ class AddressView(APIView):
     serializer_class = AddressSerializer
     
     def post(self,request):
+        existing_address = Address.objects.filter(user=request.user)
+        if existing_address:
+            return Response({"error": "User already has an address."}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -390,8 +393,10 @@ class AddressView(APIView):
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
     def put(self,request,pk):
-        print('pk is',pk)
-        address = Address.objects.get(id=pk,user=request.user)
+        try:
+            address = Address.objects.get(id=pk,user=request.user)
+        except Address.ObjectNotFound:
+            Response({"error":"address not found to update"},status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(address,data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save()
