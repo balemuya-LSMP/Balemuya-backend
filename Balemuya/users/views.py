@@ -393,9 +393,9 @@ class AddressView(APIView):
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
-    def put(self,request,pk):
+    def put(self,request):
         try:
-            address = request.user.address.get(id=pk)
+            address = request.user.address
         except Address.DoesNotExist:
             Response({"error":"address not found to update"},status=status.HTTP_400_BAD_REQUEST)
         serializer = self.serializer_class(address,data=request.data,partial=True)
@@ -404,9 +404,9 @@ class AddressView(APIView):
             return Response(serializer.data,status=status.HTTP_200_OK)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
-    def delete(self,request,pk):
+    def delete(self,request):
         try:
-           address = request.user.address.get(id=pk)
+           address = request.user.address
         except Address.DoesNotExist:
             return Response({"error":"address not found to delete"},status=status.HTTP_400_BAD_REQUEST)
         address.delete()
