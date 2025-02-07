@@ -70,6 +70,7 @@ class User(AbstractUser):
         'image', null=True, blank=True, folder='Profile/profile_images'
     )
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
+    bio = models.TextField(blank=True, null=True)
 
     is_active = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)
@@ -199,7 +200,6 @@ class Professional(models.Model):
     years_of_experience = models.PositiveIntegerField(default=0)
     is_available = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
-    bio = models.TextField(blank=True, null=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
 
     def __str__(self):
