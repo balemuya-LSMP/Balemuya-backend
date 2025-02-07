@@ -1,15 +1,15 @@
-# # Balemuya/celery.py
-# import os
-# from celery import Celery
+# Balemuya/celery.py
+import os
+from celery import Celery
 
-# # Set the default Django settings module
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
+# Set the default Django settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
 
-# # Create a Celery application instance
-# app = Celery('Balemuya')
+# Create a Celery application instance
+app = Celery('Balemuya')
 
-# app.config_from_object('django.conf:settings')
+app.config_from_object('django.conf:settings')
 
-# # Specify the broker URL for Redis
-# app.conf.broker_url = 'redis://localhost:6379/0'
-# app.autodiscover_tasks()
+# Specify the broker URL for Redis
+app.conf.broker_url = 'redis://localhost:6379/0'
+app.autodiscover_tasks()
