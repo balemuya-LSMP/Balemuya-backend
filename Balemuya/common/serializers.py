@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 'password', 'profile_image', 
-            'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 
+            'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 'bio',
             'is_active', 'is_blocked', 'created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
@@ -97,8 +97,8 @@ class UserSerializer(serializers.ModelSerializer):
             return user
 
     def update(self, instance, validated_data):
-        email = validated_data.get('email', instance.email)  # Preserve existing email if not updated
-        validated_data['email'] = self.validate_email(email)  # Re-validate email if changed
+        email = validated_data.get('email', instance.email)
+        validated_data['email'] = self.validate_email(email)  
 
         # Update instance attributes
         for attr, value in validated_data.items():

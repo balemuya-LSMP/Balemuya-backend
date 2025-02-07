@@ -198,7 +198,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             'id', 'user', 'kebele_id_front_image', 
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
             'categories', 'skills', 'rating', 'years_of_experience', 'is_available', 
-            'is_verified', 'bio', 'balance', 'educations', 'portfolios', 'certificates'
+            'is_verified',  'balance', 'educations', 'portfolios', 'certificates'
         ]
         read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url', 'educations', 'portfolios', 'certificates']
 
@@ -223,7 +223,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.kebele_id_front_image = validated_data.get('kebele_id_front_image', instance.kebele_id_front_image)
         instance.kebele_id_back_image = validated_data.get('kebele_id_back_image', instance.kebele_id_back_image)
-        instance.bio = validated_data.get('bio', instance.bio)
         instance.balance = validated_data.get('balance', instance.balance)
         instance.save()
         return instance

@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
     'channels',
+    "drf_yasg", 
 
 
      #user defined apps
@@ -86,6 +87,7 @@ REST_FRAMEWORK = {
    'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
    
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -264,6 +266,18 @@ CORS_ALLOW_METHODS = [
     'DELETE',
     'OPTIONS', 
 ]
+
+# settings.py
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+        }
+    },
+    'USE_SESSION_AUTH': False,  # Set to False if you're using JWT
+}
 
 
 # Default primary key field type
