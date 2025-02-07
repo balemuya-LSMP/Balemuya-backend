@@ -29,8 +29,7 @@ urlpatterns = [
     
     path('profile/',ProfileView.as_view(), name='profile'),
     path('profile/update/', UserUpdateView.as_view(), name='user-update'),
-    path('profile/address/create/',AddressView.as_view(), name='address-create'),
-    path('profile/address/<uuid:pk>/',AddressView.as_view(), name='address-update-delete'),
+    path('profile/address/',AddressView.as_view(), name='address-create-update-delete'),
     path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
     path('<uuid:pk>/block/',UserBlockView.as_view(),name='user-block'),
