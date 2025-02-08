@@ -129,14 +129,6 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
         write_only_fields = ['professional']
 
-    # def validate(self, attrs):
-    #     if 'professional' not in attrs:
-    #         print('professional ',professional)
-    #         professional = self.context['request'].user.professional
-    #         if professional is None:
-    #             raise serializers.ValidationError("Professional not found for the user.")
-    #         attrs['professional'] = professional
-    #     return attrs
 
     def create(self, validated_data):
         service = validated_data.get('service')
@@ -146,6 +138,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
         professional =request.user.professional      
         validated_data['professional'] = professional        
         validated_data['service'] = service        
+        validated_data['status'] = 'pending'
         
         if ServicePostApplication.objects.filter(service=service, professional=professional).exists():
             raise serializers.ValidationError("You have already applied for this service.")
