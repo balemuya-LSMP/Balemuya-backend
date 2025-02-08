@@ -12,6 +12,6 @@ urlpatterns = [
     path('bookings/<uuid:pk>/', ServiceBookingAPIView.as_view(), name='service-booking-detail'),
     
     path('bookings/<uuid:booking_id>/review/', ReviewBookingAPIView.as_view(), name='review-booking'),
-    path('bookings/<uuid:pk>/complain/', ComplainBookingAPIView.as_view(), name='complain'),
+    path('bookings/<uuid:booking_id>/complain/', ComplainBookingAPIView.as_view(), name='complain'),
     
 ]

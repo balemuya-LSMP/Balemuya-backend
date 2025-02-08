@@ -5,9 +5,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import IntegrityError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from services.models import ServicePost, ServicePostApplication, ServiceBooking
+from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain
 from .models import Notification
-from users.models import Professional,Admin,Customer,User,VerificationRequest
+from users.models import Professional,Admin,Customer,User,VerificationRequest,Feedback
 from common.models import Category
 from .serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -208,4 +208,119 @@ def notify_professional_on_service_booking(sender, instance, created, **kwargs):
                         'data': notification_serializer.data
                     }
                 )
+                
+@receiver(post_save, sender=Complain)
+def notify_admin_on_complain(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        group_name = f"admin_booking_complaint_notifications"
+        message = f"A new complain has been made for  service post {instance.booking.service_post.title}..."
         
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='new complain',
+                message=message,
+                notification_type="new_complain",
+                metadata={"complain_id":str(instance.id),
+                        "booking_id":str(instance.booking.id),
+                        "booking_status":instance.booking.status,
+                        "complainant_first_name":instance.user.first_name,
+                        "complainant_profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
+                        "complainant_id":str(instance.user.id),
+                        "complainant_user_type":instance.user.user_type,
+                        "booking_scheduled_date":instance.booking.scheduled_date,
+                        "created_at":instance.created_at
+                        }
+            )
+            recipient = User.objects.filter(user_type='admin')
+            notification.recipient.set([recipient])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_notification',
+                    'data': notification_serializer.data
+                }
+            )   
+            
+    
+
+@receiver(post_save, sender=Feedback)
+def notify_admins_on_feedback(sender,instance,created,**kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        group_name = f"admin_feedback_notifications"
+        
+        message = f"A new feedback has been made by {instance.user.first_name}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='new feedback',
+                message=message,
+                notification_type="new_feedback",
+                metadata={"feedback_id":str(instance.id),
+                        "user_id":str(instance.user.id),
+                        "user_first_name":instance.user.first_name,
+                        "user_profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
+                        "user_user_type":instance.user.user_type,
+                        "created_at":instance.created_at
+                        }
+            )
+            recipients = User.objects.filter(user_type='admin')
+            notification.recipient.set([recipients])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_notification',
+                    'data': notification_serializer.data
+                }
+            )   
+            
+            
+            
+@receiver(post_save, sender=Review)
+def notify_user_on_review(sender, instance, created, **kwargs):
+    if created:
+        group_name = None
+        channel_layer = get_channel_layer()
+        if instance.user.user_type == 'customer':
+            group_name = f"user_{instance.booking.application.professional.user.id}_review_notifications"
+        elif instance.user.user_type == 'professional':
+            group_name = f"user_{instance.booking.application.service.customer.user.id}_review_notifications"
+        
+        if group_name == None:
+            return
+        message = f"A new review has been made by {instance.user.first_name}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='new review',
+                message=message,
+                notification_type="new_review",
+                metadata={"review_id":str(instance.id),
+                        "user_id":str(instance.user.id),
+                        "user_first_name":instance.user.first_name,
+                        "user_profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
+                        "user_type":instance.user.user_type,
+                        "created_at":instance.created_at
+                        }
+            )
+            notification.recipient.set([instance.user])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_notification',
+                    "data": notification_serializer.data
+                }
+            )
+                
+
+                
