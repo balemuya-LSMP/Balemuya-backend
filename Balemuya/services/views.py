@@ -129,7 +129,8 @@ class ListServicePostApplicationsAPIView(APIView):
             return Response({"detail": "No applications found."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = ServicePostApplicationSerializer(applications, many=True)
-        return Response({"message": "success", "data": serializer.data}, status=status.HTTP_200_OK)
+        data = list(serializer.data)
+        return Response({"message": "success", "data": data}, status=status.HTTP_200_OK)
 
 
 class DetailServicePostApplicationAPIView(APIView):
