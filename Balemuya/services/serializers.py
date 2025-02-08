@@ -39,11 +39,11 @@ class ComplainSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class ServicePostSerializer(serializers.ModelSerializer):
-    customer_id = serializers.CharField(source='customer.id', read_only=True)
+    customer_id = serializers.CharField(source='customer.user.id', read_only=True)
     customer_rating = serializers.DecimalField(source='customer.rating', read_only=True, max_digits=3, decimal_places=2)
     customer_service_booked_count = serializers.IntegerField(source='customer.service_booked', read_only=True)
-    customer_first_name = serializers.CharField(source='customer.first_name', read_only=True)
-    customer_middle_name = serializers.CharField(source='customer.middle_name', read_only=True)
+    customer_first_name = serializers.CharField(source='customer.user.first_name', read_only=True)
+    customer_middle_name = serializers.CharField(source='customer.user.middle_name', read_only=True)
     customer_profile_image = serializers.ImageField(source='customer.user.profile_image', read_only=True)
 
     category = serializers.CharField()
