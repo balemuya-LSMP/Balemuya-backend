@@ -109,9 +109,11 @@ class ServicePostApplicationAPIView(APIView):
            service_id = request.data.get('service_id')
            print('service id is',service_id)
            service_post = ServicePost.objects.get(id=service_id)
-        except ServicePost.DoesNotExist:
+        except ServicePost.DoesNotExist as e:
+            print('error is',str(e))
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ServicePostApplicationSerializer(data=request.data, context={'request': request})
+        
+        serializer = ServicePostApplicationSerializer(data=request.data, context={'request': request,'service':service_post})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -211,8 +213,84 @@ class ReviewBookingAPIView(APIView):
         serializer = ReviewBookingSerializer(data=request.data,booking=booking,user=request.user)
         if serializer.is_valid():
             serializer.save()
+            if request.user.user_type == "customer":
+                booking.application.professional.rating = (booking.application.professional.rating + serializer.validated_data['rating'])/2
+                booking.application.professional.save()
+            if  request.user.user_type == "professional":
+                booking.application.service.customer.rating = (booking.application.service.customer.rating + serializer.validated_data['rating'])/2
+                booking.application.service.customer.save()
+            return Response({'message':'Review created'},serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        review = Review.objects.get(booking=booking,user=user)
+        review.comment = request.data.get('comment')
+        serializer = ReviewBookingSerializer(review)
+        if serializer.is_valid():
+            return Response({"message":"Review updated"},serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        try:
+            review = Review.objects.get(booking=booking,user=user)
+        except Review.DoesNotExist:
+            return Response({"error":"no review found"},status=status.HTTP_404_NOT_FOUND)
+        review.delete()
+        return Response({"message":"Review deleted successfully"},status=status.HTTP_204_NO_CONTENT)
+    
+class ComplainBookingAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+            
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        complain,created = Complain.objects.get_or_create(booking=booking,user=user)
+        if not created:
+            return Response({"error":"Complain already exists"},status=status.HTTP_400_BAD_REQUEST)
+        serializer = ComplainBookingSerializer(data=request.data,booking=booking,user=request.user)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class ComplainBookingAPIView(APIView):
-    pass
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        complain = Complain.objects.get(booking=booking,user=user)
+        serializer = ComplainBookingSerializer(complain,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        booking_id = kwargs.get('booking_id')
+        try:
+            booking = ServiceBooking.objects.get(id=booking_id)
+        except ServiceBooking.DoesNotExist:
+            return Response({"error":"no booking found"},status=status.HTTP_404_NOT_FOUND)
+        complain = Complain.objects.get(booking=booking,user=user)
+        complain.delete()
+        return Response({"message":"Complain deleted successfully"},status=status.HTTP_204_NO_CONTENT)
