@@ -121,7 +121,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
     professional_name = serializers.CharField(source='professional.user.get_full_name', read_only=True)
     professional_profile_image = serializers.ImageField(source='professional.user.profile_image', read_only=True)
     rating = serializers.FloatField(source='professional.rating', read_only=True)
-    professional = serializers.PrimaryKeyRelatedField(read_only=True)
+    professional = serializers.PrimaryKeyRelatedField(queryset = Professional.objects.all(),write_only=True,required=False)
     service = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = ServicePostApplication
