@@ -30,12 +30,14 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest
+from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+    Feedback
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
-    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer
+    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
+        FeedbackSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 class RegisterFCMDeviceView(APIView):

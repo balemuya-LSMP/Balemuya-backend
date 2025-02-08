@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from .models import User, Address, Permission, Admin, AdminLog, Customer, Skill, Professional, Education, Portfolio, Certificate, \
-    Payment, SubscriptionPlan, VerificationRequest
+    Payment, SubscriptionPlan, VerificationRequest,Feedback
 from common.models import Category
 from common.serializers import CategorySerializer, UserSerializer
 
@@ -228,3 +228,8 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        
+class FeedbackSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Feedback 
