@@ -30,9 +30,17 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        if hasattr(self, "group_names",[]):
-            for group_name in self.group_names:
-                await self.channel_layer.group_discard(group_name, self.channel_name)
+        if self.connected:
+            if hasattr(self, "group_names"):
+                try:
+                    for group_name in self.group_names:
+                        await self.channel_layer.group_discard(group_name, self.channel_name)
+                except Exception as e:
+                    print(f"Error during disconnect: {e}")
+            else:
+                print("No groups to disconnect from.")
+        self.connected = False
+        
 
     def get_token_from_query_string(self):
         query_string = self.scope["query_string"].decode("utf-8")
@@ -74,17 +82,25 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def reject_connection(self, message):
         await self.send(text_data=json.dumps({"error": message}))
         await self.close(code=4000)
-
+        
+        
     async def send_notification(self, event):
         notification = event['data']
+
+        try:
+           notification = self.convert_uuid_fields(notification)
+        except Exception as e:
+            print(f"Error converting UUID fields: {e}")
+            return
+
         await self.send(text_data=json.dumps({
             'notification': notification
         }))
 
-    # def serialize_uuid_fields(self, data):
-    #     """Recursively convert UUIDs to strings."""
-    #     if isinstance(data, dict):
-    #         return {key: str(value) if isinstance(value, UUID) else self.serialize_uuid_fields(value) for key, value in data.items()}
-    #     elif isinstance(data, list):
-    #         return [self.serialize_uuid_fields(item) for item in data]
-    #     return data
+    def convert_uuid_fields(self, data):
+        """Recursively convert UUIDs to strings."""
+        if isinstance(data, dict):
+            return {key: str(value) if isinstance(value, UUID) else self.convert_uuid_fields(value) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [self.convert_uuid_fields(item) for item in data]
+        return data
