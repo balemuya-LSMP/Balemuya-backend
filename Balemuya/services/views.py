@@ -38,10 +38,8 @@ class ServicePostAPIView(APIView):
                 return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             if request.user.user_type =='customer':
-                print('user is customer')
                 service_posts = ServicePost.objects.filter(customer=request.user.customer).order_by('-created_at')
             elif request.user.user_type =='professional':
-                print('professional category',request.user.professional.categories.all())
                 service_posts = ServicePost.objects.filter(category__in=request.user.professional.categories.all()).order_by('-created_at')
             elif request.user.user_type =='admin':
                 service_posts = ServicePost.objects.all().order_by('-created_at')
