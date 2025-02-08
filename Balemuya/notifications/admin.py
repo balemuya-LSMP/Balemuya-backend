@@ -4,9 +4,9 @@ from .models import Notification
 # Register your models here.
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ( 'sender', 'message_summary', 'is_read', 'created_at')
+    list_display = (  'message_summary', 'is_read', 'created_at')
     list_filter = ('is_read', 'created_at')
-    search_fields = ('recipient__username', 'sender__username', 'message')
+    search_fields = ('recipient__username', 'message')
     readonly_fields = ('created_at',)
     
     def message_summary(self, obj):
