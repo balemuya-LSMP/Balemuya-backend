@@ -1,17 +1,24 @@
 from django.urls import path
-from .views import ServicePostAPIView, ServicePostApplicationAPIView, ServiceBookingAPIView,ReviewBookingAPIView,ComplainBookingAPIView,CategoryListAPIView
+from .views import ServicePostListCreateAPIView, ServicePostDetailAPIView,CreateServicePostApplicationAPIView, ListServicePostApplicationsAPIView,DetailServicePostApplicationAPIView,\
+   AcceptServicePostApplicationAPIView, ServiceBookingRetrieveAPIView,ServiceBookingUpdateAPIView,ServiceBookingDeleteAPIView,ReviewBookingAPIView,ComplainBookingAPIView,CategoryListAPIView
 
 urlpatterns = [
     path('categories/', CategoryListAPIView.as_view(), name='category-list'),
-    path('service-posts/', ServicePostAPIView.as_view(), name='service-post-list-create'),
-    path('service-posts/<uuid:pk>/', ServicePostAPIView.as_view(), name='service-post-detail'),
-    path('service-posts/applications/', ServicePostApplicationAPIView.as_view(), name='service-post-application-create'),
-    path('service-posts/<uuid:service_id>/applications/', ServicePostApplicationAPIView.as_view(), name='service-post-application-list'),
-    path('service-posts/applications/<uuid:pk>/', ServicePostApplicationAPIView.as_view(), name='service-post-application-detail'),
-    path('bookings/', ServiceBookingAPIView.as_view(), name='service-booking-create'),
-    path('bookings/<uuid:pk>/', ServiceBookingAPIView.as_view(), name='service-booking-detail'),
+    #service posts
+    path('service-posts/', ServicePostListCreateAPIView.as_view(), name='service-post-list-create'),
+    path('service-posts/<uuid:pk>/', ServicePostDetailAPIView.as_view(), name='service-post-detail'),
+    
+    path('service-posts/applications/create/', CreateServicePostApplicationAPIView.as_view(), name='create-service-post-application'),
+    path('service-posts/customer/<uuid:service_id>/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),
+    path('service-posts/professional/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),
+    path('service-posts/applications/<uuid:pk>/', DetailServicePostApplicationAPIView.as_view(), name='detail-service-post-application'),
+    path('service-posts/applications/<uuid:pk>/accept/', AcceptServicePostApplicationAPIView.as_view(), name='accept-service-post-application'),
+   
+   path('service-bookings/<uuid:pk>/', ServiceBookingRetrieveAPIView.as_view(), name='service-booking-retrieve'),
+   path('service-bookings/<uuid:pk>/update/', ServiceBookingUpdateAPIView.as_view(), name='service-booking-update'),
+   path('service-bookings/<uuid:pk>/delete/', ServiceBookingDeleteAPIView.as_view(), name='service-booking-delete'),
     
     path('bookings/<uuid:booking_id>/review/', ReviewBookingAPIView.as_view(), name='review-booking'),
-    path('bookings/<uuid:booking_id>/complain/', ComplainBookingAPIView.as_view(), name='complain'),
+    path('bookings/<uuid:booking_id>/complain/create/', ComplainBookingAPIView.as_view(), name='complain'),
     
 ]

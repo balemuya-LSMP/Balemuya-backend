@@ -14,7 +14,7 @@ class ServicePost(models.Model):
     description = models.TextField(null=True, blank=True)  
     status = models.CharField(max_length=20, choices=[
         ('active', 'Active'),
-        ('inactive', 'Inactive'),
+        ('booked', 'booked'),
         ('completed', 'Completed'),
     ], default='active') 
     urgency = models.CharField(max_length=10, choices=[
@@ -54,7 +54,6 @@ class ServicePostApplication(models.Model):
 class ServiceBooking(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
         ('completed', 'Completed'),
         ('canceled', 'Canceled'),
     ]

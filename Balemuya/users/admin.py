@@ -49,14 +49,14 @@ class CustomUserAdmin(admin.ModelAdmin):
 @admin.register(Admin)
 class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'admin_level')
-    search_fields = ( 'admin_level')
+    search_fields = ( 'admin_level',)
     list_filter = ('admin_level',)
 
 # Customer Admin
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('user', 'rating','number_of_services_booked')
-    search_fields = ('rating')
+    search_fields = ('rating',)
     list_filter = ('rating',)
 
 # Professional Admin
@@ -80,7 +80,7 @@ class ProfessionalAdmin(admin.ModelAdmin):
 class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_display = ('professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date', 'is_expired')
     list_filter = ('plan_type', 'duration')
-    search_fields = ('plan_type')
+    search_fields = ('plan_type',)
     readonly_fields = ('start_date', 'end_date', 'is_expired')
 
     def is_expired(self, obj):
