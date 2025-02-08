@@ -31,6 +31,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if self.connected:
+            
             if hasattr(self, "group_names"):
                 try:
                     for group_name in self.group_names:
@@ -73,7 +74,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         elif user.user_type == 'admin':
             group_names.append("admin_verification_notifications")
-            group_names.append("admin_booking_complaints_notifications")
+            group_names.append("admin_booking_complaint_notifications")
             group_names.append("admin_feedback_notifications")
             group_names.append("admin_general_notifications")
 
