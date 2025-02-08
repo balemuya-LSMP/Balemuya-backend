@@ -41,8 +41,8 @@ class ServicePostAPIView(APIView):
                 print('user is customer')
                 service_posts = ServicePost.objects.filter(customer=request.user.customer).order_by('-created_at')
             elif request.user.user_type =='professional':
-                print('professional category',request.user.professional.categories.all()).order_by('-created_at')
-                service_posts = ServicePost.objects.filter(category__in=request.user.professional.categories.all())
+                print('professional category',request.user.professional.categories.all())
+                service_posts = ServicePost.objects.filter(category__in=request.user.professional.categories.all()).order_by('-created_at')
             elif request.user.user_type =='admin':
                 service_posts = ServicePost.objects.all().order_by('-created_at')
                 
