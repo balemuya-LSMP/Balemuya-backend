@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
 from common.models import Category
+from common.serializers import CategorySerializer
 from .serializers import ServicePostSerializer,ServicePostApplicationSerializer,ServiceBookingSerializer,ComplainSerializer,ServiceBookingSerializer
 from users.models import Professional, Customer
 
@@ -11,6 +12,18 @@ from django.http import JsonResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+
+
+class CategoryListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        try:
+            categories = Category.objects.all()
+        except Category.DoesNotExist:
+            return Response({"detail": "Categories not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
 class ServicePostAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -26,12 +39,12 @@ class ServicePostAPIView(APIView):
         else:
             if request.user.user_type =='customer':
                 print('user is customer')
-                service_posts = ServicePost.objects.filter(customer=request.user.customer)[:10]
+                service_posts = ServicePost.objects.filter(customer=request.user.customer).order_by('-created_at')
             elif request.user.user_type =='professional':
-                print('professional category',request.user.professional.categories.all())
+                print('professional category',request.user.professional.categories.all()).order_by('-created_at')
                 service_posts = ServicePost.objects.filter(category__in=request.user.professional.categories.all())
             elif request.user.user_type =='admin':
-                service_posts = ServicePost.objects.all()[:20]
+                service_posts = ServicePost.objects.all().order_by('-created_at')
                 
             if not service_posts:
                 return Response({"detail": "No service posts found."}, status=status.HTTP_404_NOT_FOUND)

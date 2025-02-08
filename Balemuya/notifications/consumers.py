@@ -1,4 +1,5 @@
 import json
+from uuid import UUID
 from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework_simplejwt.tokens import AccessToken
 from channels.db import database_sync_to_async
@@ -29,9 +30,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        # Remove the user from each group
-        for group_name in self.group_names:
-            await self.channel_layer.group_discard(group_name, self.channel_name)
+        if hasattr(self, "group_names"):
+            for group_name in self.group_names:
+                await self.channel_layer.group_discard(group_name, self.channel_name)
 
     def get_token_from_query_string(self):
         query_string = self.scope["query_string"].decode("utf-8")
@@ -46,26 +47,26 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return user if user.is_authenticated else None
         except Exception:
             return None
-
     @database_sync_to_async
     def get_group_names_by_user_type(self, user):
         group_names = []
+        
         if user.user_type == 'professional':
-            group_names.append(f"professional_{user.id}_subscription_notifications")
-            group_names.append(f"professional_{user.id}_application_accepted_notifications")
-            group_names.append("professional_general_notifications")
+            group_names.append(f"professional_{user.id}_ver_notifications")
+            group_names.append(f"professional_{user.id}_sub_notifications")
+            group_names.append(f"professional_{user.id}_new_bookings")
+            group_names.append(f"professional_{user.id}_general_notifications")
             for category in user.professional.categories.all():  
                 group_names.append(f"professional_{user.id}_new_jobs")
 
         elif user.user_type == 'customer':
-            group_names.append(f"customer_{user.id}_application_requests")
-            group_names.append("customer_general_notifications")
+            group_names.append(f"customer_{user.id}_job_app_requests")
+            group_names.append(f"customer_{user.id}_general_notifications")
 
         elif user.user_type == 'admin':
             group_names.append("admin_verification_notifications")
-            group_names.append("admin_booking_complain_notifications")
+            group_names.append("admin_booking_complaints_notifications")
             group_names.append("admin_feedback_notifications")
-            group_names.append("admin_notifications")
             group_names.append("admin_general_notifications")
 
         return group_names
@@ -75,7 +76,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.close(code=4000)
 
     async def send_notification(self, event):
-        notification = event['message']
+        notification = event['data']
         await self.send(text_data=json.dumps({
             'notification': notification
         }))
+
+    # def serialize_uuid_fields(self, data):
+    #     """Recursively convert UUIDs to strings."""
+    #     if isinstance(data, dict):
+    #         return {key: str(value) if isinstance(value, UUID) else self.serialize_uuid_fields(value) for key, value in data.items()}
+    #     elif isinstance(data, list):
+    #         return [self.serialize_uuid_fields(item) for item in data]
+    #     return data
