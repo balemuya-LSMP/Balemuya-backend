@@ -6,6 +6,7 @@ UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,Use
     ProfessionalVerificationRequestView,InitiatePaymentView, CheckPaymentView,\
         CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView,\
             UserFeedbackView
+from .customers.views import NearbyProfessionalsView
         
 # from .address import get_address_from_coordinates
 urlpatterns = [
@@ -57,6 +58,10 @@ urlpatterns = [
     #payment related
     path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
     path('professional/subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
+    
+    #customer
+    path('customer/nearby-professionals/', NearbyProfessionalsView.as_view(), name='nearby-professionals'),
+    
     
     #feed back
     path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),
