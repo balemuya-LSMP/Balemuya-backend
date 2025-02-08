@@ -4,7 +4,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
 UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
     ProfessionalVerificationRequestView,InitiatePaymentView, CheckPaymentView,\
-        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView
+        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView,\
+            UserFeedbackView
         
 # from .address import get_address_from_coordinates
 urlpatterns = [
@@ -56,6 +57,10 @@ urlpatterns = [
     #payment related
     path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
     path('professional/subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
+    
+    #feed back
+    path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),
+    
     
    
 ]
