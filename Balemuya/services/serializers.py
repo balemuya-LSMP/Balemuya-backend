@@ -118,28 +118,34 @@ class ServicePostSerializer(serializers.ModelSerializer):
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     professional_id = serializers.CharField(source='professional.id', read_only=True)
-    service = ServicePostSerializer(read_only=True)
     professional_name = serializers.CharField(source='professional.user.get_full_name', read_only=True)
     professional_profile_image = serializers.ImageField(source='professional.user.profile_image', read_only=True)
     rating = serializers.FloatField(source='professional.rating', read_only=True)
-
+    professional = serializers.PrimaryKeyRelatedField(read_only=True)
+    service = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = ServicePostApplication
         fields = ['id', 'service', 'professional_id', 'professional', 'professional_name', 'professional_profile_image', 'rating', 'message', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
         write_only_fields = ['professional']
 
-    def validate(self, attrs):
-        if 'professional' not in attrs:
-            professional = self.context['request'].user.professional
-            if professional is None:
-                raise serializers.ValidationError("Professional not found for the user.")
-            attrs['professional'] = professional
-        return attrs
+    # def validate(self, attrs):
+    #     if 'professional' not in attrs:
+    #         print('professional ',professional)
+    #         professional = self.context['request'].user.professional
+    #         if professional is None:
+    #             raise serializers.ValidationError("Professional not found for the user.")
+    #         attrs['professional'] = professional
+    #     return attrs
 
     def create(self, validated_data):
-        service = validated_data.get('service_id')
-        professional = self.context['request'].user.professional
+        service = validated_data.get('service')
+        request = self.context.get('request')
+        service = self.context.get('service')
+        
+        professional =request.user.professional      
+        validated_data['professional'] = professional        
+        validated_data['service'] = service        
         
         if ServicePostApplication.objects.filter(service=service, professional=professional).exists():
             raise serializers.ValidationError("You have already applied for this service.")
