@@ -733,7 +733,6 @@ class PortfolioView(APIView):
 class ProfessionalVerificationRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
-
     def post(self, request):
         user = request.user
 
@@ -959,7 +958,22 @@ class CheckPaymentView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-       
+class UserFeedbackView(APIView):
+     permission_classes = [IsAuthenticated]
+      
+
+     def post(self,request):
+         user_feedback = Feedback.objects.filter(user=request.user).first()
+         if user_feedback:
+             user_feedback.message = request.data.get('message')
+             user_feedback.save()
+             return Response({'message': 'Feedback updated successfully.'}, status=status.HTTP_200_OK)
+         else:
+             user_feedback = Feedback.objects.create(user=request.user,message=request.data.get('message'))
+             user_feedback.save()
+             return Response({'message': 'Feedback created successfully.'}, status=status.HTTP_201_CREATED)
+         
+
 
 
 
