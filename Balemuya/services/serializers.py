@@ -152,6 +152,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
 
 class ServiceBookingSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
+    
     class Meta:
         model = ServiceBooking
         fields = ['id', 'application', 'scheduled_date', 'status', 'created_at', 'updated_at']
