@@ -18,7 +18,7 @@ class NearbyProfessionalsView(APIView):
         customer_lon = request.user.address.longitude
         customer_location = (customer_lat, customer_lon)
 
-        nearby_professionals = find_nearby_professionals(customer_location,category)
+        nearby_professionals = find_nearby_professionals(customer_location,max_distance=50)
         if not nearby_professionals:
             return Response({"message": "No professionals found nearby"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -56,6 +56,38 @@ class CustomerProfileView(APIView):
             return Response({'data': response_data}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CustomerServicesView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        if request.user.user_type == "customer":
+            query_param_status = request.query_params.get('status', None)
+            if query_param_status is None:
+                new_service_post = ServicePost.objects.filter(customer=request.user.customer,status='active').order_by('-created_at')
+                new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
+                return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
+           
+            elif query_param_status == 'booked':
+                service_booked = ServiceBooking.objects.filter(application__service__customer=request.user.customer,status='pending').order_by('-created_at')
+                service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
+                
+                return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
+            elif query_param_status == 'completed':
+                service_completed = ServiceBooking.objects.filter(application__service__customer=request.user.customer,status='completed').order_by('-created_at')
+                service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
+                return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
+            elif query_param_status == 'canceled':
+                service_canceled = ServiceBooking.objects.filter(application__srvice__customer=request.user.customer,status='canceled').order_by('-created_at')
+                service_canceled_serializer = ServiceBookingSerializer(service_canceled, many=True)
+                return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Invalid status parameter."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+           
+
 
 
 
