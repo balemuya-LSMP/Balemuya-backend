@@ -154,7 +154,7 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     class Meta:
         model = ServiceBooking
-        fields = ['id', 'application', 'scheduled_date', 'agreed_price', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'application', 'scheduled_date', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, data):
@@ -166,9 +166,5 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
 
         if ServiceBooking.objects.filter(application=application).exists():
             raise serializers.ValidationError("A booking already exists for this application.")
-
-        agreed_price = data.get('agreed_price')
-        if agreed_price is None or agreed_price <= 0:
-            raise serializers.ValidationError("The agreed price must be a positive value.")
 
         return data
