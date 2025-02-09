@@ -208,66 +208,36 @@ class VerifyPasswordResetOTPView(APIView):
             return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
         
 class GoogleLoginView(APIView):
-    def get(self, request):
-        code = request.GET.get('code')  
-        print('code', code)
-
-        if not code:
-            return Response({'error': "Missing code parameter"}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        access_token = request.data.get('token')
+        if not access_token:
+            return Response({'error': "Missing access token"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            token_url = 'https://oauth2.googleapis.com/token'
-            data = {
-                'code': code,
-                'client_id': settings.GOOGLE_CLIENT_ID,
-                'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'http://localhost:3000/auth/google-callback/', 
-                'grant_type': 'authorization_code',
-            }
-            token_response = requests.post(token_url, data=data)
-            token_data = token_response.json()
-
-            access_token = token_data.get('access_token')
-            if not access_token:
-                return Response({'error': "No access token received"}, status=status.HTTP_400_BAD_REQUEST)
-
             # Get user info from Google
-            user_info_response = requests.get(
-                'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses',
+            user_info = requests.get(
+                'https://www.googleapis.com/oauth2/v1/userinfo',
                 headers={'Authorization': f'Bearer {access_token}'}
-            )
+            ).json()
 
-            if user_info_response.status_code != 200:
-                return Response({'error': user_info_response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
-
-            user_info = user_info_response.json()
-            names = user_info.get('names', [{}])
-            email_addresses = user_info.get('emailAddresses', [{}])
-
-            first_name = names[0].get('givenName', '')
-            last_name = names[0].get('unstructuredName', '')
-            email = email_addresses[0].get('value', '')
+            email = user_info.get('email')
+            first_name = user_info.get('given_name', '')
+            last_name = user_info.get('family_name', '')
 
             if not email:
-                return Response({"error": "Email not found in user info"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "Email not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create or retrieve the user
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'password': 'temporarypassword123',
-                    'is_active': True
-                }
-            )
+            # Create or get user
+            user, created = User.objects.get_or_create(email=email, defaults={
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_active': True
+            })
 
-            # Generate access and refresh tokens
-            access = AccessToken.for_user(user)
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-
             return Response({
-                'access': str(access),
+                'access': str(refresh.access_token),
                 'refresh': str(refresh),
             }, status=status.HTTP_200_OK)
 
