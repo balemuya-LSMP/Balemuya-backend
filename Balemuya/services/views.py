@@ -234,6 +234,28 @@ class ServiceBookingDeleteAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CancelServiceBookingAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, booking_id=None):
+        try:
+            booking = ServiceBooking.objects.get(id=boking_id)
+        except ServiceBooking.DoesNotExist:
+            return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        booking.status = 'canceled'
+        booking.save()
+        
+        booking.application.status = 'rejected'
+        booking.application.save()
+        
+        booking.application.service.status = 'active'
+        booking.application.service.save()
+        
+        return Response({"detail": "Booking cancelled successfully."}, status=status.HTTP_200_OK)
+
+
+
 class ReviewBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

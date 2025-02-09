@@ -379,9 +379,10 @@ class AddressView(APIView):
     def delete(self,request):
         try:
            address = request.user.address
+           address.delete()
         except Address.DoesNotExist:
             return Response({"error":"address not found to delete"},status=status.HTTP_400_BAD_REQUEST)
-        address.delete()
+       
         return Response({"message":"Address deleted successfully"},status=status.HTTP_200_OK)
     
 
