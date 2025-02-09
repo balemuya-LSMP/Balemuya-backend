@@ -16,7 +16,7 @@ class NearbyProfessionalsView(APIView):
         customer_lon = request.user.address.longitude
         customer_location = (customer_lat, customer_lon)
 
-        nearby_professionals = find_nearby_professionals(customer_location,category,max_distance=10)
+        nearby_professionals = find_nearby_professionals(customer_location,category)
         if not nearby_professionals:
             return Response({"message": "No professionals found nearby"}, status=status.HTTP_404_NOT_FOUND)
 

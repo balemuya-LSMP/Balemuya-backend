@@ -5,6 +5,7 @@ from rest_framework import status
 from geopy.distance import geodesic
 from users.models import User  # Assuming User model has user_type
 from users.serializers import ProfessionalSerializer
+from common.serializers import AddressSerializer
 
 
 def find_nearby_professionals(self, customer_location, category=None, max_distance=None):
@@ -23,8 +24,8 @@ def find_nearby_professionals(self, customer_location, category=None, max_distan
                         "id": professional.id,
                         "name": professional.first_name,
                         "user_type": professional.user_type,
-                        "profile_image": professional.profile_image,
-                        "address": professional.address.address,
+                        "profile_image": professional.profile_image.url,
+                        "address": AddressSerializer(professional.address).data,
                         "rating": professional.professional.rating,
                         "bio": professional.bio,
                         "distance": round(distance, 2)
