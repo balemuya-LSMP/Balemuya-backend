@@ -23,9 +23,9 @@ class ServicePostApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceBooking)
 class ServiceBookingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'application', 'scheduled_date', 'agreed_price', 'status', 'created_at', 'updated_at')
+    list_display = ('id', 'application', 'scheduled_date', 'status', 'created_at', 'updated_at')
     list_filter = ('status', 'scheduled_date', 'created_at')
-    search_fields = ('id', 'application__service__id', 'application__professional__user__username')
+    search_fields = ('id', 'status',)
     ordering = ('-created_at',)
     autocomplete_fields = ('application',)
 
@@ -34,7 +34,7 @@ class ServiceBookingAdmin(admin.ModelAdmin):
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ('id', 'booking', 'rating', 'comment', 'created_at')
     list_filter = ('rating', 'created_at')
-    search_fields = ('id', 'booking__id')
+    search_fields = ('id', 'comment','rating')
     ordering = ('-created_at',)
     autocomplete_fields = ('booking',)
 
@@ -42,6 +42,6 @@ class ReviewAdmin(admin.ModelAdmin):
 class ComplaintAdmin(admin.ModelAdmin):
     list_display = ('id', 'booking', 'user', 'message', 'status', 'created_at')
     list_filter = ('status', 'created_at')
-    search_fields = ('id', 'booking__id', 'user__username')
+    search_fields = ('id', 'message','status')
     ordering = ('-created_at',)
     autocomplete_fields = ('booking', 'user')

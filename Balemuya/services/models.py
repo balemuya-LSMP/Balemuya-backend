@@ -65,7 +65,6 @@ class ServiceBooking(models.Model):
         related_name='booking'
     )
     scheduled_date = models.DateTimeField()
-    agreed_price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
