@@ -122,7 +122,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
     professional_profile_image = serializers.ImageField(source='professional.user.profile_image', read_only=True)
     rating = serializers.FloatField(source='professional.rating', read_only=True)
     professional = serializers.PrimaryKeyRelatedField(queryset = Professional.objects.all(),write_only=True,required=False)
-    service = serializers.PrimaryKeyRelatedField(read_only=True)
+    service = ServicePostSerializer(read_only=True)
     class Meta:
         model = ServicePostApplication
         fields = ['id', 'service', 'professional_id', 'professional', 'professional_name', 'professional_profile_image', 'rating', 'message', 'status', 'created_at', 'updated_at']
@@ -152,6 +152,7 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
 
 class ServiceBookingSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
+    application = ServicePostApplicationSerializer(required=False, read_only=True)
     
     class Meta:
         model = ServiceBooking
