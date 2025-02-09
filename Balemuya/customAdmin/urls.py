@@ -8,8 +8,7 @@ from .views import (
     CustomerListView,
     AdminListView,
     ProfessionalVerificationRequestListView,
-    # CustomerStatisticsView
-    
+    StatisticsView    
 )
 
 urlpatterns = [
@@ -17,9 +16,12 @@ urlpatterns = [
     path('professionals/', ProfessionalListView.as_view(), name='professional-list'),
     path('professionals/<uuid:pk>/verify/', AdminVerifyProfessionalView.as_view(), name='verify-professional'),
     path('professional/verification/requests/', ProfessionalVerificationRequestListView.as_view(), name='professional-verification-request'),
-   
+    
     path('customers/', CustomerListView.as_view(), name='customer-list'),
-    # path('customers/statistics/', CustomerStatisticsView.as_view(), name='customer-statistics'),
     
     path('admins/', AdminListView.as_view(), name='admin-list'),
+
+    path('stats/', StatisticsView.as_view(), name='user-stats'),
+    
+    
 ]

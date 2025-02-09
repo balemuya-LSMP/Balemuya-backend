@@ -100,6 +100,7 @@ class ProfessionalServiceListView(APIView):
             elif query_param_status == 'booked':
                 service_booked = ServiceBooking.objects.filter(application__professional=request.user.professional,status='pending').order_by('-created_at')
                 service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
+                
                 return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'completed':
                 service_completed = ServiceBooking.objects.filter(application__professional=request.user.professional,status='completed').order_by('-created_at')

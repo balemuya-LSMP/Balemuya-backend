@@ -90,6 +90,7 @@ class ServicePostDetailAPIView(APIView):
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
 
         service_post.delete()
+        
         return Response({"message": "Post deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -267,7 +268,7 @@ class ReviewBookingAPIView(APIView):
         except ServiceBooking.DoesNotExist:
             return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
 
-        review, created = Review.objects.get_or_create(booking=booking, user=user)
+        review,created = Review.objects.get_or_create(booking=booking, user=user)
         if not created:
             return Response({"error": "Review already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
