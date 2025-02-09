@@ -22,7 +22,7 @@ class NearbyProfessionalsView(APIView):
     def find_nearby_professionals(self, customer_location, category=None, max_distance=None):
         nearby = []
 
-        professionals = User.objects.filter(user_type='professional', professional__categories__name=category)
+        professionals = User.objects.filter(user_type='professional',is_available=True, professional__categories__name=category)
 
         for professional in professionals:
             if professional.address:
@@ -35,10 +35,37 @@ class NearbyProfessionalsView(APIView):
                         "id": professional.id,
                         "name": professional.first_name,
                         "user_type": professional.user_type,
-                        "latitude": professional.address.latitude,
-                        "longitude": professional.address.longitude,
+                        "profile_image": professional.profile_image,
+                        "address": professional.address.address,
+                        "rating": professional.professional.rating,
+                        "bio": professional.bio,
                         "distance": round(distance, 2)
                     })
 
         nearby.sort(key=lambda x: x['distance'])
         return nearby
+    
+
+class FilterProfessionalsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        category = request.query_params.get('category')
+        distance = request.query_params.get('distance')
+        rating = request.query_params.get('rating')
+        
+        professionals = self.filter_professionals(category, distance, rating)
+        
+        return Response({"message": "success", "professionals": professionals}, status=status.HTTP_200_OK)
+        
+    def filter_professionals(self, category, distance, rating):
+        professionals = User.objects.filter(user_type='professional', professional__categories__name=category)
+        
+        if distance:
+            professionals = professionals.filter(address__distance_lte=(distance, 'km'))
+        
+        if rating:
+            professionals = professionals.filter(professional__rating__gte=rating)
+        
+        return ProfessionalSerializer(professionals, many=True).data
+        
