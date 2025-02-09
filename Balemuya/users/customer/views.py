@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
-from users.models import User  # Assuming User model has user_type
+from users.models import User, Customer  # Assuming User model has user_type
 from users.serializers import ProfessionalSerializer,CustomerSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking
 from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer
@@ -31,21 +31,21 @@ class CustomerProfileView(APIView):
     
     def get(self, request,pk):
         try:
-            user = User.objects.get(id=pk, user_type='customer')
-        except User.DoesNotExist:
-            return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
-            customer = user.customer
-            active_service_posts = ServicePost.objects.filter(customer=user.customer,status='active').order_by('-created_at')
-            booked_service_posts = ServicePost.objects.filter(customer=user.customer,status='booked').order_by('-created_at')
-            completed_service_posts = ServicePost.objects.filter(customer=user.customer,status='completed').order_by('-created_at')
+            user = User.objects.get(id=pk,user_type='customer')
+        except User.DoesNotExist as e:
+            return Response({'error': f'Customer not found '}, status=status.HTTP_404_NOT_FOUND)
+        customer = user.customer
+        active_service_posts = ServicePost.objects.filter(customer=user.customer,status='active').order_by('-created_at')
+        booked_service_posts = ServicePost.objects.filter(customer=user.customer,status='booked').order_by('-created_at')
+        completed_service_posts = ServicePost.objects.filter(customer=user.customer,status='completed').order_by('-created_at')
             
-            customer_serializer = CustomerSerializer(customer)
-            active_service_posts_serializer = ServicePostSerializer(active_service_posts, many=True)
-            booked_service_posts_serializer = ServicePostSerializer(booked_service_posts, many=True)
-            completed_service_posts_serializer = ServicePostSerializer(completed_service_posts, many=True)
-            reviews = Review.objects.filter(booking__application__service__customer=user.customer).order_by('-created_at')
+        customer_serializer = CustomerSerializer(customer)
+        active_service_posts_serializer = ServicePostSerializer(active_service_posts, many=True)
+        booked_service_posts_serializer = ServicePostSerializer(booked_service_posts, many=True)
+        completed_service_posts_serializer = ServicePostSerializer(completed_service_posts, many=True)
+        reviews = Review.objects.filter(booking__application__service__customer=user.customer).order_by('-created_at')
             
-            response_data = {
+        response_data = {
                 'customer': customer_serializer.data,
                 'active_service_posts': active_service_posts_serializer.data,
                 'booked_service_posts': booked_service_posts_serializer.data,
@@ -53,9 +53,8 @@ class CustomerProfileView(APIView):
                 'reviews': ReviewSerializer(reviews, many=True).data
             }
             
-            return Response({'data': response_data}, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'data': response_data}, status=status.HTTP_200_OK)
+        
 
 
 class CustomerServicesView(APIView):
