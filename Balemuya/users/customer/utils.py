@@ -8,10 +8,10 @@ from users.serializers import ProfessionalSerializer
 from common.serializers import AddressSerializer
 
 
-def find_nearby_professionals(self, customer_location, category=None, max_distance=None):
+def find_nearby_professionals(customer_location, max_distance=50):
         nearby = []
 
-        professionals = User.objects.filter(user_type='professional',professional__is_available=True, professional__categories__name=category)
+        professionals = User.objects.filter(user_type='professional',professional__is_available=True)
 
         for professional in professionals:
             if professional.address:
