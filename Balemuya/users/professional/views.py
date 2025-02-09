@@ -71,6 +71,55 @@ class ProfessionalProfileView(APIView):
         }
         return Response({"message":"Professional profile retrieved successfully", "data":response_data}, status=status.HTTP_200_OK)
 
+class ProfessionalServiceListView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        if request.user.user_type == "professional":
+            query_param_status = request.query_params.get('status', None)
+            if query_param_status is None:
+                new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-created_at')
+                new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
+                return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
+            elif query_param_status == 'pending':
+                service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='pending').order_by('-created_at')
+                service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)                
+                return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
+            
+            elif query_param_status == 'accepted':
+                service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='accepted').order_by('-created_at')
+                service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)
+                
+                return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
+            
+            elif query_param_status == 'rejected':
+                service_rejected = ServicePostApplication.objects.filter(professional=request.user.professional,status='rejected').order_by('-created_at')
+                service_rejected_serializer = ServicePostApplicationSerializer(service_rejected, many=True)
+                return Response({"data": list(service_rejected_serializer.data)}, status=status.HTTP_200_OK)
+            
+            elif query_param_status == 'booked':
+                service_booked = ServiceBooking.objects.filter(application__professional=request.user.professional,status='pending').order_by('-created_at')
+                service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
+                return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
+            elif query_param_status == 'completed':
+                service_completed = ServiceBooking.objects.filter(application__professional=request.user.professional,status='completed').order_by('-created_at')
+                service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
+                return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
+            elif query_param_status == 'canceled':
+                service_canceled = ServiceBooking.objects.filter(application__professional=request.user.professional,status='canceled').order_by('-created_at')
+                service_canceled_serializer = ServiceBookingSerializer(service_canceled, many=True)
+                return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Invalid status parameter."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+           
+        
+            
+    
+
+
+
 
 class ProfessionalProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
