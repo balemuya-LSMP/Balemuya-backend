@@ -3,6 +3,8 @@ import json
 from django.core.cache import cache
 from django.contrib.auth import login
 from django.core.mail import send_mail
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth
 
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -26,8 +28,8 @@ from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
-
-from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest
+from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain
+from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest,Feedback
 from users.utils import send_sms, generate_otp,send_push_notification
 from notifications.models import Notification
 
@@ -206,5 +208,96 @@ class ProfessionalVerificationRequestListView(APIView):
             return Response({"error": "No verification requests found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = VerificationRequestSerializer(verification_requests, many=True)
         return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+    
+    
+
+class StatisticsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.user_type == 'admin':
+            return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+        
+        # User Statistics
+        user_statistics = {
+            "total_users": User.objects.filter(is_active=True).count(),
+            "total_professionals": Professional.objects.filter(user__is_active=True).count(),
+            "total_customers": Customer.objects.filter(user__is_active=True).count(),
+            "total_admins": Admin.objects.filter(user__is_active=True).count(),
+            "blocked_users": User.objects.filter(is_blocked=True).count(),
+            "blocked_professionals": Professional.objects.filter(user__is_blocked=True).count(),
+            "blocked_customers": Customer.objects.filter(user__is_blocked=True).count(),
+            "blocked_admins": Admin.objects.filter(user__is_blocked=True).count(),
+            "verified_professionals": Professional.objects.filter(is_verified=True).count(),
+            "available_professionals": Professional.objects.filter(is_available=True).count(),
+        }
+
+        # Service Statistics
+        service_statistics = {
+            "total_services": ServicePost.objects.count(),
+            "completed_services": ServicePost.objects.filter(status='completed').count(),
+            "booked_services": ServicePost.objects.filter(status='booked').count(),
+            "active_services": ServicePost.objects.filter(status='active').count(),
+        }
+
+        # Booking Statistics
+        booking_statistics = {
+            "total_bookings": ServiceBooking.objects.count(),
+            "pending_bookings": ServiceBooking.objects.filter(status='pending').count(),
+            "completed_bookings": ServiceBooking.objects.filter(status='completed').count(),
+            "canceled_bookings": ServiceBooking.objects.filter(status='canceled').count(),
+        }
+
+        # Feedback and Complaint Statistics
+        feedback_statistics = {
+            "total_feedbacks": Feedback.objects.count(),
+            "total_complains": Complain.objects.count(),
+            "resolved_complains": Complain.objects.filter(status=True).count(),
+            "unresolved_complains": Complain.objects.filter(status=False).count(),
+        }
+
+        # Financial Statistics
+        total_revenue = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
+        monthly_revenue_stats = (
+            Payment.objects
+            .filter(payment_status='completed')
+            .annotate(month=TruncMonth('payment_date'))
+            .values('month')
+            .annotate(
+                total_revenue=Sum('amount'), 
+                payment_count=Count('id')
+            )
+            .order_by('month')
+        )
+        monthly_revenue_stats_list = list(monthly_revenue_stats)
+
+        # User Join Statistics
+        monthly_user_stats = (
+            User.objects
+            .annotate(month=TruncMonth('date_joined'))
+            .values('month')
+            .annotate(user_count=Count('id'))
+            .order_by('month')
+        )
+        monthly_user_stats_list = list(monthly_user_stats)
+
+        # Prepare the final response
+        response_data = {
+            "user_statistics": user_statistics,
+            "service_statistics": service_statistics,
+            "booking_statistics": booking_statistics,
+            "feedback_statistics": feedback_statistics,
+            "financial_statistics": {
+                "total_revenue": total_revenue,
+                "monthly_revenue_stats": monthly_revenue_stats_list,
+            },
+            "monthly_user_stats": monthly_user_stats_list,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)         
+         
+     
+         
+    
     
     
