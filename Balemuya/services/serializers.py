@@ -10,14 +10,16 @@ from uuid import UUID
 
 class ReviewSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
+    user = UserSerializer(read_only=True)
+    user_id =serializers.PrimaryKeyRelatedField(queryset = Professional.objects.all(),write_only=True)
     class Meta:
         model = Review
-        fields = ['id', 'user', 'booking', 'rating', 'comment', 'created_at', 'updated_at']
+        fields = ['id', 'user','user_id', 'booking', 'rating', 'comment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'booking']
 
     def create(self, validated_data):
-        user = validated_data.pop('user', self.context['request'].user)
-        validated_data['user'] = user
+        user_id = validated_data.pop('user_id',None)
+        validated_data['user_id'] = user_id
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
