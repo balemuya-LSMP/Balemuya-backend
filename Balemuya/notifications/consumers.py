@@ -1,9 +1,10 @@
-import json
-from uuid import UUID
 from channels.generic.websocket import AsyncWebsocketConsumer
-from rest_framework_simplejwt.tokens import AccessToken
+import json
+import logging
+from uuid import UUID
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import AccessToken
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -17,32 +18,32 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if not self.user:
             return await self.reject_connection("Unauthorized: Invalid or missing token.")
 
-        # Get group names based on user type
+        # Initialize connected and group_names
+        self.connected = True
         self.group_names = await self.get_group_names_by_user_type(self.user)
 
         # Add the user to each group
         for group_name in self.group_names:
             await self.channel_layer.group_add(group_name, self.channel_name)
 
-        print(f'User connected to groups: {self.group_names}')
+        logging.info(f'User connected to groups: {self.group_names}')
         await self.send(text_data=json.dumps({
             "message": f"Connected to groups: {self.group_names}"
         }))
 
     async def disconnect(self, close_code):
         if self.connected:
-            
             if hasattr(self, "group_names"):
                 try:
                     for group_name in self.group_names:
                         await self.channel_layer.group_discard(group_name, self.channel_name)
                 except Exception as e:
-                    print(f"Error during disconnect: {e}")
+                    logging.error(f"Error during disconnect: {e}")
             else:
-                print("No groups to disconnect from.")
+                logging.info("No groups to disconnect from.")
+        
         self.connected = False
         
-
     def get_token_from_query_string(self):
         query_string = self.scope["query_string"].decode("utf-8")
         return query_string.split("token=")[-1] if "token=" in query_string else None
@@ -54,8 +55,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             user_id = access_token["user_id"]
             user = get_user_model().objects.get(id=user_id)
             return user if user.is_authenticated else None
-        except Exception:
+        except Exception as e:
+            logging.error(f"Authentication error: {e}")
             return None
+
     @database_sync_to_async
     def get_group_names_by_user_type(self, user):
         group_names = []
@@ -84,14 +87,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"error": message}))
         await self.close(code=4000)
         
-        
     async def send_notification(self, event):
         notification = event['data']
 
         try:
-           notification = self.convert_uuid_fields(notification)
+            notification = self.convert_uuid_fields(notification)
         except Exception as e:
-            print(f"Error converting UUID fields: {e}")
+            logging.error(f"Error converting UUID fields: {e}")
             return
 
         await self.send(text_data=json.dumps({
@@ -99,7 +101,6 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     def convert_uuid_fields(self, data):
-        """Recursively convert UUIDs to strings."""
         if isinstance(data, dict):
             return {key: str(value) if isinstance(value, UUID) else self.convert_uuid_fields(value) for key, value in data.items()}
         elif isinstance(data, list):
