@@ -270,6 +270,19 @@ class StatisticsView(APIView):
             .order_by('month')
         )
         monthly_revenue_stats_list = list(monthly_revenue_stats)
+        
+        monthly_subscription_plan_stats = (
+                SubscriptionPlan.objects
+                .annotate(month=TruncMonth('start_date'))  
+                .values('month')
+                .annotate(plan_count=Count('id'))
+                .order_by('month')
+            )
+
+        monthly_subscription_plan_stats_list = list(monthly_subscription_plan_stats)
+        number_of_gold_subscribers = SubscriptionPlan.objects.filter(plan_type='gold').count()
+        number_of_dimond_subscribers = SubscriptionPlan.objects.filter(plan_type='dimond').count()
+        number_of_silver_subscribers = SubscriptionPlan.objects.filter(plan_type='silver').count()
 
         # User Join Statistics
         monthly_user_stats = (
@@ -280,6 +293,7 @@ class StatisticsView(APIView):
             .order_by('month')
         )
         monthly_user_stats_list = list(monthly_user_stats)
+        
 
         # Prepare the final response
         response_data = {
@@ -289,7 +303,11 @@ class StatisticsView(APIView):
             "feedback_statistics": feedback_statistics,
             "financial_statistics": {
                 "total_revenue": total_revenue,
+                "number_of_gold_subscribers":number_of_gold_subscribers,
+                "number_of_dimond_subscribers":number_of_dimond_subscribers,
+                "number_of_silver_subscribers":number_of_silver_subscribers,
                 "monthly_revenue_stats": monthly_revenue_stats_list,
+                "monthly_subscription_plan_stats_list":monthly_subscription_plan_stats_list
             },
             "monthly_user_stats": monthly_user_stats_list,
         }

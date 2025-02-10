@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
-from users.models import User, Customer  # Assuming User model has user_type
+from users.models import User, Customer
 from users.serializers import ProfessionalSerializer,CustomerSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking
 from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer
 
-from .utils import find_nearby_professionals
+from .utils import find_nearby_professionals,filter_professionals
 
 class NearbyProfessionalsView(APIView):
     def get(self, request):
@@ -78,8 +78,8 @@ class CustomerServicesView(APIView):
                 service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
                 return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'canceled':
-                service_canceled = ServiceBooking.objects.filter(application__srvice__customer=request.user.customer,status='canceled').order_by('-created_at')
-                service_canceled_serializer = ServiceBookingSerializer(service_canceled, many=True)
+                service_canceled = ServicePost.objects.filter(customer=request.user.customer,status='canceled').order_by('-created_at')
+                service_canceled_serializer = ServicePostSerializer(service_canceled, many=True)
                 return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
             else:
                 return Response({"detail": "Invalid status parameter."}, status=status.HTTP_400_BAD_REQUEST)
@@ -87,30 +87,28 @@ class CustomerServicesView(APIView):
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
            
 
-
-
-
-
 class FilterProfessionalsView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        category = request.query_params.get('category')
+        categories = request.query_params.getlist('categories')
         distance = request.query_params.get('distance')
         rating = request.query_params.get('rating')
-        
-        professionals = self.filter_professionals(category, distance, rating)
-        
+
+        if distance is not None:
+            try:
+                distance = float(distance)
+            except ValueError:
+                return Response({"error": "Invalid distance value."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rating is not None:
+            try:
+                rating = float(rating)
+            except ValueError:
+                return Response({"error": "Invalid rating value."}, status=status.HTTP_400_BAD_REQUEST)
+        user_location = None
+        if request.user.address:
+            user_location = (request.user.address.latitude,request.user.address.longitude)
+        professionals = filter_professionals(current_location=user_location, categories=categories, rating=rating, max_distance=distance)
+
         return Response({"message": "success", "professionals": professionals}, status=status.HTTP_200_OK)
-        
-    def filter_professionals(self, category, distance, rating):
-        professionals = User.objects.filter(user_type='professional', professional__categories__name=category)
-        
-        if distance:
-            professionals = professionals.filter(address__distance_lte=(distance, 'km'))
-        
-        if rating:
-            professionals = professionals.filter(professional__rating__gte=rating)
-        
-        return ProfessionalSerializer(professionals, many=True).data
-        
