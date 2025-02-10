@@ -23,7 +23,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         booking = validated_data.pop('booking', None)
 
         review = Review.objects.create(user=user, booking=booking, **validated_data)
-        print('review data',review)
         return review
 
     def update(self, instance, validated_data):
@@ -31,16 +30,20 @@ class ReviewSerializer(serializers.ModelSerializer):
     
 class ComplainSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
+    complaint = UserSerializer(read_only=True)
 
     class Meta:
         model = Complain
-        fields = ['id', 'customer', 'professional', 'complain', 'created_at', 'updated_at']
+        fields = ['id', 'complaint','user','booking', 'message', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+        write_only_fields = ['user','booking']
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['customer'] = user
-        return super().create(validated_data)
+        user=validated_data.pop('user',None)
+        booking = validated_data.pop('booking',None)
+        
+        complain = Complain.objects.create(booking=booking,user=user,**validated_data)
+        return complain
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)

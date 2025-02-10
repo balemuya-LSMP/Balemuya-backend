@@ -218,7 +218,7 @@ def notify_admin_on_complain(sender, instance, created, **kwargs):
     if created:
         channel_layer = get_channel_layer()
         group_name = f"admin_booking_complaint_notifications"
-        message = f"A new complain has been made for  service post {instance.booking.service_post.title}..."
+        message = f"A new complain has been made for  service post {instance.booking.application.service.title}..."
         
         with transaction.atomic():
             notification = Notification.objects.create(
@@ -232,12 +232,12 @@ def notify_admin_on_complain(sender, instance, created, **kwargs):
                         "profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
                         "complainant_id":str(instance.user.id),
                         "complainant_user_type":instance.user.user_type,
-                        "booking_scheduled_date":instance.booking.scheduled_date,
-                        "created_at":instance.created_at
+                        "booking_scheduled_date":instance.booking.scheduled_date.isoformat(),
+                        "created_at":instance.created_at.isoformat()
                         }
             )
             recipient = User.objects.filter(user_type='admin')
-            notification.recipient.set([recipient])
+            notification.recipient.set(recipient)
             notification.save()
             
             notification_serializer = NotificationSerializer(notification)
@@ -292,7 +292,6 @@ def notify_user_on_review(sender, instance, created, **kwargs):
         group_name = None
         channel_layer = get_channel_layer()
         
-        # Determine the group name based on user type
         if instance.user.user_type == 'customer':
             group_name = f"user_{instance.booking.application.professional.user.id}_review_notifications"
         elif instance.user.user_type == 'professional':
@@ -304,7 +303,6 @@ def notify_user_on_review(sender, instance, created, **kwargs):
         message = f"A new review has been made by {instance.user.first_name}..."
         
         with transaction.atomic():
-            # Create the notification with metadata
             notification = Notification.objects.create(
                 title='new review',
                 message=message,

@@ -290,28 +290,27 @@ class ReviewBookingAPIView(APIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         booking_id = kwargs.get('booking_id')
+        print('booking id is ',booking_id)
         try:
             booking = ServiceBooking.objects.get(id=booking_id)
         except ServiceBooking.DoesNotExist:
             return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if a review already exists
+        
         if Review.objects.filter(booking=booking, user=user).exists():
             return Response({"error": "Review already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create review data
+        
         review_data = {
             "booking": booking.id,
-            "user": user.id,  # Ensure user is set
+            "user": user.id, 
             **request.data,
         }
         
-        # Initialize serializer with review data
         serializer = ReviewSerializer(data=review_data)
         if serializer.is_valid():
             serializer.save()
 
-            # Update ratings based on user type
             if user.user_type == "customer":
                 booking.application.professional.rating = (
                     (booking.application.professional.rating + serializer.validated_data['rating']) / 2
@@ -335,11 +334,22 @@ class ComplainBookingAPIView(APIView):
         user = request.user
         booking_id = kwargs.get('booking_id')
         try:
-            booking = ServiceBooking.objects.get(id=booking_id)
+            booking = ServiceBooking.objects.filter(id=booking_id).first()
         except ServiceBooking.DoesNotExist:
             return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = ComplainSerializer(data=request.data, context={'request': request, 'booking': booking})
+        if booking.application.service.customer.user !=user and booking.application.professional.user !=user:
+            return Response({'error':'you can not review this'},status = status.HTTP_400_BAD_REQUEST)
+        
+        if Complain.objects.filter(booking=booking,user=user).exists():
+            return Response({'error':'you already report.'},status=status.HTTP_400_BAD_REQUEST)
+        
+        complain_data = {
+            'booking':booking.id,
+            'user':request.user.id,
+            **request.data
+            
+        }
+        serializer = ComplainSerializer(data=complain_data)
         if serializer.is_valid():
             serializer.save()
             return Response({"success": "Complain added."}, status=status.HTTP_201_CREATED)
