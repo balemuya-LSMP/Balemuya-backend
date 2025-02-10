@@ -11,13 +11,13 @@ class Notification(models.Model):
         ('success', 'Success'),
         ('error', 'Error'),
         ('verification_request', 'Verification Request'),
-        ('system', 'System'),  # System-generated notifications
-        ('service_post', 'Service Post'),  # Notification related to a new service post
-        ('service_request', 'Service Request'),  # Notification related to service requests
-        ('payment', 'Payment'),  # Notifications related to payments
-        ('application', 'Application'),  # Notifications about applications (e.g., job, project)
-        ('status_update', 'Status Update'),  # Status updates for services or applications
-        ('message', 'Message'),  # Direct messages between users
+        ('system', 'System'),
+        ('service_post', 'Service Post'),
+        ('service_request', 'Service Request'),
+        ('payment', 'Payment'),
+        ('application', 'Application'),
+        ('status_update', 'Status Update'),
+        ('message', 'Message'), 
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     recipient = models.ManyToManyField(User, related_name='notifications', blank=True)

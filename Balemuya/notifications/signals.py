@@ -44,10 +44,10 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
                     message=message,
                     metadata={
                         "job_id": str(instance.id),
-                        "customer_first_name": instance.customer.user.first_name,
-                        "customer_profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
-                        "customer_email": instance.customer.user.email,
-                        "customer_id": str(instance.customer.user.id)  # Convert UUID to string
+                        "name": instance.customer.user.first_name,
+                        "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
+                        "email": instance.customer.user.email,
+                        "id": str(instance.customer.user.id)  
                     },
                     notification_type="new_job",
                     title='New Job Post'
@@ -89,9 +89,9 @@ def notify_customer_about_application(sender, instance, created, **kwargs):
         notification = Notification.objects.create(
             message=notification_message,
             notification_type="job_apply",  
-            metadata={"prof_user_id":str(instance.professional.user.id),
-                      "prof_first_name":instance.professional.user.first_name,
-                      "prof_profile_image":instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
+            metadata={"id":str(instance.professional.user.id),
+                      "name":instance.professional.user.first_name,
+                      "profile_image":instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
                       
             },
             title='job_apply'
@@ -123,10 +123,10 @@ def send_verification_request_to_admin(sender, instance, created, **kwargs):
         notification = Notification.objects.create(
             message=notification_message,
             notification_type="verify_request",  
-            metadata={"prof_user_id":str(instance.professional.user.id),
-                      "prof_first_name":instance.professional.user.first_name,
-                      "prof_email":instance.professional.user.email,
-                      "prof_profile_image":instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,},
+            metadata={"id":str(instance.professional.user.id),
+                      "name":instance.professional.user.first_name,
+                      "email":instance.professional.user.email,
+                      "profile_image":instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,},
             title='verification request'
         )
         recepients = User.objects.filter(user_type='admin')
@@ -152,11 +152,17 @@ def notify_professional_on_verification(sender, instance, created, **kwargs):
             channel_layer = get_channel_layer()
             group_name = f"professional_{instance.professional.user.id}_ver_notifications"
             
-            message = f"Your verification request has been {instance.status}"
+            message = f"Your verification request has been {instance.status}."
             notification = Notification.objects.create(
                 message=message,
                 notification_type="verify_response",  
-                title='verification response'
+                title='verification response',
+                metadata={
+                    'id':instance.service.customer.id,
+                    'name':instance.service.customer.user.first_name,
+                    "email":instance.service.customer.user.email,
+                    "profile_image":instance.service.customer.profile_image
+                }
             )
             notification.recipient.set([instance.professional.user])
             notification.save()
@@ -173,9 +179,8 @@ def notify_professional_on_verification(sender, instance, created, **kwargs):
 @receiver(post_save, sender=ServiceBooking)
 def notify_professional_on_service_booking(sender, instance, created, **kwargs):
     if created:
+       
         if instance.status == 'pending':
-            return
-        if instance.status == 'confirmed':
             
             channel_layer = get_channel_layer()
             group_name = f"professional_{instance.application.professional.user.id}_new_bookings"
@@ -187,13 +192,12 @@ def notify_professional_on_service_booking(sender, instance, created, **kwargs):
                     message=message,
                     notification_type="new_booking",
                     metadata={"application_id":str(instance.application.id),
-                            "service_post_title":instance.application.service_post.title,
+                            "post_title":instance.application.service_post.title,
                             "booking_status":instance.status,
                             "scheduled_date":instance.scheduled_date,
-                            "agreed_price":instance.agreed_price,
-                            "customer_first_name":instance.application.service.customer.user.first_name,
-                            "customer_profile_image":instance.application.service.customer.user.profile_image.url if instance.application.service.customer.user.profile_image else None,
-                            "customer_email":instance.application.service.customer.user.email,
+                            "name":instance.application.service.customer.user.first_name,
+                            "profile_image":instance.application.service.customer.user.profile_image.url if instance.application.service.customer.user.profile_image else None,
+                            "email":instance.application.service.customer.user.email,
                             "customer_id":str(instance.customer.user.id)}
                 )
                 
@@ -224,8 +228,8 @@ def notify_admin_on_complain(sender, instance, created, **kwargs):
                 metadata={"complain_id":str(instance.id),
                         "booking_id":str(instance.booking.id),
                         "booking_status":instance.booking.status,
-                        "complainant_first_name":instance.user.first_name,
-                        "complainant_profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
+                        "name":instance.user.first_name,
+                        "profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
                         "complainant_id":str(instance.user.id),
                         "complainant_user_type":instance.user.user_type,
                         "booking_scheduled_date":instance.booking.scheduled_date,
@@ -282,33 +286,37 @@ def notify_admins_on_feedback(sender,instance,created,**kwargs):
             )   
             
             
-            
 @receiver(post_save, sender=Review)
 def notify_user_on_review(sender, instance, created, **kwargs):
     if created:
         group_name = None
         channel_layer = get_channel_layer()
+        
+        # Determine the group name based on user type
         if instance.user.user_type == 'customer':
             group_name = f"user_{instance.booking.application.professional.user.id}_review_notifications"
         elif instance.user.user_type == 'professional':
             group_name = f"user_{instance.booking.application.service.customer.user.id}_review_notifications"
         
-        if group_name == None:
+        if group_name is None:
             return
+        
         message = f"A new review has been made by {instance.user.first_name}..."
         
         with transaction.atomic():
+            # Create the notification with metadata
             notification = Notification.objects.create(
                 title='new review',
                 message=message,
                 notification_type="new_review",
-                metadata={"review_id":str(instance.id),
-                        "user_id":str(instance.user.id),
-                        "user_first_name":instance.user.first_name,
-                        "user_profile_image":instance.user.profile_image.url if instance.user.profile_image else None,
-                        "user_type":instance.user.user_type,
-                        "created_at":instance.created_at
-                        }
+                metadata={
+                    "review_id": str(instance.id),
+                    "user_id": str(instance.user.id),
+                    "user_first_name": instance.user.first_name,
+                    "user_profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
+                    "user_type": instance.user.user_type,
+                    "created_at": instance.created_at.isoformat()  # Convert to string
+                }
             )
             notification.recipient.set([instance.user])
             notification.save()
@@ -321,6 +329,5 @@ def notify_user_on_review(sender, instance, created, **kwargs):
                     "data": notification_serializer.data
                 }
             )
-                
 
                 
