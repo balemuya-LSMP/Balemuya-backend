@@ -16,6 +16,7 @@ class ServicePost(models.Model):
         ('active', 'Active'),
         ('booked', 'booked'),
         ('completed', 'Completed'),
+        ('canceled','Canceled')
     ], default='active') 
     urgency = models.CharField(max_length=10, choices=[
         ('normal', 'Normal'),

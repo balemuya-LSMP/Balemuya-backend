@@ -50,6 +50,21 @@ class ServicePostListCreateAPIView(APIView):
 
         serializer = ServicePostSerializer(service_posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def post(self, request, *args, **kwargs):
+        
+        if request.user.user_type !='customer':
+            return Response({'message':'you are not allowd to post!'},status=status.HTTP_400_BAD_REQUEST)
+        
+        posted_data = {
+            'customer_id':request.user.customer.id,
+            **request.data
+        }
+        serializer = ServicePostSerializer(data=posted_data,context={'request':request})
+        if serializer.is_valid():
+            serializer.save() 
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ServicePostDetailAPIView(APIView):
@@ -104,10 +119,17 @@ class CreateServicePostApplicationAPIView(APIView):
         try:
             service_id = request.data.get('service_id')
             service_post = ServicePost.objects.get(id=service_id)
+            print('service id get from frontend',service_post)
         except ServicePost.DoesNotExist:
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = ServicePostApplicationSerializer(data=request.data, context={'request': request, 'service': service_post})
+        professional_id = request.user.professional.id
+        print('professional id is ',professional_id)
+        application_data = {
+            'service_id':service_post,
+            'professional_id':request.user.professional.id,
+            **request.data
+        }
+        serializer = ServicePostApplicationSerializer(data=application_data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -206,7 +228,7 @@ class ServiceBookingRetrieveAPIView(APIView):
             return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
-class ServiceBookingUpdateAPIView(APIView):
+class CompleteBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk=None):
@@ -214,12 +236,15 @@ class ServiceBookingUpdateAPIView(APIView):
             booking = ServiceBooking.objects.get(id=pk)
         except ServiceBooking.DoesNotExist:
             return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = ServiceBookingSerializer(booking, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if booking.status =='pending':
+            booking.status ='completed'
+            booking.save()
+            
+            booking.application.service.status='completed'
+            booking.application.service.save()
+            return Response({"detail": "Booking completed."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+             return Response({'error':'there is no pending booking to be completed'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ServiceBookingDeleteAPIView(APIView):
@@ -227,9 +252,9 @@ class ServiceBookingDeleteAPIView(APIView):
 
     def delete(self, request, pk=None):
         try:
-            booking = ServiceBooking.objects.get(id=pk)
+            booking = ServiceBooking.objects.get(id=pk,status='completed')
         except ServiceBooking.DoesNotExist:
-            return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Booking not completed can't be deleted."}, status=status.HTTP_404_NOT_FOUND)
 
         booking.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -240,9 +265,9 @@ class CancelServiceBookingAPIView(APIView):
 
     def post(self, request, booking_id=None):
         try:
-            booking = ServiceBooking.objects.get(id=boking_id)
+            booking = ServiceBooking.objects.get(id=booking_id,status='pending')
         except ServiceBooking.DoesNotExist:
-            return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "no active booking found."}, status=status.HTTP_404_NOT_FOUND)
 
         booking.status = 'canceled'
         booking.save()
@@ -250,7 +275,7 @@ class CancelServiceBookingAPIView(APIView):
         booking.application.status = 'rejected'
         booking.application.save()
         
-        booking.application.service.status = 'active'
+        booking.application.service.status = 'canceled'
         booking.application.service.save()
         
         return Response({"detail": "Booking cancelled successfully."}, status=status.HTTP_200_OK)
