@@ -71,7 +71,7 @@ class ServiceBooking(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'Booking {self.id} for {self.application.service} by {self.application.professional} (Status: {self.status}, Price: {self.agreed_price})'
+        return f'Booking {self.id} for {self.application.service} by {self.application.professional} (Status: {self.status})'
     
 class Complain(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

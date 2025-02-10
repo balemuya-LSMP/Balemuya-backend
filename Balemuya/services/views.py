@@ -285,6 +285,8 @@ class CancelServiceBookingAPIView(APIView):
 class ReviewBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+   
+class ReviewBookingAPIView(APIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         booking_id = kwargs.get('booking_id')
@@ -293,22 +295,37 @@ class ReviewBookingAPIView(APIView):
         except ServiceBooking.DoesNotExist:
             return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
 
-        review,created = Review.objects.get_or_create(booking=booking, user=user)
-        if not created:
+        # Check if a review already exists
+        if Review.objects.filter(booking=booking, user=user).exists():
             return Response({"error": "Review already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = ReviewSerializer(instance=booking, data=request.data, user=request.user)
+        # Create review data
+        review_data = {
+            "booking": booking.id,
+            "user": user.id,  # Ensure user is set
+            **request.data,
+        }
+        
+        # Initialize serializer with review data
+        serializer = ReviewSerializer(data=review_data)
         if serializer.is_valid():
             serializer.save()
-            if request.user.user_type == "customer":
-                booking.application.professional.rating = (booking.application.professional.rating + serializer.validated_data['rating']) / 2
+
+            # Update ratings based on user type
+            if user.user_type == "customer":
+                booking.application.professional.rating = (
+                    (booking.application.professional.rating + serializer.validated_data['rating']) / 2
+                )
                 booking.application.professional.save()
-            if request.user.user_type == "professional":
-                booking.application.service.customer.rating = (booking.application.service.customer.rating + serializer.validated_data['rating']) / 2
+            elif user.user_type == "professional":
+                booking.application.service.customer.rating = (
+                    (booking.application.service.customer.rating + serializer.validated_data['rating']) / 2
+                )
                 booking.application.service.customer.save()
 
             return Response({"success": "Review added."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ComplainBookingAPIView(APIView):

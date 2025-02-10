@@ -10,22 +10,25 @@ from uuid import UUID
 
 class ReviewSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
-    user = UserSerializer(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(queryset=Professional.objects.all(), write_only=True)
+    reviewer = UserSerializer(read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'user', 'user_id', 'booking', 'rating', 'comment', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'booking']
+        fields = ['id', 'user', 'booking', 'reviewer', 'rating', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'reviewer']
+        write_only_fields = ['user']
 
     def create(self, validated_data):
-        user_id = validated_data.pop('user_id', None)
-        validated_data['user'] = user_id  # Assuming user field is set via user_id
-        return super().create(validated_data)
+        user = validated_data.pop('user', None)  
+        booking = validated_data.pop('booking', None)
+
+        review = Review.objects.create(user=user, booking=booking, **validated_data)
+        print('review data',review)
+        return review
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
-
+    
 class ComplainSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
 
