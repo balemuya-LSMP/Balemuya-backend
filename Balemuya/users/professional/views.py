@@ -18,6 +18,8 @@ from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from django.conf import settings
+from django.db.models import Q
+
 
 from allauth.account.models import get_adapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
@@ -442,7 +444,6 @@ class InitiatePaymentView(APIView):
 
         # Start a transaction block
         with transaction.atomic():
-            # Check for active subscription
             active_subscription = SubscriptionPlan.objects.filter(
                 professional=professional,
                 start_date__lte=timezone.now(),
@@ -602,4 +603,28 @@ class CheckPaymentView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class ServicePostSearchView(APIView):
+    
+    def get(self, request):
+        
+        query = request.GET.get('q', '')        
+        
+        results = []
+        
+         
+        service_posts = ServicePost.objects.filter(
+                Q(title__icontains=query) |             
+                Q(description__icontains=query) |       
+                Q(category__name__icontains=query)|
+                Q(location__region__icontains=query)|
+                Q(location__city__icontains=query),
+                status='active',
+                work_due_date__lte=timezone.now()
+                    
+            ).distinct() 
+
+    
+        serializer = ServicePostSerializer(service_posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 

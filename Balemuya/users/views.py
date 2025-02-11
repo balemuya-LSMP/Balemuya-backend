@@ -350,41 +350,7 @@ class UserUpdateView(generics.UpdateAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AddressView(APIView):
-    permission_class = [IsAuthenticated]
-    serializer_class = AddressSerializer
-    
-    def post(self,request):
-        existing_address = request.user.address
-        if existing_address:
-            return Response({"error": "User already has an address."}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            request.user.address = serializer.save()
-            request.user.save()
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
-    def put(self,request):
-        try:
-            address = request.user.address
-        except Address.DoesNotExist:
-            Response({"error":"address not found to update"},status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.serializer_class(address,data=request.data,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
-    def delete(self,request):
-        try:
-           address = request.user.address
-           address.delete()
-        except Address.DoesNotExist:
-            return Response({"error":"address not found to delete"},status=status.HTTP_400_BAD_REQUEST)
-       
-        return Response({"message":"Address deleted successfully"},status=status.HTTP_200_OK)
-    
+
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
