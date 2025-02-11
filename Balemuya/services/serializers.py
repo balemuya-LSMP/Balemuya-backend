@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain
+from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest
 from users.models import Customer, Professional
 from common.models import Category
 from common.serializers import UserSerializer, CategorySerializer
@@ -14,15 +14,24 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['id', 'user', 'booking', 'reviewer', 'rating', 'comment', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'booking','service_request', 'reviewer', 'rating', 'comment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'reviewer']
         write_only_fields = ['user']
 
     def create(self, validated_data):
         user = validated_data.pop('user', None)  
         booking = validated_data.pop('booking', None)
+        service_request = validated_data.pop('service_request', None)
 
-        review = Review.objects.create(user=user, booking=booking, **validated_data)
+        if not booking and not service_request:
+            raise serializers.ValidationError("A review must be linked to either a ServiceBooking or a ServiceRequest.")
+
+        review = Review.objects.create(
+            user=user,
+            booking=booking,
+            service_request=service_request,
+            **validated_data
+        )
         return review
 
     def update(self, instance, validated_data):
@@ -31,18 +40,28 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ComplainSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     complaint = UserSerializer(read_only=True)
+    
 
     class Meta:
         model = Complain
-        fields = ['id', 'complaint','user','booking', 'message', 'created_at', 'updated_at']
+        fields = ['id', 'complaint','user','booking','service_request','status', 'message', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
-        write_only_fields = ['user','booking']
+        write_only_fields = ['user']
 
     def create(self, validated_data):
         user=validated_data.pop('user',None)
         booking = validated_data.pop('booking',None)
+        service_request = validated_data.pop('service_request',None)
         
-        complain = Complain.objects.create(booking=booking,user=user,**validated_data)
+        if not booking and not service_request:
+            raise serializers.ValidationError("A complaint must be linked to either a ServiceBooking or a ServiceRequest.")
+
+        complain = Complain.objects.create(
+                    user=user,
+                    booking=booking,
+                    service_request=service_request,
+                    **validated_data
+                )
         return complain
 
     def update(self, instance, validated_data):
@@ -202,3 +221,13 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A booking already exists for this application.")
 
         return data
+    
+    
+class ServiceRequestSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(format='hex', read_only=True) 
+    customer = CustomerSerializer(read_only=True)
+    professional = ProfessionalSerializer(read_only=True)
+
+    class Meta:
+        model = ServiceRequest
+        fields = ['id', 'customer', 'professional', 'details', 'status', 'created_at', 'updated_at']
