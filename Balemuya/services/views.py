@@ -294,7 +294,6 @@ class ReviewAPIView(APIView):
         if booking and service_request:
             return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # If booking is provided
         if booking:
             try:
                 booking_instance = ServiceBooking.objects.get(id=booking)

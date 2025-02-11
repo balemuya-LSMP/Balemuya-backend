@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
 from users.models import User, Customer
 from users.serializers import ProfessionalSerializer,CustomerSerializer
-from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking
-from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer
+from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking,ServiceRequest
+from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer,ServiceRequestSerializer
 
 from .utils import find_nearby_professionals,filter_professionals
 
@@ -112,3 +112,50 @@ class FilterProfessionalsView(APIView):
         professionals = filter_professionals(current_location=user_location, categories=categories, rating=rating, max_distance=distance)
 
         return Response({"message": "success", "professionals": professionals}, status=status.HTTP_200_OK)
+    
+class CustomerServiceRequestAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        status_param = request.query_params.get('status')
+
+        service_requests = ServiceRequest.objects.filter(customer=user.customer)
+
+        if status_param:
+            service_requests = service_requests.filter(status=status_param)
+
+        serializer = ServiceRequestSerializer(service_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        data = {
+            'customer': user.id,
+            'professional': request.data.get('professional'),
+            'detail': request.data.get('detail'),
+        }
+
+        serializer = ServiceRequestSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": "Service request sent."}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CancelServiceRequestAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        request_id = kwargs.get('request_id')
+
+        try:
+            service_request = ServiceRequest.objects.get(id=request_id, customer=request.user.customer)
+        except ServiceRequest.DoesNotExist:
+            return Response({"error": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+
+        service_request.status = 'canceled'
+        service_request.save()
+
+        return Response({"success": "Service request canceled."}, status=status.HTTP_200_OK)
