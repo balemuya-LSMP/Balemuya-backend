@@ -34,8 +34,8 @@ from users.models import User, Professional, Customer, Admin,Payment,Subscriptio
     Feedback
 from common.models import Category
 from users.utils import send_sms, generate_otp, send_email_confirmation,notify_user
-from services.models import ServicePost, ServicePostApplication, ServiceBooking,Review
-from services.serializers import ServicePostSerializer, ServicePostApplicationSerializer,ServiceBookingSerializer,ReviewSerializer
+from services.models import ServicePost, ServicePostApplication, ServiceBooking,Review,ServiceRequest
+from services.serializers import ServicePostSerializer, ServicePostApplicationSerializer,ServiceBookingSerializer,ReviewSerializer,ServiceRequestSerializer
 
 from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
@@ -115,12 +115,42 @@ class ProfessionalServiceListView(APIView):
         else:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
            
-        
-            
+class ProfessionalServiceRequestsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        status_param = request.query_params.get('status')
 
+    
+        service_requests = ServiceRequest.objects.filter(professional=user.professional).order_by('-updated_at')
 
+        if status_param:
+            service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
 
+        serializer = ServiceRequestSerializer(service_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        request_id = kwargs.get('request_id')
+        action = request.data.get('action')
+
+        try:
+            service_request = ServiceRequest.objects.get(id=request_id, professional=request.user)
+        except ServiceRequest.DoesNotExist:
+            return Response({"error": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+
+        if action not in ['accept', 'reject']:
+            return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action == 'accept':
+            service_request.status = 'accepted'
+        elif action == 'reject':
+            service_request.status = 'rejected'
+
+        service_request.save()
+        return Response({"success": f"Service request {action}ed."}, status=status.HTTP_200_OK)
+            
 
 class ProfessionalProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -332,7 +362,6 @@ class PortfolioView(APIView):
 
     def delete(self, request, pk=None):
         try:
-            # Get the professional and the portfolio record to delete
             professional = request.user.professional
             portfolio = Portfolio.objects.get(pk=pk, professional=professional)
             portfolio.delete()

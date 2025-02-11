@@ -81,7 +81,7 @@ class ServiceRequest(models.Model):
     customer = models.ForeignKey(Customer, related_name='service_requests', on_delete=models.CASCADE)
     professional = models.ForeignKey(Professional, related_name='requests_received', on_delete=models.CASCADE)
     details = models.TextField()
-    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('rejected', 'Rejected')])
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('cancled','canceled') ,('accepted', 'Accepted'), ('rejected', 'Rejected')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
     
