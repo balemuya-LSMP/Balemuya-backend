@@ -28,7 +28,7 @@ urlpatterns = [
     path('services/', ProfessionalServiceListView.as_view(), name='professional-service-app-list'),
 
 
-    path('/service-requests/', ProfessionalServiceRequestsAPIView.as_view(), name='professional_service_requests'),#professional srvices requested
+    path('service-requests/', ProfessionalServiceRequestsAPIView.as_view(), name='professional_service_requests'),#professional srvices requested
 
     #payment related
     path('subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),

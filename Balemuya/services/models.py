@@ -80,7 +80,7 @@ class ServiceRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, related_name='service_requests', on_delete=models.CASCADE)
     professional = models.ForeignKey(Professional, related_name='requests_received', on_delete=models.CASCADE)
-    details = models.TextField()
+    detail = models.TextField()
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('cancled','canceled') ,('accepted', 'Accepted'), ('rejected', 'Rejected')])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    

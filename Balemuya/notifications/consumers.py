@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.connected = False
         await self.accept()
 
         token = self.get_token_from_query_string()
@@ -18,17 +19,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if not self.user:
             return await self.reject_connection("Unauthorized: Invalid or missing token.")
 
-        # Initialize connected and group_names
         self.connected = True
         self.group_names = await self.get_group_names_by_user_type(self.user)
 
-        # Add the user to each group
         for group_name in self.group_names:
             await self.channel_layer.group_add(group_name, self.channel_name)
 
         logging.info(f'User connected to groups: {self.group_names}')
         await self.send(text_data=json.dumps({
-            "message": f"Connected to groups: {self.group_names}"
+            "message": f"Connected to to socket"
         }))
 
     async def disconnect(self, close_code):
@@ -42,8 +41,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             else:
                 logging.info("No groups to disconnect from.")
         
-        self.connected = False
-        
+        self.connected = False 
+
     def get_token_from_query_string(self):
         query_string = self.scope["query_string"].decode("utf-8")
         return query_string.split("token=")[-1] if "token=" in query_string else None
@@ -68,11 +67,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             group_names.append(f"professional_{user.id}_sub_notifications")
             group_names.append(f"professional_{user.id}_new_bookings")
             group_names.append(f"professional_{user.id}_general_notifications")
+            group_names.append(f"professional_{user.id}_new_job_request")
             for category in user.professional.categories.all():  
                 group_names.append(f"professional_{user.id}_new_jobs")
 
         elif user.user_type == 'customer':
             group_names.append(f"customer_{user.id}_job_app_requests")
+            group_names.append(f"customer_{user.id}_job_request_response")
             group_names.append(f"customer_{user.id}_general_notifications")
 
         elif user.user_type == 'admin':
@@ -86,7 +87,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def reject_connection(self, message):
         await self.send(text_data=json.dumps({"error": message}))
         await self.close(code=4000)
-        
+
     async def send_notification(self, event):
         notification = event['data']
 
