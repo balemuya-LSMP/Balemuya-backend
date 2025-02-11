@@ -120,7 +120,7 @@ class CustomerServiceRequestAPIView(APIView):
         user = request.user
         status_param = request.query_params.get('status')
 
-        service_requests = ServiceRequest.objects.filter(customer=user.customer)
+        service_requests = ServiceRequest.objects.filter(customer=user.customer,status='pending')
 
         if status_param:
             service_requests = service_requests.filter(status=status_param)
