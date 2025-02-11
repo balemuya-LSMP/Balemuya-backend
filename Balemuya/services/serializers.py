@@ -186,30 +186,41 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceBooking
-        fields = ['id', 'application','service','professional','customer' ,'scheduled_date', 'status', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
-        write_only_fields=['application']
+        fields = ['id', 'application', 'service', 'professional', 'customer', 'scheduled_date', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at','service','professional']
+        write_only_fields = ['application']
 
     def get_service(self, obj):
-        service_data = ServicePostSerializer(obj.application.service).data
-        service_data.pop('customer', None)
-        return service_data
+        try:
+            service_data = ServicePostSerializer(obj.application.service).data
+            service_data.pop('customer', None)
+            return service_data
+        except AttributeError:
+            return None  # Handle the case where service is not accessible
 
     def get_professional(self, obj):
-        return {
-            "professional_id": str(obj.application.professional.id),
-            "professional_name": obj.application.professional.user.get_full_name(),
-            "professional_profile_image": obj.application.professional.user.profile_image.url if obj.application.professional.user.profile_image else None,
-            "rating": obj.application.professional.rating
-        }
+        try:
+            professional = obj.application.professional
+            return {
+                "professional_id": str(professional.id),
+                "professional_name": professional.user.get_full_name(),
+                "professional_profile_image": professional.user.profile_image.url if professional.user.profile_image else None,
+                "rating": professional.rating
+            }
+        except AttributeError:
+            return None  # Handle the case where professional is not accessible
 
     def get_customer(self, obj):
-        return {
-            "customer_id": str(obj.application.service.customer.user.id),
-            "customer_name": obj.application.service.customer.user.get_full_name(),
-            "customer_profile_image": obj.application.service.customer.user.profile_image.url if obj.application.service.customer.user.profile_image else None,
-            "customer_rating": obj.application.service.customer.rating,
-        }
+        try:
+            customer = obj.application.service.customer
+            return {
+                "customer_id": str(customer.user.id),
+                "customer_name": customer.user.get_full_name(),
+                "customer_profile_image": customer.user.profile_image.url if customer.user.profile_image else None,
+                "customer_rating": customer.rating,
+            }
+        except AttributeError:
+            return None
 
     def validate(self, data):
         application = data.get('application')

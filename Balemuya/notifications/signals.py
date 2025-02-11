@@ -147,7 +147,7 @@ def notify_professional_on_service_booking(sender, instance, created, **kwargs):
     if created and instance.status == 'pending':
         channel_layer = get_channel_layer()
         group_name = f"professional_{instance.application.professional.user.id}_new_bookings"
-        message = f"A new booking has been made for your service post {instance.service_post.title}..."
+        message = f"A new booking has been made for your service post {instance.application.service.title}..."
         
         with transaction.atomic():
             notification = Notification.objects.create(
