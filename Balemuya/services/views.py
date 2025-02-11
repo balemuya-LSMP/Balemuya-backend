@@ -174,14 +174,18 @@ class AcceptServicePostApplicationAPIView(APIView):
 
     def post(self, request, pk=None):
         try:
-            accepted_application = ServicePostApplication.objects.get(id=pk)
+            accepted_application = ServicePostApplication.objects.filter(id=pk).first()
+            
         except ServicePostApplication.DoesNotExist:
             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        if accepted_application.status =='accepted':
+            return Response({'error':"user already accepted"},status=status.HTTP_400_BAD_REQUEST)
+            
 
         accepted_application.status = 'accepted'
         accepted_application.save()
 
-        # Reject all other applications for the same service
         ServicePostApplication.objects.filter(service=accepted_application.service, status='pending').exclude(id=pk).update(status='rejected')
 
         # Create a booking for the accepted application
@@ -281,46 +285,75 @@ class CancelServiceBookingAPIView(APIView):
         return Response({"detail": "Booking cancelled successfully."}, status=status.HTTP_200_OK)
 
 
-
-class ReviewBookingAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-   
-class ReviewBookingAPIView(APIView):
+class ReviewAPIView(APIView):
     def post(self, request, *args, **kwargs):
         user = request.user
-        booking_id = kwargs.get('booking_id')
-        print('booking id is ',booking_id)
-        try:
-            booking = ServiceBooking.objects.get(id=booking_id)
-        except ServiceBooking.DoesNotExist:
-            return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
+        booking = request.data.get('booking')
+        service_request = request.data.get('service_request')
 
-        
-        if Review.objects.filter(booking=booking, user=user).exists():
-            return Response({"error": "Review already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        if booking and service_request:
+            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
 
-        
-        review_data = {
-            "booking": booking.id,
-            "user": user.id, 
-            **request.data,
-        }
-        
+        # If booking is provided
+        if booking:
+            try:
+                booking_instance = ServiceBooking.objects.get(id=booking)
+            except ServiceBooking.DoesNotExist:
+                return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if Review.objects.filter(booking=booking_instance, user=user).exists():
+                return Response({"error": "Review already exists for this booking"}, status=status.HTTP_400_BAD_REQUEST)
+
+            review_data = {
+                "booking": booking_instance.id,
+                "user": user.id,
+                **request.data,
+            }
+
+        elif service_request:
+            try:
+                request_instance = ServiceRequest.objects.get(id=service_request)
+            except ServiceRequest.DoesNotExist:
+                return Response({"error": "No service request found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if Review.objects.filter(service_request=request_instance, user=user).exists():
+                return Response({"error": "Review already exists for this service request"}, status=status.HTTP_400_BAD_REQUEST)
+
+            review_data = {
+                "service_request": request_instance.id,
+                "user": user.id,
+                **request.data,
+            }
+
+        else:
+            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = ReviewSerializer(data=review_data)
         if serializer.is_valid():
             serializer.save()
 
             if user.user_type == "customer":
-                booking.application.professional.rating = (
-                    (booking.application.professional.rating + serializer.validated_data['rating']) / 2
-                )
-                booking.application.professional.save()
+                if booking:
+                    booking_instance.application.professional.rating = (
+                        (booking_instance.application.professional.rating + serializer.validated_data['rating']) / 2
+                    )
+                    booking_instance.application.professional.save()
+                else:
+                    request_instance.professional.rating = (
+                        (request_instance.professional.rating + serializer.validated_data['rating']) / 2
+                    )
+                    request_instance.professional.save()
             elif user.user_type == "professional":
-                booking.application.service.customer.rating = (
-                    (booking.application.service.customer.rating + serializer.validated_data['rating']) / 2
-                )
-                booking.application.service.customer.save()
+                if booking:
+                    booking_instance.application.service.customer.rating = (
+                        (booking_instance.application.service.customer.rating + serializer.validated_data['rating']) / 2
+                    )
+                    booking_instance.application.service.customer.save()
+                else:
+                    request_instance.customer.rating = (
+                        (request_instance.customer.rating + serializer.validated_data['rating']) / 2
+                    )
+                    request_instance.customer.save()
 
             return Response({"success": "Review added."}, status=status.HTTP_200_OK)
         else:
