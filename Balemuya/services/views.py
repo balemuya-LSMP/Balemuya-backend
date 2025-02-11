@@ -8,6 +8,8 @@ from common.serializers import CategorySerializer
 from .serializers import ServicePostSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer, ComplainSerializer
 from users.models import Professional, Customer
 from django.utils import timezone
+from django.db import transaction
+
 
 class CategoryListAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -169,40 +171,40 @@ class DetailServicePostApplicationAPIView(APIView):
         serializer = ServicePostApplicationSerializer(application)
         return Response(serializer.data)
 
-
 class AcceptServicePostApplicationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk=None):
         try:
-            accepted_application = ServicePostApplication.objects.filter(id=pk).first()
-            
+            application = ServicePostApplication.objects.get(id=pk)
         except ServicePostApplication.DoesNotExist:
             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        if accepted_application.status =='accepted':
-            return Response({'error':"user already accepted"},status=status.HTTP_400_BAD_REQUEST)
-            
+        if not application.service:
+            return Response({"error": "service not  not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        accepted_application.status = 'accepted'
-        accepted_application.save()
+        if application.status == 'accepted':
+            return Response({'error': "User already accepted"}, status=status.HTTP_400_BAD_REQUEST)
 
-        ServicePostApplication.objects.filter(service=accepted_application.service, status='pending').exclude(id=pk).update(status='rejected')
+        try:
+            with transaction.atomic():
+                application.status = 'accepted'
+                application.save()
 
-        # Create a booking for the accepted application
-        booking = ServiceBooking.objects.create(
-            application=accepted_application,
-            scheduled_date=accepted_application.service.work_due_date,
-            status='pending'
-        )
-        booking.save()
+                ServicePostApplication.objects.filter(service=application.service, status='pending').exclude(id=pk).update(status='rejected')
 
-        # Update the service post status
-        accepted_application.service.status = 'booked'
-        accepted_application.service.save()
+                booking = ServiceBooking.objects.create(
+                    application=application,
+                    scheduled_date=application.service.work_due_date,
+                    status='pending'
+                )
+                
+                application.service.status = 'booked'
+                application.service.save()
 
-        return Response({"detail": "Application accepted, others rejected."}, status=status.HTTP_200_OK)
-
+                return Response({"detail": "Application accepted, others rejected."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": "An error occurred while processing your request"}, status=500)
 
 class ServiceBookingListAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -236,21 +238,29 @@ class ServiceBookingRetrieveAPIView(APIView):
 class CompleteBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def put(self, request, pk=None):
+    def post(self, request, booking_id=None):
         try:
-            booking = ServiceBooking.objects.get(id=pk)
+            booking = ServiceBooking.objects.get(id=booking_id)
         except ServiceBooking.DoesNotExist:
             return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
-        if booking.status =='pending':
-            booking.status ='completed'
-            booking.save()
-            
-            booking.application.service.status='completed'
-            booking.application.service.save()
-            return Response({"detail": "Booking completed."}, status=status.HTTP_404_NOT_FOUND)
-        else:
-             return Response({'error':'there is no pending booking to be completed'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if booking.status != 'pending':
+            return Response({"detail": "Booking must be pending to be completed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        if user != booking.application.service.customer.user and user != booking.application.professional.user:
+            return Response({"detail": "You do not have permission to complete this booking."}, status=status.HTTP_403_FORBIDDEN)
+
+        booking.status = 'completed'
+        booking.application.service.status = 'completed'
+        booking.application.service.save()
+        booking.save()
+        
+        serializer = ServiceBookingSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+    
 
 class ServiceBookingDeleteAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -273,17 +283,22 @@ class CancelServiceBookingAPIView(APIView):
             booking = ServiceBooking.objects.get(id=booking_id,status='pending')
         except ServiceBooking.DoesNotExist:
             return Response({"detail": "no active booking found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            with transaction.atomic():
+                booking.status = 'canceled'
+                booking.save()
+                
+                booking.application.status = 'rejected'
+                booking.application.save()
+                
+                booking.application.service.status = 'canceled'
+                booking.application.service.save()
+                
+                return Response({"detail": "Booking cancelled successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": "erorr in canceling ."}, status=500)
 
-        booking.status = 'canceled'
-        booking.save()
-        
-        booking.application.status = 'rejected'
-        booking.application.save()
-        
-        booking.application.service.status = 'canceled'
-        booking.application.service.save()
-        
-        return Response({"detail": "Booking cancelled successfully."}, status=status.HTTP_200_OK)
 
 
 class ReviewAPIView(APIView):
