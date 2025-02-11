@@ -2,9 +2,9 @@ from django.urls import path, include
 import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,AddressView,UserFeedbackView
+UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView
         
-# from .address import get_address_from_coordinates
+from .address import AddressView
 urlpatterns = [
         # path('get-address/', get_address_from_coordinates, name='get_address'),
 
@@ -34,7 +34,6 @@ urlpatterns = [
     
     path('professional/',include('users.professional.urls')),
     path('customer/',include('users.customer.urls')),
-    
     
     #feed back
     path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),

@@ -1,15 +1,18 @@
 from django.shortcuts import render
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
-from users.models import User, Customer
+from common.serializers import UserSerializer
+from users.models import User, Customer,Professional
 from users.serializers import ProfessionalSerializer,CustomerSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking,ServiceRequest
 from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer,ServiceRequestSerializer
 
 from .utils import find_nearby_professionals,filter_professionals
+from users.pagination import CustomPagination
 
 class NearbyProfessionalsView(APIView):
     def get(self, request):
@@ -131,7 +134,7 @@ class CustomerServiceRequestAPIView(APIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         data = {
-            'customer': user.id,
+            'customer': user.customer.id,
             'professional': request.data.get('professional'),
             'detail': request.data.get('detail'),
         }
@@ -159,3 +162,26 @@ class CancelServiceRequestAPIView(APIView):
         service_request.save()
 
         return Response({"success": "Service request canceled."}, status=status.HTTP_200_OK)
+    
+    
+    
+class UserSearchView(APIView):
+    def get(self, request):
+        query = request.GET.get('q', '')
+
+        professionals = Professional.objects.filter(
+            Q(categories__name__icontains=query) | 
+            Q(skills__name__icontains=query) |      
+            Q(user__first_name__icontains=query) |            
+            Q(user__address__city__icontains=query) |             
+            Q(user__address__region__icontains=query),               
+            is_verified=True,
+            is_available=True,
+        ).select_related('user').order_by('-rating').distinct()  # Order by rating descending
+        
+        paginator = CustomPagination()
+        paginated_results = paginator.paginate_queryset(professionals, request)
+
+        serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
+        
+        return paginator.get_paginated_response(serializer.data)
