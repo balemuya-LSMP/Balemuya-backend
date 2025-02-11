@@ -360,31 +360,59 @@ class ReviewAPIView(APIView):
             return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ComplainBookingAPIView(APIView):
+class ComplainAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        user = request.user
-        booking_id = kwargs.get('booking_id')
-        try:
-            booking = ServiceBooking.objects.filter(id=booking_id).first()
-        except ServiceBooking.DoesNotExist:
-            return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
-        if booking.application.service.customer.user !=user and booking.application.professional.user !=user:
-            return Response({'error':'you can not review this'},status = status.HTTP_400_BAD_REQUEST)
-        
-        if Complain.objects.filter(booking=booking,user=user).exists():
-            return Response({'error':'you already report.'},status=status.HTTP_400_BAD_REQUEST)
-        
-        complain_data = {
-            'booking':booking.id,
-            'user':request.user.id,
-            **request.data
-            
-        }
+        user = request.user        
+        booking = request.data.get('booking') 
+        service_request = request.data.get('service_request')
+
+        if booking and service_request:
+            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if booking:
+            try:
+                booking_instance = ServiceBooking.objects.get(id=booking)
+            except ServiceBooking.DoesNotExist:
+                return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if booking_instance.application.service.customer.user != user and booking_instance.application.professional.user != user:
+                return Response({'error': 'You cannot complain about this booking.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if Complain.objects.filter(booking=booking_instance, user=user).exists():
+                return Response({'error': 'You have already reported this booking.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            complain_data = {
+                'booking': booking_instance.id,
+                'user': user.id,
+                **request.data,
+            }
+
+        elif service_request:
+            try:
+                request_instance = ServiceRequest.objects.get(id=service_request)
+            except ServiceRequest.DoesNotExist:
+                return Response({"error": "No service request found"}, status=status.HTTP_404_NOT_FOUND)
+
+            if request_instance.customer.user != user:
+                return Response({'error': 'You cannot complain about this service request.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if Complain.objects.filter(service_request=request_instance, user=user).exists():
+                return Response({'error': 'You have already reported this service request.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            complain_data = {
+                'service_request': request_instance.id,
+                'user': user.id,
+                **request.data,
+            }
+
+        else:
+            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = ComplainSerializer(data=complain_data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"success": "Complain added."}, status=status.HTTP_201_CREATED)
+            return Response({"success": "Complaint added."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
