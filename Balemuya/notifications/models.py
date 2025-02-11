@@ -4,21 +4,19 @@ import uuid
 User = get_user_model()
 
 class Notification(models.Model):
-    # Expanded Notification Types for Your Platform
     TYPE_CHOICES = [
-        ('info', 'Information'),
-        ('warning', 'Warning'),
-        ('success', 'Success'),
-        ('error', 'Error'),
-        ('verification_request', 'Verification Request'),
-        ('system', 'System'),
-        ('service_post', 'Service Post'),
-        ('service_request', 'Service Request'),
-        ('payment', 'Payment'),
-        ('application', 'Application'),
-        ('status_update', 'Status Update'),
-        ('message', 'Message'), 
-    ]
+    ('info','info'),
+    ('new_job', 'New Job Post'),
+    ('job_apply', 'Job Application'),
+    ('verify_request', 'Verification Request'),
+    ('verify_response', 'Verification Response'),
+    ('new_booking', 'New Booking'),
+    ('new_job_request', 'New Job Request'),
+    ('new_job_response', 'Job Request Response'),
+    ('new_complain', 'New Complaint'),
+    ('new_feedback', 'New Feedback'),
+    ('new_review', 'New Review'),
+]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     recipient = models.ManyToManyField(User, related_name='notifications', blank=True)
     title = models.CharField(max_length=255,blank=True,null=True)

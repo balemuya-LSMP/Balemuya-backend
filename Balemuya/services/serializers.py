@@ -230,4 +230,4 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceRequest
-        fields = ['id', 'customer', 'professional', 'details', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'customer', 'professional', 'detail', 'status', 'created_at', 'updated_at']
