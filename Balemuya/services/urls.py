@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import ServicePostListCreateAPIView, ServicePostDetailAPIView,CreateServicePostApplicationAPIView, ListServicePostApplicationsAPIView,DetailServicePostApplicationAPIView,\
-   AcceptServicePostApplicationAPIView, ServiceBookingRetrieveAPIView,CompleteBookingAPIView,ServiceBookingDeleteAPIView,ReviewBookingAPIView,ComplainBookingAPIView,CategoryListAPIView,\
+   AcceptServicePostApplicationAPIView, ServiceBookingRetrieveAPIView,CompleteBookingAPIView,ServiceBookingDeleteAPIView,ReviewAPIView,ComplainBookingAPIView,CategoryListAPIView,\
        CancelServiceBookingAPIView
 
 urlpatterns = [
@@ -15,13 +15,13 @@ urlpatterns = [
     path('service-posts/professional/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),
     path('service-posts/applications/<uuid:pk>/', DetailServicePostApplicationAPIView.as_view(), name='detail-service-post-application'),
     path('service-posts/applications/<uuid:pk>/accept/', AcceptServicePostApplicationAPIView.as_view(), name='accept-service-post-application'),
-   
+    
    path('service-bookings/<uuid:pk>/', ServiceBookingRetrieveAPIView.as_view(), name='retrieve-service-booking'),
    path('service-bookings/<uuid:pk>/update/', CompleteBookingAPIView.as_view(), name='service-booking-complete'),
    path('service-bookings/<uuid:pk>/delete/', ServiceBookingDeleteAPIView.as_view(), name='delete-service-booking'),
    path('service-bookings/<uuid:booking_id>/cancel/', CancelServiceBookingAPIView.as_view(), name='cancel-service-booking'),
     
-    path('bookings/<uuid:booking_id>/review/', ReviewBookingAPIView.as_view(), name='review-booking'),
+    path('bookings/review/', ReviewAPIView.as_view(), name='review-booking'),
     path('bookings/<uuid:booking_id>/complain/create/', ComplainBookingAPIView.as_view(), name='complain'),
     
 ]
