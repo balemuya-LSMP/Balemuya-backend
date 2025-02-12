@@ -8,7 +8,7 @@ urlpatterns = [
     path('<uuid:pk>/profile/',ProfessionalProfileView.as_view(), name='professional-profile'),
     path('profile/update/',ProfessionalProfileUpdateView.as_view(), name='professional-update'),
     path('profile/skills/', ProfessionalSkillView.as_view(), name='skill-create-update-delete'),
-    path('profile/categories/', ProfessionalCategoryView.as_view(), name='category-create-delete'),
+    path('profile/categories/', ProfessionalCategoryView.as_view(), name='category-create-remove'),
     
     path('profile/certificates/add/', CertificateView.as_view(), name='certificate-create'),  # POST
     path('profile/certificates/<uuid:pk>/update/', CertificateView.as_view(), name='certificate-update'),  # PUT

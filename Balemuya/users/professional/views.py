@@ -218,42 +218,55 @@ class ProfessionalSkillView(APIView):
             return Response({"detail": "Skill not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class ProfessionalCategoryView(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
             professional = Professional.objects.get(user=request.user)
-            category_names = request.data.get("names", [])  # Accept a list of category names
+            category_name = request.data.get("name")
 
-            if not category_names or not isinstance(category_names, list):
-                return Response({"detail": "A list of category names is required."}, status=status.HTTP_400_BAD_REQUEST)
+            current_categories_count = professional.categories.count()
+            max_categories = 3  
 
-            added_categories = []
-            for name in category_names:
-                category, created = Category.objects.get_or_create(name=name)
+            if current_categories_count >= max_categories:
+                return Response(
+                    {"detail": f"You cannot add more than {max_categories} categories."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            category = Category.objects.filter(name=category_name).first()
+            if not category:
+                return Response({"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
+                
+            if category not in professional.categories.all():
                 professional.categories.add(category)
-                added_categories.append({"id": category.id, "name": category.name})
-
-            return Response(
-                {"detail": "Categories added successfully.", "categories": added_categories},
-                status=status.HTTP_201_CREATED
-            )
+                return Response(
+                    {"detail": "Categories added successfully.", "category": category_name},
+                    status=status.HTTP_201_CREATED
+                )
+            else:
+                return Response(
+                    {"detail": "This category is already associated with the professional."},
+                    status=status.HTTP_400_BAD_REQUEST)
+                
         except Professional.DoesNotExist:
             return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-
     def delete(self, request):
         try:
             professional = Professional.objects.get(user=request.user)
-            category_id = request.data.get("id")
+            category_name = request.data.get("name")
 
-            if not category_id:
-                return Response({"detail": "Category ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+            if not category_name:
+                return Response({"detail": "Category name is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-            category = Category.objects.get(id=category_id)
+            category = Category.objects.filter(name=category_name).first()
+
+            if category not in professional.categories.all():
+                return Response({"detail": "This category is not associated with the professional."}, status=status.HTTP_400_BAD_REQUEST)
+
             professional.categories.remove(category)
 
             return Response(
-                {"detail": "Category removed successfully.", "category": {"id": category.id, "name": category.name}},
+                {"detail": "Category removed successfully."},
                 status=status.HTTP_200_OK
             )
         except Professional.DoesNotExist:
@@ -447,7 +460,7 @@ class InitiatePaymentView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Start a transaction block
+        #
         with transaction.atomic():
             active_subscription = SubscriptionPlan.objects.filter(
                 professional=professional,

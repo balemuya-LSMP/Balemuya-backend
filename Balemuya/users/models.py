@@ -202,6 +202,7 @@ class Professional(models.Model):
     is_available = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     balance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
+    requests_left = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.user.email
