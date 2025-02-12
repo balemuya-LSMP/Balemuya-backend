@@ -230,7 +230,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
         
 class FeedbackSerializer(serializers.ModelSerializer):
-    
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Feedback 
         fields ='__all__'

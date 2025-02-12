@@ -129,6 +129,7 @@ class ProfessionalServiceRequestsAPIView(APIView):
         print('service requests ',service_requests)
 
         if status_param is not None:
+            print('status param',status)
             service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
         
         if service_requests:
@@ -142,7 +143,7 @@ class ProfessionalServiceRequestsAPIView(APIView):
         action = request.data.get('action')
 
         try:
-            service_request = ServiceRequest.objects.get(id=request_id, professional=request.user)
+            service_request = ServiceRequest.objects.get(id=request_id, professional=request.user.professional)
         except ServiceRequest.DoesNotExist:
             return Response({"error": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
