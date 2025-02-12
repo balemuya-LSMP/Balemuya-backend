@@ -40,6 +40,7 @@ from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSeria
         FeedbackSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
+from .pagination import CustomPagination
 class RegisterFCMDeviceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -443,17 +444,27 @@ class UserBlockView(generics.UpdateAPIView):
             return Response({'message': 'User blocked successfully'}, status=status.HTTP_200_OK)
 
 class UserFeedbackView(APIView):
-     permission_classes = [IsAuthenticated]
-      
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
-     def post(self,request):
+    def get(self, request, *args, **kwargs):
+        user_feedbacks = Feedback.objects.all().order_by('-created_at', '-rating')        
+        paginator = self.pagination_class() 
+        
+        if not user_feedbacks.exists():
+            return Response({'count': 0, 'results': []})
+
+        paginated_feedbacks = paginator.paginate_queryset(user_feedbacks, request)
+        serializer = FeedbackSerializer(paginated_feedbacks, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    def post(self,request):
          user_feedback = Feedback.objects.filter(user=request.user).first()
          if user_feedback:
              user_feedback.message = request.data.get('message')
              user_feedback.save()
              return Response({'message': 'Feedback updated successfully.'}, status=status.HTTP_200_OK)
          else:
-             user_feedback = Feedback.objects.create(user=request.user,message=request.data.get('message'))
+             user_feedback = Feedback.objects.create(user=request.user,message=request.data.get('message'),rating=request.data.get('rating'))
              user_feedback.save()
              return Response({'message': 'Feedback created successfully.'}, status=status.HTTP_201_CREATED)
          

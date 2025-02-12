@@ -127,9 +127,11 @@ class CustomerServiceRequestAPIView(APIView):
 
         if status_param:
             service_requests = service_requests.filter(status=status_param)
-
-        serializer = ServiceRequestSerializer(service_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if service_requests:
+            serializer = ServiceRequestSerializer(service_requests, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'message':'request not found'},status=status.HTTP_404_NOT_FOUND)
     
 
     def post(self, request, *args, **kwargs):

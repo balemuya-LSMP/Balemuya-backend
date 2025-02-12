@@ -35,8 +35,9 @@ urlpatterns = [
     path('professional/',include('users.professional.urls')),
     path('customer/',include('users.customer.urls')),
     
-    #feed back
+    #feedback
     path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),
+    path('feedbacks/', UserFeedbackView.as_view(), name='user-feedback'),
     
     
    

@@ -11,7 +11,7 @@ from common.serializers import AddressSerializer
 def find_nearby_professionals(customer_location, max_distance=50,rating=None,category=None,):
         nearby = []
 
-        professionals = User.objects.filter(user_type='professional',professional__is_available=True)
+        professionals = User.objects.filter(user_type='professional',professional_is_verified=True,professional__is_available=True)
 
         for professional in professionals:
             if professional.address:
@@ -38,7 +38,7 @@ def find_nearby_professionals(customer_location, max_distance=50,rating=None,cat
 def filter_professionals(current_location=None, categories=None, rating=None, max_distance=50):
     filtered = []
 
-    professionals = User.objects.filter(user_type='professional', professional__is_available=True)
+    professionals = User.objects.filter(user_type='professional',professional__is_verified=True, professional__is_available=True)
 
     if categories:
         professionals = professionals.filter(professional__categories__name__in=categories).distinct()
