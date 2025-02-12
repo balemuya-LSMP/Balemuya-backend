@@ -523,7 +523,6 @@ class InitiatePaymentView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
 class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -547,25 +546,33 @@ class CheckPaymentView(APIView):
             if response.status_code == 200:
                 payment.payment_status = 'completed'
                 payment.save()
-        
-                payment.professional.is_available=True
-                payment.professional.num_of_requests=0
-                payment.professional.save()
+
+                professional = payment.professional
+                professional.is_available = True
+                
+                subscription_plan = payment.subscription_plan
+                if subscription_plan:
+                    request_coins = subscription_plan.REQUEST_COINS[subscription_plan.plan_type]
+                    total_requests = request_coins * subscription_plan.duration
+                    professional.num_of_request += total_requests
+                
+                professional.save()
                 
                 payment_data = PaymentSerializer(payment).data
                 
                 return Response({
-                        "message": "Payment status checked successfully.",
-                        "data":{
-                            "payment":payment_data},
-                            "first_name":response_data.get("data", {}).get("first_name"),
-                            "last_name":response_data.get("data", {}).get("last_name"),
-                            "email":response_data.get("data", {}).get("email"),
-                            "amount":response_data.get("data", {}).get("amount"),
-                            "currency":response_data.get("data", {}).get("currency")
-                         },status=status.HTTP_200_OK)
+                    "message": "Payment status checked successfully.",
+                    "data": {
+                        "payment": payment_data
+                    },
+                    "first_name": response_data.get("data", {}).get("first_name"),
+                    "last_name": response_data.get("data", {}).get("last_name"),
+                    "email": response_data.get("data", {}).get("email"),
+                    "amount": response_data.get("data", {}).get("amount"),
+                    "currency": response_data.get("data", {}).get("currency")
+                }, status=status.HTTP_200_OK)
             else:
-                payment.payment_status ='failed'
+                payment.payment_status = 'failed'
                 payment.save()
                 return Response(
                     {"error": "Failed to retrieve payment status from Chapa."},
@@ -591,6 +598,7 @@ class ServicePostSearchView(APIView):
                 Q(description__icontains=query) |       
                 Q(category__name__icontains=query)|
                 Q(location__region__icontains=query)|
+                Q(urgency__icontains=query)|
                 Q(location__city__icontains=query),
                 status='active',
                 work_due_date__lte=timezone.now()
