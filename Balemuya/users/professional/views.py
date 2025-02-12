@@ -126,12 +126,16 @@ class ProfessionalServiceRequestsAPIView(APIView):
 
     
         service_requests = ServiceRequest.objects.filter(professional=user.professional).order_by('-updated_at')
+        print('service requests ',service_requests)
 
-        if status_param:
+        if status_param is not None:
             service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
-
-        serializer = ServiceRequestSerializer(service_requests, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        if service_requests:
+             serializer = ServiceRequestSerializer(service_requests, many=True)
+             return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error':"no service request found"},status=400)
 
     def post(self, request, *args, **kwargs):
         request_id = kwargs.get('request_id')
