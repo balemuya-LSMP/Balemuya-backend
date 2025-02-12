@@ -130,23 +130,32 @@ class CustomerServiceRequestAPIView(APIView):
 
         serializer = ServiceRequestSerializer(service_requests, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
 
     def post(self, request, *args, **kwargs):
-        user = request.user
-        data = {
-            'customer': user.customer.id,
-            'professional': request.data.get('professional'),
-            'detail': request.data.get('detail'),
-        }
+            customer_user = request.user.customer
+            professional_user_id = request.data.get('professional')
+            print('professional id ',professional_user_id)
 
-        serializer = ServiceRequestSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"success": "Service request sent."}, status=status.HTTP_201_CREATED)
+            try:
+                professional_user =User.objects.get(id=professional_user_id)
+            except Professional.DoesNotExist:
+                return Response({"error": "Professional does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                'customer_id': customer_user.id,  
+                'professional_id': professional_user.professional.id, 
+                'detail': request.data.get('detail'),
+            }
 
+            serializer = ServiceRequestSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"success": "Service request sent."}, status=status.HTTP_201_CREATED)
 
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
 class CancelServiceRequestAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
