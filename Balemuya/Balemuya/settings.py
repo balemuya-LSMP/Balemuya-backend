@@ -128,19 +128,19 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 
-CELERY_BEAT_SCHEDULE = {
-    'notify-expiring-subscriptions-every-day': {
-        'task': 'users.tasks.notify_expiring_subscriptions',
-        'schedule': crontab(minute=0, hour='*'),
-    },
-}
+# CELERY_BEAT_SCHEDULE = {
+#     'notify-expiring-subscriptions-every-day': {
+#         'task': 'users.tasks.notify_expiring_subscriptions',
+#         'schedule': crontab(minute=0, hour='*'),
+#     },
+# }
 
-CELERY_BROKER_URL = 'redis://red-culq0bt6l47c73dt1nt0:6379/0'
-CELERY_TASK_SERIALIZER = 'json'
+# CELERY_BROKER_URL = 'redis://red-culq0bt6l47c73dt1nt0:6379/0'
+# CELERY_TASK_SERIALIZER = 'json'
 
 # settings.py
 
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

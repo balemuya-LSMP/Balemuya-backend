@@ -236,7 +236,7 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
     
 class ServiceRequestSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True) 
-    professional = ProfessionalSerializer(source='professional.user', read_only=True) 
+    professional = serializers.SerializerMethodField() 
     customer_id = serializers.PrimaryKeyRelatedField(
         queryset=Customer.objects.all(),
         write_only=True, 
@@ -251,6 +251,18 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceRequest
         fields = ['id', 'customer', 'customer_id', 'professional', 'professional_id', 'detail', 'status', 'created_at', 'updated_at']
+        
+    def get_professional(self, obj):
+        try:
+            professional=obj.professional
+            return {
+                    "professional_id": str(professional.id),
+                    "professional_name": professional.user.get_full_name(),
+                    "professional_profile_image": professional.user.profile_image.url if professional.user.profile_image else None,
+                    "rating": professional.rating
+                }
+        except AttributeError:
+            return None
 
     def create(self, validated_data):
         service_request = ServiceRequest.objects.create(**validated_data)
