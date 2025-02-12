@@ -85,6 +85,14 @@ class ServiceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
     
+    def __str__(self):
+        return f"ServiceRequest {self.id} - {self.status} for {self.customer}"
+
+    class Meta:
+        ordering = ['-created_at'] 
+        verbose_name = "Service Request"
+        verbose_name_plural = "Service Requests"
+    
 
 class Complain(models.Model):
     STATUS_CHOICES = [
