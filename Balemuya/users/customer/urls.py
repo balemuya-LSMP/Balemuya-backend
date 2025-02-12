@@ -11,7 +11,7 @@ urlpatterns = [
     path('search-professional/',UserSearchView.as_view(),name='search-professional'),
     
     path('service-request/', CustomerServiceRequestAPIView.as_view(), name='create_service_request'),  
-    path('service-request/<int:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel_service_request'),
+    path('service-request/<uuid:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel_service_request'),
       
     path('services/',CustomerServicesView.as_view(), name='customer-services'),
 ]

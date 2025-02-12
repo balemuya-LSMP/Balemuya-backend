@@ -188,7 +188,7 @@ class UserSearchView(APIView):
             Q(user__address__region__icontains=query),               
             is_verified=True,
             is_available=True,
-        ).select_related('user').order_by('-rating').distinct()  # Order by rating descending
+        ).select_related('user').order_by('-rating').distinct() 
         
         paginator = CustomPagination()
         paginated_results = paginator.paginate_queryset(professionals, request)

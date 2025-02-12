@@ -44,6 +44,7 @@ from users.serializers import  LoginSerializer ,ProfessionalSerializer, Customer
         FeedbackSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
+from .utils import filter_service_posts_by_distance
 
 class ProfessionalProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -584,28 +585,57 @@ class CheckPaymentView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-class ServicePostSearchView(APIView):
-    
+class ServicePostSearchView(generics.ListAPIView):
+    serializer_class = ServicePostSerializer
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        
         query = request.GET.get('q', '')        
+        print('q',query)
         
-        results = []
-        
-         
+        # Base query for active service posts
         service_posts = ServicePost.objects.filter(
-                Q(title__icontains=query) |             
-                Q(description__icontains=query) |       
-                Q(category__name__icontains=query)|
-                Q(location__region__icontains=query)|
-                Q(urgency__icontains=query)|
-                Q(location__city__icontains=query),
-                status='active',
-                work_due_date__lte=timezone.now()
-                    
-            ).distinct() 
+            Q(title__icontains=query) |             
+            Q(description__icontains=query) |       
+            Q(category__name__icontains=query) |
+            Q(location__region__icontains=query) |
+            Q(urgency__icontains=query) |
+            Q(location__city__icontains=query),
+            status='active',
+            work_due_date__lte=timezone.now()
+        ).distinct() 
 
-    
-        serializer = ServicePostSerializer(service_posts, many=True)
+        user_location = request.user.address 
+        filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
+
+        serializer = self.get_serializer(filtered_posts, many=True)
+
+        for i, post in enumerate(serializer.data):
+            post['distance'] = filtered_posts[i].distance
+
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class ServicePostFilterView(generics.ListAPIView):
+    serializer_class = ServicePostSerializer
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, *args, **kwargs):
+        categories = request.data.get('categories', [])
+
+        if not categories:
+            return Response({"error": "No categories provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        service_posts = ServicePost.objects.filter(
+            category__name__in=categories,
+            status='active'
+        ).order_by('-urgency', '-created_at').distinct()
+
+        user_location = request.user.address 
+        filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
+
+        serializer = self.get_serializer(filtered_posts, many=True)
+
+        for i, post in enumerate(serializer.data):
+            post['distance'] = filtered_posts[i].distance 
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
