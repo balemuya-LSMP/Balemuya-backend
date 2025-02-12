@@ -585,8 +585,7 @@ class CheckPaymentView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-class ServicePostSearchView(generics.ListAPIView):
-    serializer_class = ServicePostSerializer
+class ServicePostSearchView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -606,17 +605,18 @@ class ServicePostSearchView(generics.ListAPIView):
         ).distinct() 
 
         user_location = request.user.address 
+        if not user_location:
+            return Response({"error": "please turn on your location."}, status=status.HTTP_400_BAD_REQUEST)
         filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
 
-        serializer = self.get_serializer(filtered_posts, many=True)
+        serializer = ServicePostSerializer(filtered_posts, many=True)
 
         for i, post in enumerate(serializer.data):
             post['distance'] = filtered_posts[i].distance
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-class ServicePostFilterView(generics.ListAPIView):
-    serializer_class = ServicePostSerializer
+class ServicePostFilterView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -631,9 +631,11 @@ class ServicePostFilterView(generics.ListAPIView):
         ).order_by('-urgency', '-created_at').distinct()
 
         user_location = request.user.address 
+        if not user_location:
+            return Response({"error": "please turn on your location."}, status=status.HTTP_400_BAD_REQUEST)
         filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
 
-        serializer = self.get_serializer(filtered_posts, many=True)
+        serializer = ServicePostSerializer(filtered_posts, many=True)
 
         for i, post in enumerate(serializer.data):
             post['distance'] = filtered_posts[i].distance 
