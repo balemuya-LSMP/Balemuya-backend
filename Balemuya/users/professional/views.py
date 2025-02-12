@@ -424,11 +424,6 @@ class ProfessionalSubscriptionHistoryView(APIView):
         serializer = SubscriptionPlanSerializer(subscription_history, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-
-
-    
-    
 class InitiatePaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -438,137 +433,97 @@ class InitiatePaymentView(APIView):
         amount = data.get("amount")
         plan_type = data.get("plan_type")
         duration = data.get("duration")
-        print('duration',duration)
         return_url = data.get("return_url")
         txt_ref = uuid.uuid4()
-        
+
         if not plan_type or not duration:
-            return Response(
-                {"error": "Plan type and duration are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Plan type and duration are required."}, status=status.HTTP_400_BAD_REQUEST)
         if not amount:
-            return Response(
-                {"error": "Amount is required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
+            return Response({"error": "Amount is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         professional = Professional.objects.filter(user=user, is_verified=True).first()
         if professional is None:
+            return Response({"error": "Professional not found or not verified."}, status=status.HTTP_404_NOT_FOUND)
+
+        if professional.num_of_request > 0:
+            return Response({"error": "You cannot subscribe while you have remaining request coins."}, status=status.HTTP_400_BAD_REQUEST)
+
+        active_subscription = SubscriptionPlan.objects.filter(
+            professional=professional,
+            start_date__lte=timezone.now(),
+            end_date__gte=timezone.now()
+        ).first()
+
+        if active_subscription:
             return Response(
-                {"error": "Professional not found or not verified."},
-                status=status.HTTP_404_NOT_FOUND
+                {
+                    "error": "You already have an active subscription.",
+                    "plan_type": active_subscription.plan_type,
+                    "duration": active_subscription.duration,
+                    "end_date": active_subscription.end_date.isoformat(),
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        #
-        with transaction.atomic():
-            active_subscription = SubscriptionPlan.objects.filter(
-                professional=professional,
-                start_date__lte=timezone.now(),
-                end_date__gte=timezone.now()
-            ).first()
 
-            payment = None
-            if active_subscription:
-                payment = Payment.objects.filter(
+        chapa_url = "https://api.chapa.co/v1/transaction/initialize"
+        chapa_api_key = settings.CHAPA_SECRET_KEY
+        payload = {
+            "amount": amount,
+            "currency": "ETB",
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "tx_ref": str(txt_ref),
+            "return_url": f'{return_url}?transaction_id={txt_ref}'
+        }
+        headers = {
+            "Authorization": f"Bearer {chapa_api_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(chapa_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                result = response.json()
+
+                payment = Payment.objects.create(
                     professional=professional,
-                    subscription_plan=active_subscription
-                ).first()
-
-                if payment and payment.payment_status == 'completed':
-                    return Response(
-                        {
-                            "error": "You are already subscribed to an active plan.",
-                            "plan_type": active_subscription.plan_type,
-                            "duration": active_subscription.duration,
-                            "end_date": active_subscription.end_date.isoformat(),
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-            # Check if the professional has enough balance
-            if professional.balance < amount:
-                return Response(
-                    {"error": "Insufficient balance, please deposit enough amount."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    transaction_id=str(txt_ref),
+                    amount=amount,
+                    payment_status='pending',
+                    subscription_plan=None
                 )
 
-            # Proceed with payment initiation
-            chapa_url = "https://api.chapa.co/v1/transaction/initialize"
-            chapa_api_key = settings.CHAPA_SECRET_KEY
-            payload = {
-                "amount": amount,
-                "currency": "ETB",
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "tx_ref": str(txt_ref),
-                "return_url": f'{return_url}?transaction_id={txt_ref}'
-            }
-            headers = {
-                "Authorization": f"Bearer {chapa_api_key}",
-                "Content-Type": "application/json"
-            }
-
-            try:
-                response = requests.post(chapa_url, json=payload, headers=headers)
-                if response.status_code == 200:
-                    result = response.json()
-                    # Create a Payment record
-                    if active_subscription:
-                        payment = Payment.objects.filter(
-                            professional=professional,
-                            subscription_plan=active_subscription).first()
-                        if payment is not None  and payment.payment_status !='completed':
-                            print('payment is updated')
-                            payment.subscription_plan = active_subscription
-                            payment.amount = amount
-                            payment.transaction_id = str(txt_ref)
-                            payment.payment_status = 'pending'
-                            payment.save()
-                        else:
-                            payment = Payment.objects.create(
-                                subscription_plan=active_subscription,
-                                professional=professional,
-                                transaction_id=str(txt_ref),
-                                amount=amount,
-                                payment_status='pending')
-                            payment.save()
-                    else: 
-                        subscription_plan = SubscriptionPlan(
-                            professional=professional,
-                            plan_type=plan_type,
-                            duration=duration
-                        )
-                        subscription_plan.save()
-                        payment = Payment.objects.create(
-                            subscription_plan=subscription_plan,
-                            professional=professional,
-                            transaction_id=str(txt_ref),
-                            amount=amount,
-                            payment_status='pending'
-                        )
-                        payment.save()
-                
-                    return Response(
-                        {
-                            "message": "Payment initiated successfully.",
-                            "data": {
-                                "payment_url": result.get("data", {}).get("checkout_url"),
-                                "transaction_id": str(txt_ref)
-                            }
-                        },
-                        status=status.HTTP_200_OK
-                    )
-                else:
-                    error_message = response.json().get("message", "Failed to initiate payment.")
-                    return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
-
-            except requests.RequestException as e:
-                return Response(
-                    {"error": f"Payment request failed: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                subscription_plan = SubscriptionPlan.objects.create(
+                    professional=professional,
+                    plan_type=plan_type,
+                    duration=duration
                 )
+                payment.subscription_plan = subscription_plan
+                payment.save()
+
+                return Response(
+                    {
+                        "message": "Payment initiated successfully.",
+                        "data": {
+                            "payment_url": result.get("data", {}).get("checkout_url"),
+                            "transaction_id": str(txt_ref)
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
+            else:
+                error_message = response.json().get("message", "Failed to initiate payment.")
+                return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            return Response(
+                {"error": f"Payment request failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -592,9 +547,9 @@ class CheckPaymentView(APIView):
             if response.status_code == 200:
                 payment.payment_status = 'completed'
                 payment.save()
-                
-                payment.professional.balance -= payment.amount
+        
                 payment.professional.is_available=True
+                payment.professional.num_of_requests=0
                 payment.professional.save()
                 
                 payment_data = PaymentSerializer(payment).data
