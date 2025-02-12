@@ -14,6 +14,7 @@ urlpatterns = [
     path('service-posts/customer/<uuid:service_id>/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),
     path('service-posts/professional/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),
     path('service-posts/applications/<uuid:pk>/', DetailServicePostApplicationAPIView.as_view(), name='detail-service-post-application'),
+    
     path('service-posts/applications/<uuid:pk>/accept/', AcceptServicePostApplicationAPIView.as_view(), name='accept-service-post-application'),
     
    path('service-bookings/<uuid:pk>/', ServiceBookingRetrieveAPIView.as_view(), name='retrieve-service-booking'),
