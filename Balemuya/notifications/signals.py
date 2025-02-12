@@ -187,7 +187,7 @@ def notify_professional_on_service_request(sender, instance, created, **kwargs):
                     "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
                 }
             )
-            notification.recipient.set(instance.professional.user)
+            notification.recipient.set([instance.professional.user])
             notification.save()
             
             notification_serializer = NotificationSerializer(notification)
