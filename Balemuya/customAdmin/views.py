@@ -77,7 +77,6 @@ class ProfessionalListView(generics.ListAPIView):
 
 
 
-# View for listing Customers
 class CustomerListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CustomerSerializer
@@ -109,7 +108,6 @@ class CustomerListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-# View for listing Admins
 class AdminListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AdminSerializer
@@ -180,7 +178,6 @@ class AdminVerifyProfessionalView(APIView):
             email_from = settings.EMAIL_HOST_USER
             recipient_list = [professional.user.email]
             send_mail(subject, message, email_from, recipient_list)
-            # send_push_notification(professional.user, "Congratulations! Your verification request has been approved by the admin.")
 
         elif verification_request.status == "rejected":
             subject = "Verification Rejected"

@@ -18,6 +18,8 @@ urlpatterns = [
     path('professional/verification/requests/', ProfessionalVerificationRequestListView.as_view(), name='professional-verification-request'),
     
     path('customers/', CustomerListView.as_view(), name='customer-list'),
+    # path('services/', ServiceListView.as_view(), name='service-list'),
+    # path('services/', ServiceListView.as_view(), name='service-list'),
     
     path('admins/', AdminListView.as_view(), name='admin-list'),
 
