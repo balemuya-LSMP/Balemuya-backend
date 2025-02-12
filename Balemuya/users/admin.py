@@ -62,7 +62,7 @@ class CustomerAdmin(admin.ModelAdmin):
 # Professional Admin
 @admin.register(Professional)
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating', 'years_of_experience', 'is_available')
+    list_display = ('user', 'is_verified', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating','num_of_request', 'years_of_experience', 'is_available')
     list_filter = ('is_verified', 'is_available', 'rating')
 
     def kebele_id_image_front_preview(self, obj):

@@ -181,10 +181,10 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'kebele_id_front_image',
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
-            'categories', 'skills', 'rating', 'years_of_experience', 'is_available',
-            'is_verified', 'balance', 'educations', 'portfolios', 'certificates'
+            'categories', 'skills', 'rating', 'years_of_experience', 'is_available','num_of_request',
+            'is_verified', 'educations', 'portfolios', 'certificates'
         ]
-        read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url', 'educations', 'portfolios', 'certificates']
+        read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url','num_of_request', 'educations', 'portfolios', 'certificates']
 
     def get_kebele_id_front_image_url(self, obj):
         if obj.kebele_id_front_image:
@@ -206,7 +206,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.kebele_id_front_image = validated_data.get('kebele_id_front_image', instance.kebele_id_front_image)
         instance.kebele_id_back_image = validated_data.get('kebele_id_back_image', instance.kebele_id_back_image)
-        instance.balance = validated_data.get('balance', instance.balance)
         instance.save()
         return instance
 
