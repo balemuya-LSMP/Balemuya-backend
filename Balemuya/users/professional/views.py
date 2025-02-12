@@ -80,7 +80,7 @@ class ProfessionalServiceListView(APIView):
         if request.user.user_type == "professional":
             query_param_status = request.query_params.get('status', None)
             if query_param_status is None:
-                new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-created_at')
+                new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-urgency','-created_at')
                 new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
