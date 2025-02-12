@@ -2,7 +2,7 @@ from django.urls import path
 import uuid
 from .views import ProfessionalProfileView, ProfessionalProfileUpdateView,ProfessionalSkillView,ProfessionalCategoryView,CertificateView,EducationView,PortfolioView,\
     ProfessionalVerificationRequestView,InitiatePaymentView,CheckPaymentView,ProfessionalSubscriptionHistoryView,\
-    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView
+    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView
 
 urlpatterns = [
     path('<uuid:pk>/profile/',ProfessionalProfileView.as_view(), name='professional-profile'),
@@ -23,10 +23,11 @@ urlpatterns = [
     path('profile/portfolios/<uuid:pk>/delete/', PortfolioView.as_view(), name='portfolio-delete'),  # DELETE
     path('verification-requests/', ProfessionalVerificationRequestView.as_view(), name='professional-verification-request'),
     path('subscription/history/',ProfessionalSubscriptionHistoryView.as_view(), name='professional-subscription-history'),
-     
+    
     #services
     path('services/', ProfessionalServiceListView.as_view(), name='professional-service-app-list'),
     path('service/search/', ServicePostSearchView.as_view(), name='service_post_search'),
+    path('service/filter/', ServicePostFilterView.as_view(), name='service_post_filter'),
 
     path('service-requests/', ProfessionalServiceRequestsAPIView.as_view(), name='professional_service_requests'),#professional srvices requested
 
