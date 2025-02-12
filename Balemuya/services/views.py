@@ -118,13 +118,18 @@ class CreateServicePostApplicationAPIView(APIView):
     def post(self, request, service_id=None):
         if request.user.user_type != "professional":
             return Response({"detail": "Only professionals can apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
-
+        
         try:
             service_id = request.data.get('service_id')
             service_post = ServicePost.objects.get(id=service_id)
-            print('service id get from frontend',service_post)
         except ServicePost.DoesNotExist:
-            return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.professional.is_available==False:
+            return Response({"message": "Please subscribe for requests."}, status=status.HTTP_400_BAD_REQUEST)
+        elif request.user.professional.num_of_request==0:
+            return Response({"message": "You have no  coins to apply  Job."}, status=status.HTTP_400_BAD_REQUEST)
+        
+       
         professional_id = request.user.professional.id
         print('professional id is ',professional_id)
         application_data = {
@@ -135,6 +140,9 @@ class CreateServicePostApplicationAPIView(APIView):
         serializer = ServicePostApplicationSerializer(data=application_data)
         if serializer.is_valid():
             serializer.save()
+            request.user.professional.num_of_request -= 1
+            request.user.professional.save()
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
