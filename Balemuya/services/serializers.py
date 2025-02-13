@@ -205,7 +205,8 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
                 "professional_id": str(professional.id),
                 "professional_name": professional.user.get_full_name(),
                 "professional_profile_image": professional.user.profile_image.url if professional.user.profile_image else None,
-                "rating": professional.rating
+                "rating": professional.rating,
+                "phone_number":professional.user.phone_number
             }
         except AttributeError:
             return None  # Handle the case where professional is not accessible
