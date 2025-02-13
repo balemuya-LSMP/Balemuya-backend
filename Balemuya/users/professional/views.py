@@ -487,21 +487,22 @@ class InitiatePaymentView(APIView):
             response = requests.post(chapa_url, json=payload, headers=headers)
             if response.status_code == 200:
                 result = response.json()
-
-                payment = Payment.objects.create(
-                    professional=professional,
-                    transaction_id=str(txt_ref),
-                    amount=amount,
-                    payment_status='pending',
-                    subscription_plan=None
-                )
-
+                
                 subscription_plan = SubscriptionPlan.objects.create(
                     professional=professional,
                     plan_type=plan_type,
                     duration=duration
                 )
-                payment.subscription_plan = subscription_plan
+                subscription_plan.save()
+                payment = Payment.objects.create(
+                    professional=professional,
+                    transaction_id=str(txt_ref),
+                    amount=amount,
+                    payment_status='pending',
+                    subscription_plan=subscription_plan
+                )
+
+                
                 payment.save()
 
                 return Response(
