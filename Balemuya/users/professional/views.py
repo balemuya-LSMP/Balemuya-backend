@@ -454,8 +454,10 @@ class InitiatePaymentView(APIView):
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
         ).first()
+        
+        payment = Payment.objects.filter(professional=professional,subscription_plan=active_subscription, payment_status='completed').first()
 
-        if active_subscription:
+        if payment:
             return Response(
                 {
                     "error": "You already have an active subscription.",
@@ -465,7 +467,8 @@ class InitiatePaymentView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+        if active_subscription:
+            active_subscription.delete()
 
         chapa_url = "https://api.chapa.co/v1/transaction/initialize"
         chapa_api_key = settings.CHAPA_SECRET_KEY
