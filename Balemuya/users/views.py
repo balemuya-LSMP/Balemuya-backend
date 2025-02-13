@@ -5,7 +5,8 @@ from django.core.cache import cache
 from django.contrib.auth import login
 from django.db import transaction
 from django.utils import timezone
-
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -98,6 +99,7 @@ class RegisterView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class VerifyEmailView(APIView):
     def get(self, request):
         uidb64 = request.GET.get('uid')
@@ -112,9 +114,36 @@ class VerifyEmailView(APIView):
         if user is not None and default_token_generator.check_token(user, token):
             user.is_active = True
             user.save()
-            return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+
+            html_content = render_to_string('email_verification_success.html', {
+                "message": "Email verified successfully!",
+                "user": user,
+            })
+            return HttpResponse(html_content, status=200, content_type="text/html")
         else:
-            return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+            html_content = render_to_string('email_verification_failed.html', {
+                "message": "Invalid or expired token.",
+            })
+            return HttpResponse(html_content, status=400, content_type="text/html")
+
+
+# class VerifyEmailView(APIView):
+#     def get(self, request):
+#         uidb64 = request.GET.get('uid')
+#         token = request.GET.get('token')
+        
+#         try:
+#             uid = urlsafe_base64_decode(uidb64).decode()
+#             user = User.objects.get(pk=uid)
+#         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+#             user = None
+        
+#         if user is not None and default_token_generator.check_token(user, token):
+#             user.is_active = True
+#             user.save()
+#             return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+#         else:
+#             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyPhoneView(APIView):
     
