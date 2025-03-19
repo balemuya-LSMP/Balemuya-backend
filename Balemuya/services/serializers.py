@@ -197,7 +197,7 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
             return service_data
         except AttributeError:
             return None  # Handle the case where service is not accessible
-
+    #to get professional details
     def get_professional(self, obj):
         try:
             professional = obj.application.professional
@@ -210,6 +210,7 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
             }
         except AttributeError:
             return None  # Handle the case where professional is not accessible
+        
 
     def get_customer(self, obj):
         try:
