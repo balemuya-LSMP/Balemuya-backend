@@ -31,12 +31,12 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+from .models import User,Professional, Customer,OrgCustomer,OrgProfessional, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
     Feedback
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
-from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
+from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerializer,OrgProfessionalSerializer,OrgCustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
         FeedbackSerializer
     
@@ -126,24 +126,6 @@ class VerifyEmailView(APIView):
             })
             return HttpResponse(html_content, status=400, content_type="text/html")
 
-
-# class VerifyEmailView(APIView):
-#     def get(self, request):
-#         uidb64 = request.GET.get('uid')
-#         token = request.GET.get('token')
-        
-#         try:
-#             uid = urlsafe_base64_decode(uidb64).decode()
-#             user = User.objects.get(pk=uid)
-#         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-#             user = None
-        
-#         if user is not None and default_token_generator.check_token(user, token):
-#             user.is_active = True
-#             user.save()
-#             return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
-#         else:
-#             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyPhoneView(APIView):
     
