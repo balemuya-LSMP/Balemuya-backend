@@ -1,137 +1,114 @@
 from django.contrib import admin
-from django.utils.html import mark_safe
-from .models import User, Admin, Customer, Professional, Education, Portfolio, Certificate, Address, Skill, Payment, SubscriptionPlan,\
-    VerificationRequest,Feedback
-from django.contrib.auth.admin import UserAdmin
-from django.utils.translation import gettext_lazy as _
-from django.conf import settings
+from .models import (
+    Address,
+    User,
+    Customer,
+    OrgCustomer,
+    Professional,
+    OrgProfessional,
+    Feedback,
+    Permission,
+    Admin,
+    AdminLog,
+    Skill,
+    Education,
+    Portfolio,
+    Certificate,
+    SubscriptionPlan,
+    Payment,
+    VerificationRequest,
+)
 
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('country', 'region', 'city', 'latitude', 'longitude')
+    search_fields = ('country', 'region', 'city')
 
-class EducationInline(admin.StackedInline):
-    model = Education
-    extra = 1
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('email', 'phone_number', 'user_type', 'is_email_verified', 'is_active')
+    search_fields = ('email', 'phone_number')
+    list_filter = ('user_type', 'is_email_verified', 'is_active')
 
-class SkillsInline(admin.StackedInline):
-    model = Professional.skills.through
-    extra = 1
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'first_name', 'last_name', 'number_of_services_booked', 'rating')
+    search_fields = ('user__email', 'first_name', 'last_name')
 
-class PortfolioInline(admin.StackedInline):
-    model = Portfolio
-    extra = 1
+@admin.register(OrgCustomer)
+class OrgCustomerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'organization_name', 'registration_number', 'number_of_employees', 'rating')
+    search_fields = ('user__email', 'organization_name', 'registration_number')
 
-class CertificateInline(admin.StackedInline):
-    model = Certificate
-    extra = 1
+@admin.register(Professional)
+class ProfessionalAdmin(admin.ModelAdmin):
+    list_display = ('user', 'first_name', 'last_name', 'years_of_experience', 'rating')
+    search_fields = ('user__email', 'first_name', 'last_name')
+
+@admin.register(OrgProfessional)
+class OrgProfessionalAdmin(admin.ModelAdmin):
+    list_display = ('user', 'organization_name', 'registration_number', 'number_of_employees', 'rating')
+    search_fields = ('user__email', 'organization_name', 'registration_number')
 
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    list_display = ('user', 'message','created_at')
-    search_fields = ('user__email',)
-    list_filter = ('created_at',)
+    list_display = ('user', 'message', 'rating', 'created_at')
+    search_fields = ('user__email', 'message')
+    list_filter = ('rating',)
 
-# Custom User Admin
-@admin.register(User)
-class CustomUserAdmin(admin.ModelAdmin):
-    model = User
-    list_display = ('email', 'first_name', 'middle_name', 'last_name','profile_image_preview', 'phone_number', 'gender', 'user_type','address', 'is_active', 'is_staff', 'is_superuser')
-    list_filter = ('user_type', 'is_active', 'is_staff', 'is_superuser')
-    search_fields = ('email', 'first_name', 'middle_name', 'last_name', 'phone_number')
-    ordering = ('email',)
-    
-    
-    
-    def profile_image_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.profile_image}" width="50" height="50" />')
-    profile_image_preview.allow_tags = True
-    profile_image_preview.short_description = 'Profile Image'
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
 
-# Admin Admin
 @admin.register(Admin)
 class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'admin_level')
-    search_fields = ( 'admin_level',)
-    list_filter = ('admin_level',)
+    search_fields = ('user__email', 'first_name', 'last_name')
 
-# Customer Admin
-@admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'rating','number_of_services_booked')
-    search_fields = ('rating',)
-    list_filter = ('rating',)
-
-# Professional Admin
-@admin.register(Professional)
-class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'is_verified', 'kebele_id_image_front_preview', 'kebele_id_image_back_preview', 'rating','num_of_request', 'years_of_experience', 'is_available')
-    list_filter = ('is_verified', 'is_available', 'rating')
-
-    def kebele_id_image_front_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_front_image}" width="50" height="50" />')
-    kebele_id_image_front_preview.allow_tags = True
-    kebele_id_image_front_preview.short_description = 'Id front Image'
-
-    def kebele_id_image_back_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.kebele_id_back_image}" width="50" height="50" />')
-    kebele_id_image_back_preview.allow_tags = True
-    kebele_id_image_back_preview.short_description = 'Id back Image'
-    inlines = [EducationInline, SkillsInline, PortfolioInline, CertificateInline]  
-
-@admin.register(SubscriptionPlan)
-class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date', 'is_expired')
-    list_filter = ('plan_type', 'duration')
-    search_fields = ('plan_type',)
-    readonly_fields = ('start_date', 'end_date', 'is_expired')
-
-    def is_expired(self, obj):
-        return obj.is_expired()
-    is_expired.boolean = True
-    is_expired.short_description = 'Expired'
-
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'subscription_plan', 'amount', 'payment_status', 'payment_method', 'payment_date')
-    list_filter = ('payment_status', 'payment_method')
-    readonly_fields = ('payment_date',)
-
-
-@admin.register(VerificationRequest)
-class VerificationRequestAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'status', 'verified_by', 'created_at', 'updated_at')
-    list_filter = ('status',)
-
-@admin.register(Education)
-class EducationAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'degree', 'field_of_study')
-    list_filter = ('degree', 'field_of_study')
+@admin.register(AdminLog)
+class AdminLogAdmin(admin.ModelAdmin):
+    list_display = ('admin', 'action', 'timestamp')
+    search_fields = ('admin__user__email', 'action')
+    list_filter = ('timestamp',)
 
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
+@admin.register(Education)
+class EducationAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'school', 'degree', 'created_at')
+    search_fields = ('professional__user__email', 'school')
+    list_filter = ('created_at',)
 
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):
-    list_display = ('professional', 'title', 'description', 'image_preview')
-
-    def image_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.image}" width="50" height="50" />')
-    image_preview.allow_tags = True
-    image_preview.short_description = 'Image'
+    list_display = ('professional', 'title', 'created_at')
+    search_fields = ('professional__user__email', 'title')
+    list_filter = ('created_at',)
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ('professional','image_preview')
-    
-    def image_preview(self, obj):
-            return mark_safe(f'<img src="{settings.MEDIA_URL}{obj.image}" width="50" height="50" />')
-    image_preview.allow_tags = True
-    image_preview.short_description = 'Image'
-    
-@admin.register(Address)
-class AddressAdmin(admin.ModelAdmin):
-    list_display = ('country', 'region', 'city', 'latitude', 'longitude') 
-    search_fields = ( 'country', 'region', 'city')
-    
+    list_display = ('professional', 'name', 'created_at')
+    search_fields = ('professional__user__email', 'name')
+    list_filter = ('created_at',)
 
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('user', 'plan_type', 'duration', 'cost', 'start_date', 'end_date')
+    search_fields = ('user__email', 'plan_type')
+    list_filter = ('plan_type',)
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status')
+    search_fields = ('subscription_plan__professional__user__email', 'transaction_id')
+    list_filter = ('payment_status',)
+
+@admin.register(VerificationRequest)
+class VerificationRequestAdmin(admin.ModelAdmin):
+    list_display = ('professional', 'status', 'created_at', 'updated_at')
+    search_fields = ('professional__user__email',)
+    list_filter = ('status',)

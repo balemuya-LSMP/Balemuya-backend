@@ -9,9 +9,9 @@ from users.models import Address, User
 
 class ServicePost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.CASCADE, related_name='services')
+    customer = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     title = models.CharField(max_length=100,null=True, blank=True)
-    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name='services')
+    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     description = models.TextField(null=True, blank=True)  
     status = models.CharField(max_length=20, choices=[
         ('active', 'Active'),
@@ -42,8 +42,8 @@ class ServicePostApplication(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service = models.ForeignKey(ServicePost, on_delete=models.CASCADE, related_name='applications')
-    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='applications')
+    service = models.ForeignKey(ServicePost, on_delete=models.CASCADE, related_name='service_applications')
+    professional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='professional_applications')
     message = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -64,7 +64,7 @@ class ServiceBooking(models.Model):
     application = models.OneToOneField(
         ServicePostApplication, 
         on_delete=models.CASCADE, 
-        related_name='booking'
+        related_name='service_booking'
     )
     scheduled_date = models.DateTimeField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -78,14 +78,15 @@ class ServiceBooking(models.Model):
     
 class ServiceRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(Customer, related_name='service_requests', on_delete=models.CASCADE)
-    professional = models.ForeignKey(Professional, related_name='requests_received', on_delete=models.CASCADE)
+    customer = models.ForeignKey(User, related_name='service_recieved', on_delete=models.CASCADE)
+    professional = models.ForeignKey(User, related_name='service_requests', on_delete=models.CASCADE)
     detail = models.TextField()
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('cancled','canceled') ,('accepted', 'Accepted'), ('rejected', 'Rejected')],default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
     
     def __str__(self):
+        
         return f"ServiceRequest {self.id} - {self.status} for {self.customer}"
 
     class Meta:
