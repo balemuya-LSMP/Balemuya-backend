@@ -51,6 +51,7 @@ class CustomUserManager(BaseUserManager):
 ACCOUNT_TYPE_CHOICES = [
     ('organization', 'Organization'),
     ('individual', 'Individual'),
+    ('admin', 'Admin'),
 ]
 USER_TYPE_CHOICES = [
     ('customer', 'Customer'),
@@ -67,11 +68,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
 
-    account_type = models.CharField(max_length=30, choices=ACCOUNT_TYPE_CHOICES, default='ind')
+    account_type = models.CharField(max_length=30, choices=ACCOUNT_TYPE_CHOICES, default='individual')
 
     is_active = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
-    is_blocked = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
+    
+    date_joined = models.DateTimeField(default=timezone.now)
+
     last_login = models.DateTimeField(auto_now=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -338,7 +342,7 @@ class Certificate(models.Model):
         verbose_name_plural = 'Certificates'
         ordering = ['-created_at']
 
-
+# Subscription Plan
 class SubscriptionPlan(models.Model):
     PLAN_CHOICES = [
         ('silver', 'Silver'),
@@ -352,14 +356,6 @@ class SubscriptionPlan(models.Model):
         'diamond': Decimal('300.00'),
     }
     
-    
-    REQUEST_COINS = {
-        'silver': 100,   
-        'gold': 300,    
-        'diamond': 500,
-    }
-
-
     DURATION_CHOICES = [
         (1, '1 Month'),
         (3, '3 Months'),
@@ -368,7 +364,7 @@ class SubscriptionPlan(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    professional = models.OneToOneField('User', on_delete=models.CASCADE, related_name='subscription_plan',null=True)  # Only one subscription per professional
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
     cost = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
@@ -388,13 +384,14 @@ class SubscriptionPlan(models.Model):
         return timezone.now() > self.end_date if self.end_date else False
 
     def __str__(self):
-        return f"{self.professional} - {self.plan_type} - {self.duration} Plan"
+        return f"{self.professional.email} - {self.plan_type} - {self.duration} Month(s)"
 
     class Meta:
         verbose_name = 'Subscription Plan'
         verbose_name_plural = 'Subscription Plans'
 
 
+# Payment Model for Services
 class Payment(models.Model):
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -403,29 +400,52 @@ class Payment(models.Model):
         ('refunded', 'Refunded'),
     ]
     
-    PAYMENT_TYPE_CHOICES = [
-        ('subscription', 'Subscription'),
-        ('transaction', 'Transaction'),
-    ]
-    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments',null=True)  # The customer making the payment
-    professional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_payments')  # Professional receiving the payment
-    subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)  # Nullable for subscriptions
-    amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False) 
+    customer = models.ForeignKey('User', on_delete=models.CASCADE, related_name='service_payments', null=True)  # The customer making the payment
+    professional = models.ForeignKey('User', on_delete=models.CASCADE, related_name='received_payments',null=True)  # Professional receiving the payment
+    service = models.ForeignKey('services.ServicePost', on_delete=models.CASCADE,null=True)  # The service related to the payment
+    amount = models.DecimalField(max_digits=10, decimal_places=2,default=0) 
     payment_date = models.DateTimeField(default=timezone.now)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
-    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES,null=True)  # To differentiate between subscription and transaction
     payment_method = models.CharField(max_length=50, default='chapa', null=True, blank=True)
     transaction_id = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
-        return f"Payment {self.transaction_id} from {self.user.email} to {self.professional.email} - Amount: {self.amount}"
+        return f"Payment {self.transaction_id} from {self.customer.email} to {self.professional.email} - Amount: {self.amount}"
 
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
-        
+
+
+# Subscription Payment Model
+class SubscriptionPayment(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='subscription_payments')
+    professional = models.ForeignKey('User', on_delete=models.CASCADE, related_name='subscription_payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    payment_date = models.DateTimeField(default=timezone.now)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=50, default='chapa', null=True, blank=True)
+    transaction_id = models.CharField(max_length=100, unique=True)
+
+    def save(self, *args, **kwargs):
+        # Calculate the payment amount based on the associated subscription plan
+        self.amount = self.subscription_plan.cost
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Subscription Payment {self.transaction_id} for {self.professional.email} - Amount: {self.amount}"
+
+    class Meta:
+        verbose_name = 'Subscription Payment'
+        verbose_name_plural = 'Subscription Payments'
         
 class VerificationRequest(models.Model):
     
