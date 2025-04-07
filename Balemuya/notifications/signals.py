@@ -1,103 +1,330 @@
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import IntegrityError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from services.models import ServicePost, ServicePostApplication
+from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest
 from .models import Notification
-from users.models import Professional
+from users.models import Professional,Admin,Customer,User,VerificationRequest,Feedback
 from common.models import Category
 from .serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
 from uuid import UUID
+from .utils import get_professionals_in_proximity_and_category
 
 User = get_user_model()
+
 
 @receiver(post_save, sender=ServicePost)
 def notify_professionals_about_new_post(sender, instance, created, **kwargs):
     if created:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        from notifications.consumers import NotificationConsumer
-
-        category = instance.category
         channel_layer = get_channel_layer()
-        consumer = NotificationConsumer(scope=None)  # Create an instance of the consumer
+        message = f"New job posted: {instance.description[:50]}..."
 
-        # Notify professionals in the category
-        async_to_sync(consumer.notify_professionals_about_service_post)(instance)
+        try:
+            professionals = get_professionals_in_proximity_and_category(instance)
 
-        print(f"Notifications for category '{category.name}' sent via NotificationConsumer.")
-    
-    
-    #  if created:
-    #     category = instance.category
-    #     channel_layer = get_channel_layer()
-    #     group_name = f"category_{category.name}"  # Use category ID to identify the group
-    #     print('group name is', group_name)
+            if not professionals:
+                return
 
-    #     notification_message = f'A new service post has been created in the {category.name} category.'
-        
-    #     print('category is',category)
-    #     # Fetch professionals associated with the category (many-to-many relationship)
-    #     professionals = Professional.objects.filter(categories=category.id)
-    #     print('professionals:', professionals)
+            recipients = User.objects.filter(professional__in=professionals)
 
-    #     recipients = []
-    #     for professional in professionals:
-    #         recipients.append(professional.user)
+            if not recipients.exists():
+                return
 
-    #     # Create the notification (sending it to all recipients)
-    #     notification = Notification.objects.create(
-    #         sender=instance.customer.user,
-    #         message=notification_message,
-    #         notification_type="service_post",
-    #     )
-    #     # Set the recipients for the notification
-    #     notification.recipient.set(recipients)
-    #     notification.save()
+            with transaction.atomic():
+                notification = Notification.objects.create(
+                    message=message,
+                    metadata={
+                        "id": str(instance.customer.user.id),
+                        "name": instance.customer.user.first_name,
+                        "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
+                    },
+                    notification_type="new_job",
+                    title='New Job Posted'
+                )
+                notification.recipient.set(recipients)
+                notification_serializer = NotificationSerializer(notification)
 
-    #     # Serialize the notification using the NotificationSerializer
-    #     serializer = NotificationSerializer(notification)
-    #     notification_data = serializer.data
-    #     print('notification data',notification_data)
-    #     # Send serialized notification to the group
-    #     async_to_sync(channel_layer.group_send)(
-    #         group_name,
-    #         {
-    #             'type': 'send_notification',
-    #             'message': notification_data
-    #         }
-    #     )
+            for professional in professionals:
+                group_name = f"professional_{professional.user.id}_new_jobs"
+                async_to_sync(channel_layer.group_add)(group_name, f"user_{professional.user.id}")
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {'type': 'send_notification', 'data': notification_serializer.data}
+                )
 
-    #     print('Notifications sent to professionals')
+        except IntegrityError as e:
+            print(f"Database error while creating notification: {e}")
+        except ObjectDoesNotExist as e:
+            print(f"Object not found error: {e}")
+        except Exception as e:
+            print(f"Unexpected error while sending notifications: {e}")
 
 @receiver(post_save, sender=ServicePostApplication)
 def notify_customer_about_application(sender, instance, created, **kwargs):
     if created:
-        customer = instance.customer  # The customer associated with the application
+        customer = instance.service.customer.user
         channel_layer = get_channel_layer()
-        group_name = f"customer_{customer.id}"  # Group name based on customer ID
+        group_name = f"customer_{customer.id}_job_app_requests"
 
-        # The sender is the professional who applied
-        notification_message = f"A professional has applied to your service post."
+        notification_message = f"A professional has applied to your service post {instance.service.title}..."
         notification = Notification.objects.create(
-            recipient=customer,  # The customer is the recipient
-            sender=instance.professional.user,  # The professional who applied
             message=notification_message,
-            notification_type="application",  # Add the notification type
-            application_id=instance.id  # Store the ID of the application
+            notification_type="job_apply",  
+            metadata={
+                "id": str(instance.professional.user.id),
+                "name": instance.professional.user.first_name,
+                "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
+            },
+            title='Job Application Received'
         )
+        notification.recipient.set([customer])
+        notification.save()
 
-        # Serialize the notification using the NotificationSerializer
         serializer = NotificationSerializer(notification)
-
-        # Send serialized notification to the group
         async_to_sync(channel_layer.group_send)(
             group_name,
-            {
-                'type': 'send_notification',
-                'message': serializer.data  # Use the serialized data
-            }
+            {'type': 'send_notification', 'message': serializer.data}
         )
 
-        print('Notification sent to customer')
+@receiver(post_save, sender=VerificationRequest)
+def send_verification_request_to_admin(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        group_name = f"admin_verification_notifications"
+
+        notification_message = f"A professional application request to verify."
+        notification = Notification.objects.create(
+            message=notification_message,
+            notification_type="verify_request",  
+            metadata={
+                "id": str(instance.professional.user.id),
+                "name": instance.professional.user.first_name,
+                "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
+            },
+            title='Verification Request Submitted'
+        )
+        recipients = User.objects.filter(user_type='admin')
+        notification.recipient.set([recipients])
+        notification.save()
+
+        serializer = NotificationSerializer(notification)
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {'type': 'send_notification', 'data': serializer.data}
+        )
+
+@receiver(post_save, sender=VerificationRequest)
+def notify_professional_on_verification(sender, instance, created, **kwargs):
+    if not created and instance.status in ['approved', 'rejected']:
+        channel_layer = get_channel_layer()
+        group_name = f"professional_{instance.professional.user.id}_ver_notifications"
+        
+        message = f"Your verification request has been {instance.status}."
+        notification = Notification.objects.create(
+            message=message,
+            notification_type="verify_response",  
+            title='Verification Response',
+            metadata={
+                'id': instance.service.customer.id,
+                'name': instance.service.customer.user.first_name,
+                "profile_image": instance.service.customer.profile_image
+            }
+        )
+        notification.recipient.set([instance.professional.user])
+        notification.save()
+
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {'type': 'send_notification', 'data': message}
+        )
+
+@receiver(post_save, sender=ServiceBooking)
+def notify_professional_on_service_booking(sender, instance, created, **kwargs):
+    if created and instance.status == 'pending':
+        channel_layer = get_channel_layer()
+        group_name = f"professional_{instance.application.professional.user.id}_new_bookings"
+        message = f"A new booking has been made for your service post {instance.application.service.title}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Booking Notification',
+                message=message,
+                notification_type="new_booking",
+                metadata={
+                    "id": str(instance.application.service.customer.user.first_name),
+                    "name": instance.application.service.customer.user.first_name,
+                    "profile_image": instance.application.service.customer.user.profile_image.url if instance.application.service.customer.user.profile_image else None,
+                }
+            )
+            notification.recipient.set([instance.application.professional.user])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+@receiver(post_save, sender=ServiceRequest)
+def notify_professional_on_service_request(sender, instance, created, **kwargs):
+    if created and instance.status == 'pending':
+        channel_layer = get_channel_layer()
+        group_name = f"professional_{instance.professional.user.id}_new_job_request"
+        message = f"A new job request from {instance.customer.user.first_name}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Job Request',
+                message=message,
+                notification_type="new_job_request",
+                metadata={
+                    "id": str(instance.customer.id),
+                    "name": instance.customer.user.first_name,
+                    "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
+                }
+            )
+            notification.recipient.set([instance.professional.user])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+@receiver(post_save, sender=ServiceRequest)
+def notify_customer_on_service_response(sender, instance, created, **kwargs):
+    if not created and instance.status != 'pending':
+        channel_layer = get_channel_layer()
+        group_name = f"customer_{instance.customer.user.id}_job_request_response"
+        message = f"{instance.professional.user.first_name} has {instance.status} your request."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='Job Request Response',
+                message=message,
+                notification_type="new_job_response",
+                metadata={
+                    "id": str(instance.professional.id),
+                    "name": instance.professional.first_name,
+                    "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
+                }
+            )
+            notification.recipient.set(instance.customer.user)
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+@receiver(post_save, sender=Complain)
+def notify_admin_on_complain(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        group_name = f"admin_booking_complaint_notifications"
+        
+        message = None
+        if instance.booking:
+            message = f"A new complaint has been made for service post {instance.booking.application.service.title}..."
+        elif instance.service_request:
+            message = f"A new complaint has been made for service request job."
+
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Complaint',
+                message=message,
+                notification_type="new_complain",
+                metadata={
+                    "id": str(instance.user.id),
+                    "name": instance.user.first_name,
+                    "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
+                }
+            )
+            recipients = User.objects.filter(user_type='admin')
+            notification.recipient.set(recipients)
+            notification.save()
+
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+@receiver(post_save, sender=Feedback)
+def notify_admins_on_feedback(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        group_name = f"admin_feedback_notifications"
+        
+        message = f"A new feedback has been made by {instance.user.first_name}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Feedback',
+                message=message,
+                notification_type="new_feedback",
+                metadata={
+                    "id": str(instance.user.id),
+                    "name": instance.user.first_name,
+                    "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
+                }
+            )
+            recipients = User.objects.filter(user_type='admin')
+            notification.recipient.set(recipients)
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+@receiver(post_save, sender=Review)
+def notify_user_on_review(sender, instance, created, **kwargs):
+    if created:
+        group_name = None
+        channel_layer = get_channel_layer()
+        
+        if instance.user.user_type == 'customer':
+            if instance.booking:
+                group_name = f"user_{instance.booking.application.professional.user.id}_review_notifications"
+            else:
+                group_name = f"user_{instance.service_request.professional.user.id}_review_notifications"
+
+        elif instance.user.user_type == 'professional':
+            if instance.booking:
+                group_name = f"user_{instance.booking.application.service.customer.user.id}_review_notifications"
+            else:
+                group_name = f"user_{instance.service_request.customer.user.id}_review_notifications"
+
+        
+        if group_name is None:
+            return
+        
+        message = f"A new review has been made by {instance.user.first_name}..."
+        
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Review',
+                message=message,
+                notification_type="new_review",
+                metadata={
+                    "id": str(instance.user.id),
+                    "name": instance.user.first_name,
+                    "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
+                }
+            )
+            notification.recipient.set([instance.user])
+            notification.save()
+            
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )

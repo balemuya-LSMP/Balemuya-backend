@@ -21,11 +21,13 @@ class CategorySerializer(serializers.ModelSerializer):
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude', 'is_current']
+        fields = ['id', 'country', 'region', 'city', 'latitude', 'longitude']
+        
+        
 
 
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
+    address = AddressSerializer(required=False)
     email = serializers.EmailField(max_length=200)
     profile_image_url = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=True)
@@ -34,8 +36,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'first_name', 'middle_name', 'last_name', 'password', 'profile_image', 
-            'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 
-            'is_active', 'is_blocked', 'created_at', 'updated_at', 'addresses'
+            'profile_image_url', 'gender', 'email', 'phone_number', 'user_type', 'bio',
+            'is_active', 'is_blocked', 'created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
             'password': {'write_only': True}
@@ -95,8 +97,8 @@ class UserSerializer(serializers.ModelSerializer):
             return user
 
     def update(self, instance, validated_data):
-        email = validated_data.get('email', instance.email)  # Preserve existing email if not updated
-        validated_data['email'] = self.validate_email(email)  # Re-validate email if changed
+        email = validated_data.get('email', instance.email)
+        validated_data['email'] = self.validate_email(email)  
 
         # Update instance attributes
         for attr, value in validated_data.items():

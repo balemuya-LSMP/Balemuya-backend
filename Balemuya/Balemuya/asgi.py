@@ -5,10 +5,8 @@ from channels.auth import AuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Balemuya.settings')
 
-# Initialize Django application early
 django_asgi_app = get_asgi_application()
 
-# Import routing after the application is initialized
 from .routings import websocket_urlpatterns
 
 application = ProtocolTypeRouter({

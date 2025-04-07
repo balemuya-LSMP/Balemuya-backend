@@ -5,7 +5,8 @@ from django.core.cache import cache
 from django.contrib.auth import login
 from django.db import transaction
 from django.utils import timezone
-
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -30,14 +31,17 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest
+from .models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+    Feedback
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
-    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer
+    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
+        FeedbackSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
+from .pagination import CustomPagination
 class RegisterFCMDeviceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -95,6 +99,7 @@ class RegisterView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class VerifyEmailView(APIView):
     def get(self, request):
         uidb64 = request.GET.get('uid')
@@ -109,9 +114,36 @@ class VerifyEmailView(APIView):
         if user is not None and default_token_generator.check_token(user, token):
             user.is_active = True
             user.save()
-            return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+
+            html_content = render_to_string('email_verification_success.html', {
+                "message": "Email verified successfully!",
+                "user": user,
+            })
+            return HttpResponse(html_content, status=200, content_type="text/html")
         else:
-            return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+            html_content = render_to_string('email_verification_failed.html', {
+                "message": "Invalid or expired token.",
+            })
+            return HttpResponse(html_content, status=400, content_type="text/html")
+
+
+# class VerifyEmailView(APIView):
+#     def get(self, request):
+#         uidb64 = request.GET.get('uid')
+#         token = request.GET.get('token')
+        
+#         try:
+#             uid = urlsafe_base64_decode(uidb64).decode()
+#             user = User.objects.get(pk=uid)
+#         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+#             user = None
+        
+#         if user is not None and default_token_generator.check_token(user, token):
+#             user.is_active = True
+#             user.save()
+#             return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+#         else:
+#             return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyPhoneView(APIView):
     
@@ -206,66 +238,36 @@ class VerifyPasswordResetOTPView(APIView):
             return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
         
 class GoogleLoginView(APIView):
-    def get(self, request):
-        code = request.GET.get('code')  
-        print('code', code)
-
-        if not code:
-            return Response({'error': "Missing code parameter"}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        access_token = request.data.get('token')
+        if not access_token:
+            return Response({'error': "Missing access token"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            token_url = 'https://oauth2.googleapis.com/token'
-            data = {
-                'code': code,
-                'client_id': settings.GOOGLE_CLIENT_ID,
-                'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                'redirect_uri': 'http://localhost:3000/auth/google-callback/', 
-                'grant_type': 'authorization_code',
-            }
-            token_response = requests.post(token_url, data=data)
-            token_data = token_response.json()
-
-            access_token = token_data.get('access_token')
-            if not access_token:
-                return Response({'error': "No access token received"}, status=status.HTTP_400_BAD_REQUEST)
-
             # Get user info from Google
-            user_info_response = requests.get(
-                'https://people.googleapis.com/v1/people/me?personFields=names,emailAddresses',
+            user_info = requests.get(
+                'https://www.googleapis.com/oauth2/v1/userinfo',
                 headers={'Authorization': f'Bearer {access_token}'}
-            )
+            ).json()
 
-            if user_info_response.status_code != 200:
-                return Response({'error': user_info_response.json().get('error', 'Unknown error')}, status=status.HTTP_400_BAD_REQUEST)
-
-            user_info = user_info_response.json()
-            names = user_info.get('names', [{}])
-            email_addresses = user_info.get('emailAddresses', [{}])
-
-            first_name = names[0].get('givenName', '')
-            last_name = names[0].get('unstructuredName', '')
-            email = email_addresses[0].get('value', '')
+            email = user_info.get('email')
+            first_name = user_info.get('given_name', '')
+            last_name = user_info.get('family_name', '')
 
             if not email:
-                return Response({"error": "Email not found in user info"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "Email not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create or retrieve the user
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'password': 'temporarypassword123',
-                    'is_active': True
-                }
-            )
+            # Create or get user
+            user, created = User.objects.get_or_create(email=email, defaults={
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_active': True
+            })
 
-            # Generate access and refresh tokens
-            access = AccessToken.for_user(user)
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-
             return Response({
-                'access': str(access),
+                'access': str(refresh.access_token),
                 'refresh': str(refresh),
             }, status=status.HTTP_200_OK)
 
@@ -371,39 +373,12 @@ class UserUpdateView(generics.UpdateAPIView):
     def put(self, request):
         user = request.user
         serializer = self.serializer_class(instance=user, data=request.data, partial=True)
-        # Validate and save the profile
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AddressView(APIView):
-    permission_class = [IsAuthenticated]
-    serializer_class = AddressSerializer
-    
-    def post(self,request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
-    def put(self,request,pk):
-        print('pk is',pk)
-        address = Address.objects.get(id=pk,user=request.user)
-        serializer = self.serializer_class(address,data=request.data,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
-    def delete(self,request,pk):
-        address = Address.objects.get(id=pk,user=request.user)
-        address.delete()
-        return Response({"message":"Address deleted successfully"},status=status.HTTP_200_OK)
-    
-        
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -497,458 +472,32 @@ class UserBlockView(generics.UpdateAPIView):
             user.save()
             return Response({'message': 'User blocked successfully'}, status=status.HTTP_200_OK)
 
-
-class ProfessionalProfileUpdateView(APIView):
+class UserFeedbackView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
-    def put(self, request):
-        professional = request.user.professional
-        serializer = ProfessionalSerializer(professional, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-# views related to professional
-class ProfessionalSkillView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            professional = Professional.objects.get(user=request.user)
-            skill_names = request.data.get("names", [])  # Accept a list of skill names
-
-            if not skill_names or not isinstance(skill_names, list):
-                return Response({"detail": "A list of skill names is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-            added_skills = []
-            for name in skill_names:
-                skill, created = Skill.objects.get_or_create(name=name)
-                professional.skills.add(skill)
-                added_skills.append({"id": skill.id, "name": skill.name})
-
-            return Response(
-                {"detail": "Skills added successfully.", "skills": added_skills},
-                status=status.HTTP_201_CREATED
-            )
-        except Professional.DoesNotExist:
-            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    def delete(self, request):
-        """
-        Remove a skill from the authenticated professional.
-        """
-        try:
-            professional = Professional.objects.get(user=request.user)
-            skill_id = request.data.get("id")
-
-            if not skill_id:
-                return Response({"detail": "Skill ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-            skill = Skill.objects.get(id=skill_id)
-            professional.skills.remove(skill)
-
-            return Response(
-                {"detail": "Skill removed successfully.", "skill": {"id": skill.id, "name": skill.name}},
-                status=status.HTTP_200_OK
-            )
-        except Professional.DoesNotExist:
-            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Skill.DoesNotExist:
-            return Response({"detail": "Skill not found."}, status=status.HTTP_404_NOT_FOUND)
-
-class ProfessionalCategoryView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            professional = Professional.objects.get(user=request.user)
-            category_names = request.data.get("names", [])  # Accept a list of category names
-
-            if not category_names or not isinstance(category_names, list):
-                return Response({"detail": "A list of category names is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-            added_categories = []
-            for name in category_names:
-                category, created = Category.objects.get_or_create(name=name)
-                professional.categories.add(category)
-                added_categories.append({"id": category.id, "name": category.name})
-
-            return Response(
-                {"detail": "Categories added successfully.", "categories": added_categories},
-                status=status.HTTP_201_CREATED
-            )
-        except Professional.DoesNotExist:
-            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    def delete(self, request):
-        try:
-            professional = Professional.objects.get(user=request.user)
-            category_id = request.data.get("id")
-
-            if not category_id:
-                return Response({"detail": "Category ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-            category = Category.objects.get(id=category_id)
-            professional.categories.remove(category)
-
-            return Response(
-                {"detail": "Category removed successfully.", "category": {"id": category.id, "name": category.name}},
-                status=status.HTTP_200_OK
-            )
-        except Professional.DoesNotExist:
-            return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Category.DoesNotExist:
-            return Response({"detail": "Category not found."}, status=status.HTTP_404_NOT_FOUND)
-
-
-class CertificateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        professional = request.user.professional
-        serializer = CertificateSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save(professional=professional)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, pk):
-        try:
-            certificate = Certificate.objects.get(id=pk, professional=request.user.professional)
-        except Certificate.DoesNotExist:
-            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = CertificateSerializer(certificate, data=request.data, partial=True, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        try:
-            certificate = Certificate.objects.get(id=pk, professional=request.user.professional)
-        except Certificate.DoesNotExist:
-            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        certificate.delete()
-        return Response({"detail": "Certificate deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-
-
-
-class EducationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            professional = request.user.professional
-            serializer = EducationSerializer(data=request.data, context={'request': request})
-            if serializer.is_valid():
-                print('serializer is valid')
-                serializer.save(professional=professional)
-                print('professional saved',serializer.data)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, pk=None):
-        try:
-            professional = request.user.professional
-            education = Education.objects.get(pk=pk, professional=professional)
-            serializer = EducationSerializer(education, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Education.DoesNotExist:
-            return Response({"detail": "Education not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk=None):
-        try:
-            # Get the professional and the education record to delete
-            professional = request.user.professional
-            education = Education.objects.get(pk=pk, professional=professional)
-            education.delete()
-            return Response({"detail": "Education deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-        except Education.DoesNotExist:
-            return Response({"detail": "Education not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, *args, **kwargs):
+        user_feedbacks = Feedback.objects.all().order_by('-created_at', '-rating')        
+        paginator = self.pagination_class() 
         
+        if not user_feedbacks.exists():
+            return Response({'count': 0, 'results': []})
 
-class PortfolioView(APIView):
-    permission_classes = [IsAuthenticated]
+        paginated_feedbacks = paginator.paginate_queryset(user_feedbacks, request)
+        serializer = FeedbackSerializer(paginated_feedbacks, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    def post(self,request):
+         user_feedback = Feedback.objects.filter(user=request.user).first()
+         if user_feedback:
+             user_feedback.message = request.data.get('message')
+             user_feedback.save()
+             return Response({'message': 'Feedback updated successfully.'}, status=status.HTTP_200_OK)
+         else:
+             user_feedback = Feedback.objects.create(user=request.user,message=request.data.get('message'),rating=request.data.get('rating'))
+             user_feedback.save()
+             return Response({'message': 'Feedback created successfully.'}, status=status.HTTP_201_CREATED)
+         
 
-    def post(self, request):
-        try:
-            professional = request.user.professional
-            serializer = PortfolioSerializer(data=request.data, context={'request': request})
-            if serializer.is_valid():
-                serializer.save(professional=professional)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, pk=None):
-        try:
-            professional = request.user.professional
-            portfolio = Portfolio.objects.get(pk=pk, professional=professional)
-            serializer = PortfolioSerializer(portfolio, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Portfolio.DoesNotExist:
-            return Response({"detail": "Portfolio not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk=None):
-        try:
-            # Get the professional and the portfolio record to delete
-            professional = request.user.professional
-            portfolio = Portfolio.objects.get(pk=pk, professional=professional)
-            portfolio.delete()
-            return Response({"detail": "Portfolio deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-        except Portfolio.DoesNotExist:
-            return Response({"detail": "Portfolio not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ProfessionalVerificationRequestView(APIView):
-    permission_classes = [IsAuthenticated]
-
-
-    def post(self, request):
-        user = request.user
-
-        try:
-            professional = Professional.objects.get(user=user)
-        except Professional.DoesNotExist:
-            return Response({"error": "You must be a professional to request verification."}, status=status.HTTP_403_FORBIDDEN)
-        
-        if professional.is_verified:
-            return Response({"error": "You are already verified."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if VerificationRequest.objects.filter(professional=professional, status='pending').exists():
-            return Response({"error": "A pending verification request already exists."}, status=status.HTTP_400_BAD_REQUEST)
-
-        verification_request = VerificationRequest.objects.create(professional=professional)
-        serializer = VerificationRequestSerializer(verification_request)
-
-        return Response({"message": "Verification request submitted successfully.", "data": serializer.data}, status=status.HTTP_201_CREATED)
-
-
-class ProfessionalSubscriptionHistoryView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        professional = request.user.professional
-        subscription_history = SubscriptionPlan.objects.filter(professional=professional)
-        serializer = SubscriptionPlanSerializer(subscription_history, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    
-    
-class InitiatePaymentView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        data = request.data
-        amount = data.get("amount")
-        plan_type = data.get("plan_type")
-        duration = data.get("duration")
-        print('duration',duration)
-        return_url = data.get("return_url")
-        txt_ref = uuid.uuid4()
-        
-        if not plan_type or not duration:
-            return Response(
-                {"error": "Plan type and duration are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if not amount:
-            return Response(
-                {"error": "Amount is required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        professional = Professional.objects.filter(user=user, is_verified=True).first()
-        if professional is None:
-            return Response(
-                {"error": "Professional not found or not verified."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Start a transaction block
-        with transaction.atomic():
-            # Check for active subscription
-            active_subscription = SubscriptionPlan.objects.filter(
-                professional=professional,
-                start_date__lte=timezone.now(),
-                end_date__gte=timezone.now()
-            ).first()
-
-            payment = None
-            if active_subscription:
-                payment = Payment.objects.filter(
-                    professional=professional,
-                    subscription_plan=active_subscription
-                ).first()
-
-                if payment and payment.payment_status == 'completed':
-                    return Response(
-                        {
-                            "error": "You are already subscribed to an active plan.",
-                            "plan_type": active_subscription.plan_type,
-                            "duration": active_subscription.duration,
-                            "end_date": active_subscription.end_date.isoformat(),
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-            # Check if the professional has enough balance
-            if professional.balance < amount:
-                return Response(
-                    {"error": "Insufficient balance, please deposit enough amount."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Proceed with payment initiation
-            chapa_url = "https://api.chapa.co/v1/transaction/initialize"
-            chapa_api_key = settings.CHAPA_SECRET_KEY
-            payload = {
-                "amount": amount,
-                "currency": "ETB",
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "tx_ref": str(txt_ref),
-                "return_url": f'{return_url}?transaction_id={txt_ref}'
-            }
-            headers = {
-                "Authorization": f"Bearer {chapa_api_key}",
-                "Content-Type": "application/json"
-            }
-
-            try:
-                response = requests.post(chapa_url, json=payload, headers=headers)
-                if response.status_code == 200:
-                    result = response.json()
-                    # Create a Payment record
-                    if active_subscription:
-                        payment = Payment.objects.filter(
-                            professional=professional,
-                            subscription_plan=active_subscription).first()
-                        if payment is not None  and payment.payment_status !='completed':
-                            print('payment is updated')
-                            payment.subscription_plan = active_subscription
-                            payment.amount = amount
-                            payment.transaction_id = str(txt_ref)
-                            payment.payment_status = 'pending'
-                            payment.save()
-                        else:
-                            payment = Payment.objects.create(
-                                subscription_plan=active_subscription,
-                                professional=professional,
-                                transaction_id=str(txt_ref),
-                                amount=amount,
-                                payment_status='pending')
-                            payment.save()
-                    else: 
-                        subscription_plan = SubscriptionPlan(
-                            professional=professional,
-                            plan_type=plan_type,
-                            duration=duration
-                        )
-                        subscription_plan.save()
-                        payment = Payment.objects.create(
-                            subscription_plan=subscription_plan,
-                            professional=professional,
-                            transaction_id=str(txt_ref),
-                            amount=amount,
-                            payment_status='pending'
-                        )
-                        payment.save()
-                
-                    return Response(
-                        {
-                            "message": "Payment initiated successfully.",
-                            "data": {
-                                "payment_url": result.get("data", {}).get("checkout_url"),
-                                "transaction_id": str(txt_ref)
-                            }
-                        },
-                        status=status.HTTP_200_OK
-                    )
-                else:
-                    error_message = response.json().get("message", "Failed to initiate payment.")
-                    return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
-
-            except requests.RequestException as e:
-                return Response(
-                    {"error": f"Payment request failed: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-class CheckPaymentView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, transaction_id):
-        try:
-            payment = Payment.objects.get(transaction_id=transaction_id)
-        except Payment.DoesNotExist:
-            return Response(
-                {"error": "Transaction not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        chapa_api_url = f"https://api.chapa.co/v1/transaction/verify/{transaction_id}"
-        headers = {
-            'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',
-        }
-            
-        try:
-            response = requests.get(chapa_api_url, headers=headers)
-            response_data = response.json()
-            if response.status_code == 200:
-                payment.payment_status = 'completed'
-                payment.save()
-                
-                payment.professional.balance -= payment.amount
-                payment.professional.is_available=True
-                payment.professional.save()
-                
-                payment_data = PaymentSerializer(payment).data
-                
-                return Response({
-                        "message": "Payment status checked successfully.",
-                        "data":{
-                            "payment":payment_data},
-                            "first_name":response_data.get("data", {}).get("first_name"),
-                            "last_name":response_data.get("data", {}).get("last_name"),
-                            "email":response_data.get("data", {}).get("email"),
-                            "amount":response_data.get("data", {}).get("amount"),
-                            "currency":response_data.get("data", {}).get("currency")
-                         },status=status.HTTP_200_OK)
-            else:
-                payment.payment_status ='failed'
-                payment.save()
-                return Response(
-                    {"error": "Failed to retrieve payment status from Chapa."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        except requests.exceptions.RequestException as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-       
 
 
 

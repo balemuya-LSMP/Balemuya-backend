@@ -20,7 +20,7 @@ import cloudinary.uploader
 import cloudinary.api
 
 import os
-
+from celery.schedules import crontab
 from datetime import timedelta
 
 #load environment variable from .env file
@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     'django_twilio',
     'cloudinary',
     'channels',
+    'django_celery_beat',
+    "drf_yasg", 
 
 
      #user defined apps
@@ -86,6 +88,7 @@ REST_FRAMEWORK = {
    'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
    
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -123,6 +126,21 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
+
+# CELERY_BEAT_SCHEDULE = {
+#     'notify-expiring-subscriptions-every-day': {
+#         'task': 'users.tasks.notify_expiring_subscriptions',
+#         'schedule': crontab(minute=0, hour='*'),
+#     },
+# }
+
+# CELERY_BROKER_URL = 'redis://red-culq0bt6l47c73dt1nt0:6379/0'
+# CELERY_TASK_SERIALIZER = 'json'
+
+# settings.py
+
+# CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -225,23 +243,28 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
+CSRF_TRUSTED_ORIGINS = [
+    'https://balemuya-project.onrender.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
 
-CORS_ALLOW_ALL_ORIGINS = True 
-CORS_ALLOW_HEADERS =  [
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'https://balemuya-project.onrender.com',
+]
+
+CORS_ALLOW_HEADERS = [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-#     'http://localhost:3000',  # React local development
-#     'http://127.0.0.1:3000',
-#     'https://balemuya-project.vercel.app',  # Deployed frontend
-# ]
-
+APPEND_SLASH=False
 
 CORS_ALLOW_METHODS = [
     'GET',
@@ -252,8 +275,24 @@ CORS_ALLOW_METHODS = [
     'OPTIONS', 
 ]
 
+# settings.py
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+        }
+    },
+    'USE_SESSION_AUTH': False,  # Set to False if you're using JWT
+}
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+# settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

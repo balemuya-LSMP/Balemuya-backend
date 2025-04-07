@@ -1,11 +1,13 @@
-from django.urls import path
+from django.urls import path, include
 import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView ,\
-    ProfessionalVerificationRequestView,InitiatePaymentView, CheckPaymentView,\
-        CertificateView, EducationView, PortfolioView, ProfessionalSkillView, ProfessionalCategoryView,AddressView, ProfessionalProfileUpdateView,ProfessionalSubscriptionHistoryView
+UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView
+        
+from .address import AddressView
 urlpatterns = [
+        # path('get-address/', get_address_from_coordinates, name='get_address'),
+
     
     path('register-device/', RegisterFCMDeviceView.as_view(), name='register_device'),
 
@@ -25,34 +27,18 @@ urlpatterns = [
     
     path('profile/',ProfileView.as_view(), name='profile'),
     path('profile/update/', UserUpdateView.as_view(), name='user-update'),
-    path('profile/address/create/',AddressView.as_view(), name='address-create'),
-    path('profile/address/<uuid:pk>/',AddressView.as_view(), name='address-update-delete'),
+    path('profile/address/',AddressView.as_view(), name='address-create-update-delete'),
     path('<uuid:id>/',UserDetailView.as_view(),name='user-detail'),
     path('<uuid:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
     path('<uuid:pk>/block/',UserBlockView.as_view(),name='user-block'),
     
+    path('professional/',include('users.professional.urls')),
+    path('customer/',include('users.customer.urls')),
     
-    path('professional/profile/update/',ProfessionalProfileUpdateView.as_view(), name='professional-update'),
-    path('professional/profile/skills/', ProfessionalSkillView.as_view(), name='skill-create-update-delete'),
-    path('professional/profile/categories/', ProfessionalCategoryView.as_view(), name='category-create-delete'),
+    #feedback
+    path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),
+    path('feedbacks/', UserFeedbackView.as_view(), name='user-feedback'),
     
-    path('professional/profile/certificates/add/', CertificateView.as_view(), name='certificate-create'),  # POST
-    path('professional/profile/certificates/<uuid:pk>/update/', CertificateView.as_view(), name='certificate-update'),  # PUT
-    path('professional/profile/certificates/<uuid:pk>/delete/', CertificateView.as_view(), name='certificate-delete'),  # DELETE
-    
-    path('professional/profile/educations/add/', EducationView.as_view(), name='education-create'),  # POST
-    path('professional/profile/educations/<uuid:pk>/update/', EducationView.as_view(), name='education-update'),  # PUT
-    path('professional/profile/educations/<uuid:pk>/delete/', EducationView.as_view(), name='education-delete'),  # DELETE
-    
-    path('professional/profile/portfolios/add/', PortfolioView.as_view(), name='portfolio-create'),  # POST
-    path('professional/profile/portfolios/<uuid:pk>/update/', PortfolioView.as_view(), name='portfolio-update'),  # PUT
-    path('professional/profile/portfolios/<uuid:pk>/delete/', PortfolioView.as_view(), name='portfolio-delete'),  # DELETE
-    path('professional/verification-requests/', ProfessionalVerificationRequestView.as_view(), name='professional-verification-request'),
-    path('professional/subscription/history/',ProfessionalSubscriptionHistoryView.as_view(), name='professional-subscription-history'),
-
-    #payment related
-    path('professional/subscription/payment/initiate/', InitiatePaymentView.as_view(), name='initiate_payment'),
-    path('professional/subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
     
    
 ]
