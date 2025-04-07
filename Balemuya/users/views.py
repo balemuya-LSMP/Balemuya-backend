@@ -7,6 +7,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -83,7 +85,7 @@ class RegisterView(APIView):
             print('email send end')
             
             otp = generate_otp()
-            cache.set(f"otp_{user_instance.email}", otp, timeout=300)
+            cache.set(f"otp_{user_instance.id}", otp, timeout=300)
             
             cached = cache.get(f"otp_{user_instance.email}")
             print('cached otp', cached)
@@ -112,11 +114,12 @@ class VerifyEmailView(APIView):
             user = None
         
         if user is not None and default_token_generator.check_token(user, token):
+            user.is_email_verified = True
             user.is_active = True
             user.save()
 
             html_content = render_to_string('email_verification_success.html', {
-                "message": "Email verified successfully!",
+                "message": " {user.account_type} Email is verified successfully!",
                 "user": user,
             })
             return HttpResponse(html_content, status=200, content_type="text/html")
@@ -131,15 +134,13 @@ class VerifyPhoneView(APIView):
     
     def post(self, request):
         otp = int(request.data.get('otp'))
-        print('otp', otp)
         email = request.data.get('email')
-        print('email', email)
         cached_otp = cache.get(f"otp_{email}")
-        print('cached otp', cached_otp)
         
         if cached_otp == otp:
             print('otp is valid')
             user = User.objects.filter(email=email).first()
+            user.is_phone_verified = True
             user.is_active = True
             user.save()
             cache.delete(f"otp_{email}")
@@ -149,8 +150,51 @@ class VerifyPhoneView(APIView):
 
 class ResendOTPView(APIView):
     permission_classes = (AllowAny,)
-    pass
 
+    def post(self, request):
+        # Extract the required fields from the request
+        contact_type = request.data.get('type')  # 'email' or 'phone'
+        contact_value = request.data.get('contact')  # Email address or phone number
+
+        if not contact_type or not contact_value:
+            return Response({"detail": "Type and contact are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_instance = User.objects.get(**{f"{contact_type}__iexact": contact_value})
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Generate a new OTP
+        otp = get_random_string(length=6, allowed_chars='0123456789')
+        cache.set(f"otp_{user_instance.id}", otp, timeout=300)  # Cache OTP for 5 minutes
+
+        # Email verification link
+        token = default_token_generator.make_token(user_instance)
+        uid = urlsafe_base64_encode(str(user_instance.pk).encode())
+        current_domain = request.get_host()
+        verification_link = f'http://{current_domain}/api/users/auth/verify-{contact_type}/?uid={uid}&token={token}'
+
+        # Prepare email
+        subject = 'Verify your email for Balemuya.'
+        message = f'Please click the link below to verify your email for Balemuya.\n\n{verification_link}'
+        recipient_list = [user_instance.email]
+
+        # Send confirmation email
+        print('Email send start')
+        send_email_confirmation(subject, message, recipient_list)
+        print('Email send end')
+
+        # Send OTP via SMS
+        message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+        send_sms(request, to=user_instance.phone_number, message_body=message_body)
+
+        return Response({
+            'message': f'OTP has been sent. Please check your {account_type} for further instructions.',
+            'data': {
+                'email': user_instance.email,
+                'phone': user_instance.phone_number
+            }
+        }, status=status.HTTP_200_OK)
 class SetPasswordView(APIView):
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
@@ -274,7 +318,7 @@ class LoginView(APIView):
         if not user.check_password(password):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
         
-        if not user.is_active:
+        if not user.is_active or not user.is_email_verified:
             return Response({'error': 'Your account is not active. Please check your email to verify your account.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         if user:
@@ -286,6 +330,7 @@ class LoginView(APIView):
                                  'id': user.id,
                                  'email': user.email,
                                  'user_type': user.user_type,
+                                 'account_type': user.account_type,
                                  'access': access,
                                  'refresh': refresh,
                              }
@@ -316,37 +361,46 @@ class LogoutView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        if user is None:
+        
+        if not user:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if user.user_type == 'customer': 
-            customer = Customer.objects.filter(user=user).first()
-            if customer is None:
-                return Response({'error': 'Customer not found.'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = CustomerSerializer(customer)
+
+        if user.user_type == 'customer':
+            if user.account_type == 'individual':
+                customer = get_object_or_404(Customer, user=user)
+                serializer = CustomerSerializer(customer)
+            elif user.account_type == 'organization':
+                customer = get_object_or_404(OrgCustomer, user=user)
+                serializer = OrgCustomerSerializer(customer)
+            else:
+                return Response({'error': 'Invalid account type.'}, status=status.HTTP_400_BAD_REQUEST)
+
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
-        
-        if user.user_type == 'professional':
-            professional = Professional.objects.filter(user=user).first()
-            if professional is None:
-                return Response({'error': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = ProfessionalSerializer(professional)
-            notify_user(user.id,'professional logs in successfully!!!')
+
+        elif user.user_type == 'professional':
+            if user.account_type == 'individual':
+                professional = get_object_or_404(Professional, user=user)
+                serializer = ProfessionalSerializer(professional)
+            elif user.account_type == 'organization':
+                professional = get_object_or_404(OrgProfessional, user=user)
+                serializer = OrgProfessionalSerializer(professional)
+            else:
+                return Response({'error': 'Invalid account type.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            notify_user(user.id, 'Professional logged in successfully!')
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
-        
-        if user.user_type == 'admin':
-            admin = Admin.objects.filter(user=user).first()
+
+        elif user.user_type == 'admin':
+            admin = get_object_or_404(Admin, user=user)
             serializer = AdminSerializer(admin)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
 
-        else:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 class UserUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]

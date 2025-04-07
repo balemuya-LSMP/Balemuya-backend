@@ -17,6 +17,7 @@ from .models import (
     Certificate,
     Payment,
     SubscriptionPlan,
+    SubscriptionPayment,
     VerificationRequest,
     Feedback,
 )
@@ -93,7 +94,7 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
     user = UserSerializer()
 
     class Meta:
-        model = Customer  # Updated
+        model = Customer  
         fields = ['user', 'rating', 'number_of_services_booked']
         read_only_fields = ['number_of_services_booked']
 
@@ -117,10 +118,7 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
             individual_customer = Customer.objects.create(user=user, **validated_data)  # Updated
             return individual_customer
         
-class OrgProfessionalSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=OrgProfessional
-        fields = '__all__'
+
         
 class OrgCustomerSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -128,6 +126,7 @@ class OrgCustomerSerializer(serializers.ModelSerializer):
         model=OrgCustomer
         
         fields = '__all__'
+        exclude = ['id']
         
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
@@ -198,7 +197,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
         fields = [
-            'id', 'user', 'kebele_id_front_image',
+            'user', 'kebele_id_front_image',
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
             'skills', 'rating', 'years_of_experience', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
@@ -223,12 +222,13 @@ class OrgProfessionalSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     logo_url = serializers.SerializerMethodField()
     skills = SkillSerializer(many=True, read_only=True)
+    categories = CategorySerializer(many=True, read_only=True)
     class Meta:
         model = OrgProfessional
         fields = [
-            'id', 'user', 'organization_name', 'registration_number',
+            'user', 'organization_name', 'registration_number',
             'number_of_employees', 'description', 'contact_person',
-            'logo', 'logo_url', 'skills', 'rating', 'years_of_experience',
+            'logo', 'logo_url', 'skills','categories', 'rating', 'years_of_experience',
             'is_available', 'is_verified'
         ]
         read_only_fields = ['id', 'logo_url']
@@ -238,66 +238,23 @@ class OrgProfessionalSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
         return None
-
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    professional = UserSerializer()
     class Meta:
         model = SubscriptionPlan
-        fields = ['plan_type', 'duration', 'start_date', 'end_date']
-        read_only_fields = ['id', 'professional', 'start_date', 'end_date']
-
-    def create(self, validated_data):
-        professional = validated_data.pop('professional')
-        subscription_plan = SubscriptionPlan.objects.create(professional=professional, **validated_data)
-        return subscription_plan
-    
-##subscription plan serializer
-class SubscriptionPlanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SubscriptionPlan
-        fields = [
-            'id', 'user', 'plan_type', 'duration', 'cost', 
-            'start_date', 'end_date'
-        ]
-        read_only_fields = ['id', 'cost', 'start_date', 'end_date']
-
-    def create(self, validated_data):
-        professional = validated_data.pop('professional')
-        subscription_plan = SubscriptionPlan.objects.create(user=user, **validated_data)
-        return subscription_plan
-
-    def update(self, instance, validated_data):
-        instance.plan_type = validated_data.get('plan_type', instance.plan_type)
-        instance.duration = validated_data.get('duration', instance.duration)
-        instance.save()
-        return instance
-
+        fields = ['id', 'professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date']
 
 class PaymentSerializer(serializers.ModelSerializer):
+    customer = UserSerializer()
+    professional = UserSerializer()
     class Meta:
         model = Payment
-        fields = [
-            'id', 'customer', 'professional', 'subscription_plan', 
-            'amount', 'payment_date', 'payment_status', 
-            'payment_type', 'payment_method', 'transaction_id'
-        ]
-        read_only_fields = ['id', 'payment_date', 'amount', 'payment_status']
+        fields = ['id', 'customer', 'professional', 'service', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
 
-    def create(self, validated_data):
-        payment = Payment(**validated_data)
-        payment.save()
-        return payment
-
-    def update(self, instance, validated_data):
-        instance.customer = validated_data.get('user', instance.customer)
-        instance.professional = validated_data.get('professional', instance.professional)
-        instance.subscription_plan = validated_data.get('subscription_plan', instance.subscription_plan)
-        instance.amount = validated_data.get('amount', instance.amount)
-        instance.payment_status = validated_data.get('payment_status', instance.payment_status)
-        instance.payment_type = validated_data.get('payment_type', instance.payment_type)
-        instance.payment_method = validated_data.get('payment_method', instance.payment_method)
-        instance.transaction_id = validated_data.get('transaction_id', instance.transaction_id)
-        instance.save()
-        return instance
+class SubscriptionPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPayment
+        fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
 
 class FeedbackSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
