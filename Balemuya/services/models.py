@@ -1,15 +1,13 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
-from users.models import Customer,Professional
 from common.models import Category
-from users.models import Address, User
 
 # Create your models here.
 
 class ServicePost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
+    customer = models.ForeignKey('users.User', null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     title = models.CharField(max_length=100,null=True, blank=True)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     description = models.TextField(null=True, blank=True)  
@@ -24,7 +22,7 @@ class ServicePost(models.Model):
         ('urgent', 'Urgent')
     ], default='normal') 
     work_due_date = models.DateTimeField(null=True, blank=True)
-    location = models.ForeignKey(Address, on_delete=models.CASCADE,default=None, related_name='service_post')
+    location = models.ForeignKey('users.Address', on_delete=models.CASCADE,default=None, related_name='service_post')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)    
@@ -43,7 +41,7 @@ class ServicePostApplication(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service = models.ForeignKey(ServicePost, on_delete=models.CASCADE, related_name='service_applications')
-    professional = models.ForeignKey(User, on_delete=models.CASCADE, related_name='professional_applications')
+    professional = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='professional_applications')
     message = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -62,7 +60,7 @@ class ServiceBooking(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     application = models.OneToOneField(
-        ServicePostApplication, 
+        'ServicePostApplication', 
         on_delete=models.CASCADE, 
         related_name='service_booking'
     )
@@ -78,8 +76,8 @@ class ServiceBooking(models.Model):
     
 class ServiceRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(User, related_name='service_recieved', on_delete=models.CASCADE)
-    professional = models.ForeignKey(User, related_name='service_requests', on_delete=models.CASCADE)
+    customer = models.ForeignKey('users.User', related_name='service_recieved', on_delete=models.CASCADE)
+    professional = models.ForeignKey('users.User', related_name='service_requests', on_delete=models.CASCADE)
     detail = models.TextField()
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('cancled','canceled') ,('accepted', 'Accepted'), ('rejected', 'Rejected')],default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -105,7 +103,7 @@ class Complain(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking = models.ForeignKey('ServiceBooking', on_delete=models.CASCADE, related_name='complains', null=True, blank=True)
     service_request = models.ForeignKey('ServiceRequest', on_delete=models.CASCADE, related_name='complains', null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='complains')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='complains')
     message = models.TextField(null=True,blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -128,7 +126,7 @@ class Review(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking = models.ForeignKey('ServiceBooking', on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
     service_request = models.ForeignKey('ServiceRequest', on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='reviews')
     rating = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
