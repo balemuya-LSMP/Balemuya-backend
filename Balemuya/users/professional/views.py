@@ -476,14 +476,13 @@ class ProfessionalSubscriptionHistoryView(APIView):
         else:
             return Response({'detail':'This user is not Professional'},status=status.HTTP_401_UNAUTHORIZED)
 
-
 class InitiateSubscriptionPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
         data = request.data
-        
+
         # Input validation
         amount = data.get("amount")
         plan_type = data.get("plan_type")
@@ -494,60 +493,65 @@ class InitiateSubscriptionPaymentView(APIView):
         if not all([plan_type, duration, amount]):
             return Response({"detail": "Plan type, duration, and amount are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check user type
-        if user.account_type not in ['individual', 'organization']:
-            return Response({"detail": "Invalid account type."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Determine the professional based on account type
+        # Check user type and fetch the professional
         professional = None
         if user.account_type == 'individual':
             professional = Professional.objects.filter(user=user, is_verified=True).first()
         elif user.account_type == 'organization':
             professional = OrgProfessional.objects.filter(user=user, is_verified=True).first()
 
-        if professional is None:
+        if not professional:
             return Response({"detail": "Professional not found or not verified."}, status=status.HTTP_404_NOT_FOUND)
 
         if professional.num_of_request > 0:
             return Response({"detail": "You cannot subscribe while you have remaining request coins."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check for active subscription
         active_subscription = SubscriptionPlan.objects.filter(
             professional=professional.user,
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
         ).first()
 
-        subscription_payment = SubscriptionPayment.objects.filter(
-            professional=professional.user,
-            subscription_plan=active_subscription,
-            payment_status='completed'
-        ).first()
-
-        if subscription_payment:
-            return Response(
-                {
-                    "detail": "You already have an active subscription.",
-                    "plan_type": active_subscription.plan_type,
-                    "duration": active_subscription.duration,
-                    "end_date": active_subscription.end_date.isoformat(),
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         if active_subscription:
+            subscription_payment = SubscriptionPayment.objects.filter(
+                professional=professional.user,
+                subscription_plan=active_subscription,
+                payment_status='completed'
+            ).first()
+
+            if subscription_payment:
+                return Response(
+                    {
+                        "detail": "You already have an active subscription.",
+                        "plan_type": active_subscription.plan_type,
+                        "duration": active_subscription.duration,
+                        "end_date": active_subscription.end_date.isoformat(),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             active_subscription.delete()
 
         # Prepare to initiate payment
         chapa_url = "https://api.chapa.co/v1/transaction/initialize"
+        
+        # Prepare payload
         payload = {
             "amount": amount,
             "currency": "ETB",
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "email": professional.user.email,
             "tx_ref": str(txt_ref),
             "return_url": f'{return_url}?transaction_id={txt_ref}'
         }
+
+        # Set name fields based on professional type
+        if isinstance(professional, Professional):
+            payload["first_name"] = professional.first_name
+            payload["last_name"] = professional.last_name
+        elif isinstance(professional, OrgProfessional):
+            payload["first_name"] = professional.organization_name
+
         headers = {
             "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}",
             "Content-Type": "application/json"
@@ -586,7 +590,7 @@ class InitiateSubscriptionPaymentView(APIView):
                 status=status.HTTP_200_OK
             )
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             error_message = response.json().get("message", "Failed to initiate payment.")
             return Response({"detail": error_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -598,10 +602,18 @@ class InitiateSubscriptionPaymentView(APIView):
 class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_professional(self, user):
+        """Retrieve the professional based on user account type."""
+        if user.account_type == 'individual':
+            return Professional.objects.filter(user=user, is_verified=True).first()
+        elif user.account_type == 'organization':
+            return OrgProfessional.objects.filter(user=user, is_verified=True).first()
+        return None
+
     def get(self, request, transaction_id):
         try:
-            payment = Payment.objects.get(transaction_id=transaction_id)
-        except Payment.DoesNotExist:
+            subscription_payment = SubscriptionPayment.objects.get(transaction_id=transaction_id)
+        except SubscriptionPayment.DoesNotExist:
             return Response(
                 {"detail": "Transaction not found."},
                 status=status.HTTP_404_NOT_FOUND
@@ -611,31 +623,35 @@ class CheckPaymentView(APIView):
         headers = {
             'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',
         }
-            
+        
         try:
             response = requests.get(chapa_api_url, headers=headers)
             response_data = response.json()
-            if response.status_code == 200:
-                payment.payment_status = 'completed'
-                payment.save()
 
-                professional = payment.professional
-                professional.is_available = True
-                
-                subscription_plan = payment.subscription_plan
-                if subscription_plan:
-                    request_coins = subscription_plan.REQUEST_COINS[subscription_plan.plan_type]
-                    total_requests = request_coins * subscription_plan.duration
-                    professional.num_of_request += total_requests
-                
-                professional.save()
-                
-                payment_data = PaymentSerializer(payment).data
+            if response.status_code == 200:
+                # Update payment status
+                subscription_payment.payment_status = 'completed'
+                subscription_payment.save()
+
+                # Fetch the professional associated with the payment
+                professional = self.get_professional(request.user)
+                if professional:
+                    professional.is_available = True
+                    
+                    subscription_plan = subscription_payment.subscription_plan
+                    if subscription_plan:
+                        request_coins = subscription_plan.REQUEST_COINS[subscription_plan.plan_type]
+                        total_requests = request_coins * subscription_plan.duration
+                        professional.num_of_request += total_requests
+                    
+                    professional.save()
+
+                payment_data = SubscriptionPaymentSerializer(subscription_payment).data
                 
                 return Response({
                     "message": "Payment status checked successfully.",
                     "data": {
-                        "payment": payment_data
+                        "payment": payment_data,
                     },
                     "first_name": response_data.get("data", {}).get("first_name"),
                     "last_name": response_data.get("data", {}).get("last_name"),
@@ -644,8 +660,8 @@ class CheckPaymentView(APIView):
                     "currency": response_data.get("data", {}).get("currency")
                 }, status=status.HTTP_200_OK)
             else:
-                payment.payment_status = 'failed'
-                payment.save()
+                subscription_payment.payment_status = 'failed'
+                subscription_payment.save()
                 return Response(
                     {"detail": "Failed to retrieve payment status from Chapa."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
