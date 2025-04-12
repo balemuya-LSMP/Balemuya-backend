@@ -7,7 +7,7 @@ from django.db import transaction
 import re
 
 from services.models import Category    
-from users.models import User, Address,Professional,Customer,Admin,OrgCustomer,OrgProfessional
+from users.models import User, Address,Professional,Customer,Admin
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -36,8 +36,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'password', 'profile_image', 
-            'profile_image_url','email', 'phone_number', 'user_type','account_type', 'bio',
-            'is_active','created_at', 'updated_at', 'address'
+            'profile_image_url','email','username', 'phone_number', 'user_type','entity_type', 'bio',
+            'is_active','is_blocked','created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
             'password': {'write_only': True}
@@ -87,14 +87,12 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save()
 
-            if user.user_type == 'professional' and user.account_type=='individual':
+            if user.user_type == 'professional':
                 Professional.objects.create(user=user)
-            if user.user_type == 'professional' and user.account_type=='organization':
-                OrdProfessional.objects.create(user=user)
-            elif user.user_type == 'customer' and user.account_type=='individual':
+           
+            elif user.user_type == 'customer':
                 Customer.objects.create(user=user)
-            elif user.user_type == 'customer' and user.account_type =='organization':
-                OrdCustomer.objects.create(user=user)
+            
             elif user.user_type == 'admin':
                 Admin.objects.create(user=user)
 

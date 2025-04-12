@@ -3,9 +3,7 @@ from .models import (
     Address,
     User,
     Customer,
-    OrgCustomer,
     Professional,
-    OrgProfessional,
     Feedback,
     Permission,
     Admin,
@@ -27,29 +25,22 @@ class AddressAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('email', 'phone_number', 'user_type','account_type','is_active', 'is_email_verified','is_phone_verified',)
+    list_display = ('email','username', 'phone_number', 'user_type','entity_type','is_active', 'is_email_verified','is_phone_verified',)
     search_fields = ('email', 'phone_number')
     list_filter = ('user_type', 'is_active')
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'first_name', 'last_name', 'number_of_services_booked', 'rating')
-    search_fields = ('user__email', 'first_name', 'last_name')
+    list_display = ('user', 'full_name','gender','number_of_employees' ,'number_of_services_booked', 'rating')
+    search_fields = ('user__email', 'full_name',)
 
-@admin.register(OrgCustomer)
-class OrgCustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'organization_name', 'registration_number', 'number_of_employees', 'rating')
-    search_fields = ('user__email', 'organization_name', 'registration_number')
+
 
 @admin.register(Professional)
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'first_name', 'last_name', 'years_of_experience', 'rating')
-    search_fields = ('user__email', 'first_name', 'last_name')
+    list_display = ('user', 'full_name','gender', 'years_of_experience', 'rating')
+    search_fields = ('user__email','full_name')
 
-@admin.register(OrgProfessional)
-class OrgProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'organization_name', 'registration_number', 'number_of_employees', 'rating')
-    search_fields = ('user__email', 'organization_name', 'registration_number')
 
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):

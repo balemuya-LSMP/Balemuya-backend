@@ -34,14 +34,14 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from users.models import User, Professional,OrgProfessional,OrgCustomer, Customer, Admin,Payment,SubscriptionPlan,Payment,SubscriptionPayment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+from users.models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,SubscriptionPayment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
     Feedback
 from common.models import Category
 from users.utils import send_sms, generate_otp, send_email_confirmation,notify_user
 from services.models import ServicePost, ServicePostApplication, ServiceBooking,Review,ServiceRequest
 from services.serializers import ServicePostSerializer, ServicePostApplicationSerializer,ServiceBookingSerializer,ReviewSerializer,ServiceRequestSerializer
 
-from users.serializers import  LoginSerializer ,ProfessionalSerializer,OrgProfessionalSerializer,OrgCustomerSerializer, CustomerSerializer, AdminSerializer,\
+from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPaymentSerializer,\
         FeedbackSerializer
     
@@ -57,12 +57,13 @@ class ProfessionalProfileView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         
+        professional = user.professional
         if not user:
             return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
-        applied_jobs = ServicePostApplication.objects.filter(professional=user, status='pending')
-        pending_jobs = ServiceBooking.objects.filter(application__professional=user, status='pending')
-        canceled_jobs = ServiceBooking.objects.filter(application__professional=user, status='canceled')
-        completed_jobs = ServiceBooking.objects.filter(application__professional=user, status='completed')
+        applied_jobs = ServicePostApplication.objects.filter(professional=professional, status='pending')
+        pending_jobs = ServiceBooking.objects.filter(application__professional=professional, status='pending')
+        canceled_jobs = ServiceBooking.objects.filter(application__professional=professional, status='canceled')
+        completed_jobs = ServiceBooking.objects.filter(application__professional=professional, status='completed')
         reviews = Review.objects.filter(booking__application__professional=user).order_by('-created_at')
         
         professional_data = None

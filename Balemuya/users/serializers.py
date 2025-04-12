@@ -8,9 +8,7 @@ from .models import (
     Admin,
     AdminLog,
     Customer, 
-    OrgCustomer, 
     Professional,
-    OrgProfessional,
     Skill,
     Education,
     Portfolio,
@@ -95,7 +93,7 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
 
     class Meta:
         model = Customer  
-        fields = ['user', 'rating', 'number_of_services_booked']
+        fields = ['user','full_name', 'rating','gender','description','number_of_employees', 'number_of_services_booked']
         read_only_fields = ['number_of_services_booked']
 
     def update(self, instance, validated_data):
@@ -120,34 +118,6 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
         
 
         
-class OrgCustomerSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    class Meta:
-        model=OrgCustomer
-        
-        fields = '__all__'
-        exclude = ['id']
-        
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', None)
-        if user_data:
-            user_serializer = UserSerializer(instance=instance.user, data=user_data, partial=True)
-            user_serializer.is_valid(raise_exception=True)
-            user_serializer.save()
-
-        instance.rating = validated_data.get('rating', instance.rating)
-        instance.save()
-        return instance
-
-    def create(self, validated_data):
-        user_data = validated_data.pop('user', {})
-        with transaction.atomic():
-            user_serializer = UserSerializer(data=user_data)
-            user_serializer.is_valid(raise_exception=True)
-            user = user_serializer.save()
-            org_customer = OrgCustomerCustomer.objects.create(user=user, **validated_data)  # Updated
-            return org_customer
-
 class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Education
@@ -197,7 +167,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
         fields = [
-            'user', 'kebele_id_front_image',
+            'user','gender','full_name','number_of_employees','tx_number','description','kebele_id_front_image',
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
             'skills', 'rating', 'years_of_experience', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
@@ -217,36 +187,15 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         return None
     
 
-#Org professional serializer
-class OrgProfessionalSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    logo_url = serializers.SerializerMethodField()
-    skills = SkillSerializer(many=True, read_only=True)
-    categories = CategorySerializer(many=True, read_only=True)
-    class Meta:
-        model = OrgProfessional
-        fields = [
-            'user', 'organization_name', 'registration_number',
-            'number_of_employees', 'description', 'contact_person',
-            'logo', 'logo_url', 'skills','categories', 'rating', 'years_of_experience',
-            'is_available', 'is_verified'
-        ]
-        read_only_fields = ['id', 'logo_url']
-
-    def get_logo_url(self, obj):
-        if obj.logo:
-            request = self.context.get('request')
-            return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
-        return None
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
-    professional = UserSerializer()
+    professional = ProfessionalSerializer()
     class Meta:
         model = SubscriptionPlan
         fields = ['id', 'professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date']
 
 class PaymentSerializer(serializers.ModelSerializer):
-    customer = UserSerializer()
-    professional = UserSerializer()
+    customer = CustomerSerializer()
+    professional = ProfessionalSerializer()
     class Meta:
         model = Payment
         fields = ['id', 'customer', 'professional', 'service', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
