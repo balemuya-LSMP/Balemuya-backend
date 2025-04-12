@@ -66,12 +66,7 @@ class ProfessionalProfileView(APIView):
         completed_jobs = ServiceBooking.objects.filter(application__professional=professional, status='completed')
         reviews = Review.objects.filter(booking__application__professional=user).order_by('-created_at')
         
-        professional_data = None
-        if user.account_type =='organization':
-            professional_data = OrgProfessionalSerializer(user.org_professional).data
-        if user.account_type =='individual':
-            professional_data=ProfessionalSerializer(user).data
-        
+        professional_data = ProfessionalSerializer(user.professional).data
         response_data={
             "professional":professional_data,
             "applied_jobs":ServicePostApplicationSerializer(applied_jobs,many=True).data,
@@ -91,21 +86,17 @@ class ProfessionalServiceListView(APIView):
             query_param_status = request.query_params.get('status', None)
             if query_param_status is None:
                 new_service_post = []
-                if rerquest.user.account_type=='individual':
-                    new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-urgency','-created_at')
-                if rerquest.user.account_type=='organization':
-                     new_service_post = ServicePost.objects.filter(category__in=request.user.org_professional.categories.all(),status='active').order_by('-urgency','-created_at')
+                new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-urgency','-created_at')
                 new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
-                service_accepted = ServicePostApplication.objects.filter(professional=request.user,status='pending').order_by('-created_at')
+                service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='pending').order_by('-created_at')
                 service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)                
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'accepted':
                 service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='accepted').order_by('-created_at')
                 service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)
-                
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'rejected':
@@ -114,16 +105,15 @@ class ProfessionalServiceListView(APIView):
                 return Response({"data": list(service_rejected_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'booked':
-                service_booked = ServiceBooking.objects.filter(application__professional=request.user,status='pending').order_by('-created_at')
+                service_booked = ServiceBooking.objects.filter(application__professional=request.user.professional,status='pending').order_by('-created_at')
                 service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
-                
                 return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'completed':
-                service_completed = ServiceBooking.objects.filter(application__professional=request.user,status='completed').order_by('-created_at')
+                service_completed = ServiceBooking.objects.filter(application__professional=request.user.professional,status='completed').order_by('-created_at')
                 service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
                 return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'canceled':
-                service_canceled = ServiceBooking.objects.filter(application__professional=request.user,status='canceled').order_by('-created_at')
+                service_canceled = ServiceBooking.objects.filter(application__professional=request.user.professional,status='canceled').order_by('-created_at')
                 service_canceled_serializer = ServiceBookingSerializer(service_canceled, many=True)
                 return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
             else:
@@ -137,10 +127,8 @@ class ProfessionalServiceRequestsAPIView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         status_param = request.query_params.get('status')
-
     
-        service_requests = ServiceRequest.objects.filter(professional=user).order_by('-updated_at')
-        print('service requests ',service_requests)
+        service_requests = ServiceRequest.objects.filter(professional=user.professional).order_by('-updated_at')
 
         if status_param is not None:
             print('status param',status)
@@ -157,7 +145,7 @@ class ProfessionalServiceRequestsAPIView(APIView):
         action = request.data.get('action')
 
         try:
-            service_request = ServiceRequest.objects.get(id=request_id, professional=request.user)
+            service_request = ServiceRequest.objects.get(id=request_id, professional=request.user.professional)
         except ServiceRequest.DoesNotExist:
             return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -179,17 +167,15 @@ class ProfessionalProfileUpdateView(APIView):
     def put(self, request):
         professional = None
         serializer = None
-        if request.user.user_type =='professional' and request.user.account_type=='individual':
+        if request.user.user_type =='professional':
             professional = request.user.professional
             serializer = ProfessionalSerializer(professional, data=request.data, partial=True)
-        if request.user.user_type =='professional' and request.user.account_type=='organization':
-            professional = request.user.org_professional
-            serializer = OrgProfessionalSerializer(professional, data=request.data, partial=True)
-            
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail':"user is not professional"},status = status.HTTP_400_BAD_REQUEST)
+    
 # views related to professional
 class ProfessionalSkillView(APIView):
     permission_classes = [IsAuthenticated]
@@ -197,12 +183,7 @@ class ProfessionalSkillView(APIView):
     def get_professional(self, user):
         if user.user_type != 'professional':
             return None
-        
-        if user.account_type == 'individual':
-            return get_object_or_404(Professional, user=user)
-        elif user.account_type == 'organization':
-            return get_object_or_404(OrgProfessional, user=user)
-        return None
+        return get_object_or_404(Professional, user=user)
 
     def post(self, request):
         professional = self.get_professional(request.user)
@@ -222,7 +203,7 @@ class ProfessionalSkillView(APIView):
             added_skills.append({"id": skill.id, "name": skill.name})
 
         return Response(
-            {"detail": "Skills added successfully.", "skills": added_skills},
+            {"message": "Skills added successfully.", "skills": added_skills},
             status=status.HTTP_201_CREATED
         )
 
@@ -245,7 +226,7 @@ class ProfessionalSkillView(APIView):
         professional.skills.remove(skill)
 
         return Response(
-            {"detail": "Skill removed successfully.", "skill": {"id": skill.id, "name": skill.name}},
+            {"message": "Skill removed successfully.", "skill": {"id": skill.id, "name": skill.name}},
             status=status.HTTP_200_OK
         )
         
@@ -258,11 +239,8 @@ class ProfessionalCategoryView(APIView):
         if user.user_type != 'professional':
             return None 
 
-        if user.account_type == 'individual':
-            return get_object_or_404(Professional, user=user)
-        elif user.account_type == 'organization':
-            return get_object_or_404(OrgProfessional, user=user)
-        return None 
+        return get_object_or_404(Professional, user=user)
+        
 
     def post(self, request):
         professional = self.get_professional(request.user)
@@ -294,7 +272,7 @@ class ProfessionalCategoryView(APIView):
 
         professional.categories.add(category)
         return Response(
-            {"detail": "Category added successfully.", "category": category_name},
+            {"message": "Category added successfully.", "category": category_name},
             status=status.HTTP_201_CREATED
         )
 
@@ -354,7 +332,7 @@ class CertificateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to delete certificates.'}, status=status.HTTP_403_FORBIDDEN)
 
         certificate = get_object_or_404(Certificate, id=pk, professional=request.user)
@@ -405,7 +383,7 @@ class PortfolioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to add portfolio.'}, status=status.HTTP_403_FORBIDDEN)
 
         professional = request.user.professional
@@ -418,7 +396,7 @@ class PortfolioView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk=None):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to update portfolio.'}, status=status.HTTP_403_FORBIDDEN)
 
         portfolio = get_object_or_404(Portfolio, pk=pk, professional=request.user.professional)
@@ -431,7 +409,7 @@ class PortfolioView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk=None):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to delete portfolio.'}, status=status.HTTP_403_FORBIDDEN)
 
         portfolio = get_object_or_404(Portfolio, pk=pk, professional=request.user.professional)
@@ -448,13 +426,8 @@ class ProfessionalVerificationRequestView(APIView):
         if user.user_type != 'professional':
             return Response({"detail": "You must be a professional to request verification."}, status=status.HTTP_403_FORBIDDEN)
         
-        if user.account_type == 'individual':
-            professional = get_object_or_404(Professional, user=user)
-        elif user.account_type == 'organization':
-            professional = get_object_or_404(OrgProfessional, user=user)
-        else:
-            return Response({"detail": "Invalid account type."}, status=status.HTTP_400_BAD_REQUEST)
-
+        professional = get_object_or_404(Professional, user=user)
+       
         if professional.is_verified:
             return Response({"detail": "You are already verified."}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -495,11 +468,8 @@ class InitiateSubscriptionPaymentView(APIView):
             return Response({"detail": "Plan type, duration, and amount are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check user type and fetch the professional
-        professional = None
-        if user.account_type == 'individual':
-            professional = Professional.objects.filter(user=user, is_verified=True).first()
-        elif user.account_type == 'organization':
-            professional = OrgProfessional.objects.filter(user=user, is_verified=True).first()
+                
+        professional = Professional.objects.filter(user=user, is_verified=True).first()
 
         if not professional:
             return Response({"detail": "Professional not found or not verified."}, status=status.HTTP_404_NOT_FOUND)
@@ -509,14 +479,14 @@ class InitiateSubscriptionPaymentView(APIView):
 
         # Check for active subscription
         active_subscription = SubscriptionPlan.objects.filter(
-            professional=professional.user,
+            professional=professional,
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
         ).first()
 
         if active_subscription:
             subscription_payment = SubscriptionPayment.objects.filter(
-                professional=professional.user,
+                professional=professional,
                 subscription_plan=active_subscription,
                 payment_status='completed'
             ).first()
@@ -540,18 +510,14 @@ class InitiateSubscriptionPaymentView(APIView):
         # Prepare payload
         payload = {
             "amount": amount,
+            "first_name":professional.full_name,
+            "phone_number":professional.user.phone_number,
             "currency": "ETB",
             "email": professional.user.email,
             "tx_ref": str(txt_ref),
             "return_url": f'{return_url}?transaction_id={txt_ref}'
         }
 
-        # Set name fields based on professional type
-        if isinstance(professional, Professional):
-            payload["first_name"] = professional.first_name
-            payload["last_name"] = professional.last_name
-        elif isinstance(professional, OrgProfessional):
-            payload["first_name"] = professional.organization_name
 
         headers = {
             "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}",
@@ -560,11 +526,10 @@ class InitiateSubscriptionPaymentView(APIView):
 
         try:
             response = requests.post(chapa_url, json=payload, headers=headers)
-            response.raise_for_status()  # Raises an error for bad responses
+            response.raise_for_status()  
 
             result = response.json()
 
-            # Use a transaction to ensure both objects are created successfully
             with transaction.atomic():
                 subscription_plan = SubscriptionPlan.objects.create(
                     professional=professional.user,
@@ -605,12 +570,8 @@ class CheckPaymentView(APIView):
 
     def get_professional(self, user):
         """Retrieve the professional based on user account type."""
-        if user.account_type == 'individual':
-            return Professional.objects.filter(user=user, is_verified=True).first()
-        elif user.account_type == 'organization':
-            return OrgProfessional.objects.filter(user=user, is_verified=True).first()
-        return None
-
+        return Professional.objects.filter(user=user, is_verified=True).first()
+        
     def get(self, request, transaction_id):
         try:
             subscription_payment = SubscriptionPayment.objects.get(transaction_id=transaction_id)
