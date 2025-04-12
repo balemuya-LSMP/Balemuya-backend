@@ -123,18 +123,18 @@ class CreateServicePostApplicationAPIView(APIView):
             service_id = request.data.get('service_id')
             service_post = ServicePost.objects.get(id=service_id)
         except ServicePost.DoesNotExist:
-            return Response({"message": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
         if request.user.professional.is_available==False:
-            return Response({"message": "Please subscribe for requests."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Please subscribe for requests."}, status=status.HTTP_400_BAD_REQUEST)
         elif request.user.professional.num_of_request==0:
-            return Response({"message": "You have no  coins to apply  Job."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "You have no  coins to apply  Job."}, status=status.HTTP_400_BAD_REQUEST)
         
        
         professional_id = request.user.professional.id
         print('professional id is ',professional_id)
         application_data = {
             'service_id':service_post,
-            'professional_id':request.user.professional.id,
+            'professional_id':professional_id,
             **request.data
         }
         serializer = ServicePostApplicationSerializer(data=application_data)
