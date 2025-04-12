@@ -48,7 +48,7 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 # User Types
-ACCOUNT_TYPE_CHOICES = [
+ENTITY_TYPE_CHOICES = [
     ('organization', 'Organization'),
     ('individual', 'Individual'),
     ('admin', 'Admin'),
@@ -62,15 +62,17 @@ USER_TYPE_CHOICES = [
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=200, unique=True)
+    username = models.CharField(max_length = 100,null=True,blank=True)
     phone_number = models.CharField(max_length=30)
-    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     profile_image = CloudinaryField('image', null=True, blank=True, folder='Profile/profile_images')
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
-
-    account_type = models.CharField(max_length=30, choices=ACCOUNT_TYPE_CHOICES, default='individual')
+     
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
+    entity_type = models.CharField(max_length=30, choices=ENTITY_TYPE_CHOICES, default='individual')
 
     is_active = models.BooleanField(default=False)
+    is_blocked = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
     
@@ -91,74 +93,54 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
     
-##############  Abstract Base Individual Mixin  ############################
-class BaseCustomerMixin(models.Model):
+
+
+###############  Base User Mixin ###########################
+class BaseUserMixin(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    number_of_services_booked = models.PositiveIntegerField(default=0)    
+    gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
+    full_name = models.CharField(max_length=100,null=True,blank=True)
+    tx_number = models.CharField(max_length=100,null=True,blank=True)
+    number_of_employees = models.IntegerField(default=0)
+
     class Meta:
         abstract = True
+        
     
-###############        Individual customer  Mixin ###########################
-class Customer(BaseCustomerMixin):
+############### customer  Model ###########################
+class Customer(BaseUserMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer')
-    first_name = models.CharField(max_length=30,null=True,blank=True)
-    middle_name = models.CharField(max_length=30, blank=True, null=True)
-    last_name = models.CharField(max_length=30,null=True,blank=True)
-    gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female')],null=True,blank=True)
-
+    user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='customer')
+    number_of_services_booked = models.PositiveIntegerField(default=0)    
+    
     def __str__(self):
         return self.user.email
 
     class Meta:
-        verbose_name = 'Individual Customer'
-        verbose_name_plural = 'Individual Customers'
+        verbose_name = 'Customer'
+        verbose_name_plural = 'Customers'
     
     def __str__(self):
         return self.user.email
     
     
-############## Organizational Customer model ##########################
-class OrgCustomer(BaseCustomerMixin):
+    
+class Professional(BaseUserMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='org_customer')
-    organization_name = models.CharField(max_length=255)
-    registration_number = models.CharField(max_length=100, unique=True)
-    rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    number_of_employees = models.PositiveIntegerField(null=True, blank=True)
-    years_of_experience = models.PositiveIntegerField(default=0)
+    user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='professional')
     description = models.TextField(blank=True, null=True)
-    contact_person = models.CharField(max_length=255, null=True, blank=True) 
-    logo = CloudinaryField('image', null=True, blank=True, folder='Org_customer/logos')
-    
-    def __str__(self):
-        return self.organization_name
-    
-###############  Base professional Mixin ###########################
-class BaseProfessionalMixin(models.Model):
-    rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    skills = models.ManyToManyField('Skill', blank=True, related_name='%(class)s_professionals')
+    skills = models.ManyToManyField('Skill', blank=True, related_name='professionals')
     categories = models.ManyToManyField(
-        'common.Category', blank=True, related_name='%(class)s_professionals'
+        'common.Category', blank=True, related_name='professionals'
     )
     years_of_experience = models.PositiveIntegerField(default=0)
+    
     is_verified = models.BooleanField(default=False)
     is_available = models.BooleanField(default=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
     num_of_request = models.IntegerField(default=0)
 
-    class Meta:
-        abstract = True
 
-
-class Professional(BaseProfessionalMixin):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professional')
-    first_name = models.CharField(max_length=30,blank=True,null =True)
-    middle_name = models.CharField(max_length=30, blank=True, null=True)
-    last_name = models.CharField(max_length=30,null=True,blank=True)
-    gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True)
-    
     kebele_id_front_image = CloudinaryField(
         'image', null=True, blank=True, folder='Professional/kebele_id_images/front_images'
     )
@@ -173,19 +155,6 @@ class Professional(BaseProfessionalMixin):
         verbose_name = 'Professional'
         verbose_name_plural = 'Professionals'
 
-############## Organizational Professional model ##########################
-class OrgProfessional(BaseProfessionalMixin):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='org_professional')
-    organization_name = models.CharField(max_length=255)
-    registration_number = models.CharField(max_length=100, unique=True)
-    number_of_employees = models.PositiveIntegerField(null=True, blank=True)
-    description = models.TextField(blank=True, null=True)
-    contact_person = models.CharField(max_length=255, null=True, blank=True) 
-    logo = CloudinaryField('image', null=True, blank=True, folder='Org_professional/logos')
-    
-    def __str__(self):
-        return self.organization_name
     
 ################## Feedback  model #####################
 class Feedback(models.Model):
@@ -220,8 +189,7 @@ class Permission(models.Model):
 class Admin(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin')
-    first_name = models.CharField(max_length=30,null=True,blank=True)
-    last_name = models.CharField(max_length=30,null=True,blank=True)
+    full_name = models.CharField(max_length=30,null=True,blank=True)
     gender = models.CharField(max_length=30, choices=[('male', 'Male'), ('female', 'Female')],null=True)
     permissions = models.ManyToManyField(Permission, blank=True, related_name='admins')
     admin_level = models.PositiveIntegerField(default=0)
@@ -269,7 +237,7 @@ class Skill(models.Model):
 class Education(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='educations'  # Updated to use CustomUser
+        'Professional', on_delete=models.CASCADE, related_name='educations'
     )
     school = models.CharField(max_length=100)
     degree = models.CharField(max_length=100, blank=True, null=True)
@@ -278,7 +246,7 @@ class Education(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        if self.professional.user_type != 'professional':
+        if self.professional.user.user_type != 'professional':
             raise ValueError("Only professionals can have education records.")
         super().save(*args, **kwargs)
 
@@ -293,7 +261,7 @@ class Education(models.Model):
 class Portfolio(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='portfolios'
+        'Professional', on_delete=models.CASCADE, related_name='portfolios'
     )
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -302,7 +270,7 @@ class Portfolio(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        if self.professional.user_type != 'professional':
+        if self.professional.user.user_type != 'professional':
             raise ValueError("Only professionals can create portfolios.")
         super().save(*args, **kwargs)
 
@@ -320,7 +288,7 @@ class Portfolio(models.Model):
 class Certificate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='certificates'  # Updated to use CustomUser
+        'Professional', on_delete=models.CASCADE, related_name='certificates' 
     )
     image = CloudinaryField(
         'certificate_image', null=True, blank=True, folder='Certificates'
@@ -364,7 +332,7 @@ class SubscriptionPlan(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    professional = models.OneToOneField('User', on_delete=models.CASCADE, related_name='subscription_plan',null=True)  # Only one subscription per professional
+    professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='subscription_plan',null=True) 
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
     cost = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
@@ -401,9 +369,9 @@ class Payment(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey('User', on_delete=models.CASCADE, related_name='service_payments', null=True)  # The customer making the payment
-    professional = models.ForeignKey('User', on_delete=models.CASCADE, related_name='received_payments',null=True)  # Professional receiving the payment
-    service = models.ForeignKey('services.ServicePost', on_delete=models.CASCADE,null=True)  # The service related to the payment
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE, related_name='service_payments', null=True)  
+    professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='received_payments',null=True) 
+    service = models.ForeignKey('services.ServicePost', on_delete=models.CASCADE,null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2,default=0) 
     payment_date = models.DateTimeField(default=timezone.now)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
@@ -411,7 +379,7 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
-        return f"Payment {self.transaction_id} from {self.customer.email} to {self.professional.email} - Amount: {self.amount}"
+        return f"Payment {self.transaction_id} from {self.customer.user.email} to {self.professional.user.email} - Amount: {self.amount}"
 
     class Meta:
         verbose_name = 'Payment'
@@ -428,7 +396,7 @@ class SubscriptionPayment(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='subscription_payments')
-    professional = models.ForeignKey('User', on_delete=models.CASCADE, related_name='subscription_payments')
+    professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='subscription_payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     payment_date = models.DateTimeField(default=timezone.now)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
@@ -436,12 +404,11 @@ class SubscriptionPayment(models.Model):
     transaction_id = models.CharField(max_length=100, unique=True)
 
     def save(self, *args, **kwargs):
-        # Calculate the payment amount based on the associated subscription plan
         self.amount = self.subscription_plan.cost
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Subscription Payment {self.transaction_id} for {self.professional.email} - Amount: {self.amount}"
+        return f"Subscription Payment {self.transaction_id} for {self.professional.user.email} - Amount: {self.amount}"
 
     class Meta:
         verbose_name = 'Subscription Payment'
@@ -455,8 +422,8 @@ class VerificationRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    professional = models.OneToOneField(User, on_delete=models.CASCADE,default=None, related_name='verification_requests')
-    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
+    professional = models.OneToOneField('User', on_delete=models.CASCADE,default=None, related_name='verification_requests')
+    verified_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     admin_comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
