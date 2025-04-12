@@ -7,7 +7,7 @@ from common.models import Category
 
 class ServicePost(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey('users.User', null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
+    customer = models.ForeignKey('users.Customer', null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     title = models.CharField(max_length=100,null=True, blank=True)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name='service_posts')
     description = models.TextField(null=True, blank=True)  
@@ -41,7 +41,7 @@ class ServicePostApplication(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service = models.ForeignKey(ServicePost, on_delete=models.CASCADE, related_name='service_applications')
-    professional = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='professional_applications')
+    professional = models.ForeignKey('users.Professional', on_delete=models.CASCADE, related_name='professional_applications')
     message = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -76,8 +76,8 @@ class ServiceBooking(models.Model):
     
 class ServiceRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey('users.User', related_name='service_recieved', on_delete=models.CASCADE)
-    professional = models.ForeignKey('users.User', related_name='service_requests', on_delete=models.CASCADE)
+    customer = models.ForeignKey('users.Customer', related_name='service_recieved', on_delete=models.CASCADE)
+    professional = models.ForeignKey('users.Professional', related_name='service_requests', on_delete=models.CASCADE)
     detail = models.TextField()
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'),('cancled','canceled') ,('accepted', 'Accepted'), ('rejected', 'Rejected')],default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
