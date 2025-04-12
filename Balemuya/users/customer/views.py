@@ -97,22 +97,23 @@ class FilterProfessionalsView(APIView):
         categories = request.query_params.getlist('categories')
         distance = request.query_params.get('distance')
         rating = request.query_params.get('rating')
+        entity_type = request.query_params.get('entity_type')
 
         if distance is not None:
             try:
                 distance = float(distance)
             except ValueError:
-                return Response({"error": "Invalid distance value."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Invalid distance value."}, status=status.HTTP_400_BAD_REQUEST)
 
         if rating is not None:
             try:
                 rating = float(rating)
             except ValueError:
-                return Response({"error": "Invalid rating value."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Invalid rating value."}, status=status.HTTP_400_BAD_REQUEST)
         user_location = None
         if request.user.address:
             user_location = (request.user.address.latitude,request.user.address.longitude)
-        professionals = filter_professionals(current_location=user_location, categories=categories, rating=rating, max_distance=distance)
+        professionals = filter_professionals(current_location=user_location, categories=categories, rating=rating,entity_type=entity_type, max_distance=distance)
 
         return Response({"message": "success", "professionals": professionals}, status=status.HTTP_200_OK)
     
@@ -142,7 +143,7 @@ class CustomerServiceRequestAPIView(APIView):
             try:
                 professional_user =User.objects.get(id=professional_user_id)
             except Professional.DoesNotExist:
-                return Response({"error": "Professional does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Professional does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
             data = {
                 'customer_id': customer_user.id,  
@@ -153,7 +154,7 @@ class CustomerServiceRequestAPIView(APIView):
             serializer = ServiceRequestSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"success": "Service request sent."}, status=status.HTTP_201_CREATED)
+                return Response({"message": "Service request sent."}, status=status.HTTP_201_CREATED)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
@@ -167,12 +168,12 @@ class CancelServiceRequestAPIView(APIView):
         try:
             service_request = ServiceRequest.objects.get(id=request_id, customer=request.user.customer)
         except ServiceRequest.DoesNotExist:
-            return Response({"error": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
         service_request.status = 'canceled'
         service_request.save()
 
-        return Response({"success": "Service request canceled."}, status=status.HTTP_200_OK)
+        return Response({"message": "Service request canceled."}, status=status.HTTP_200_OK)
     
     
     
@@ -183,9 +184,11 @@ class UserSearchView(APIView):
         professionals = Professional.objects.filter(
             Q(categories__name__icontains=query) | 
             Q(skills__name__icontains=query) |      
-            Q(user__first_name__icontains=query) |            
+            Q(user__username__icontains=query) |            
             Q(user__address__city__icontains=query) |             
-            Q(user__address__region__icontains=query),               
+            Q(user__address__region__icontains=query),
+            user__is_blocked=False,
+            user__is_active=True,               
             is_verified=True,
             is_available=True,
         ).select_related('user').order_by('-rating').distinct() 
