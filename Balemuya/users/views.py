@@ -33,12 +33,12 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from .models import User,Professional, Customer,OrgCustomer,OrgProfessional, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+from .models import User,Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
     Feedback
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
-from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerializer,OrgProfessionalSerializer,OrgCustomerSerializer, AdminSerializer,\
+from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
         FeedbackSerializer
     
@@ -91,7 +91,7 @@ class RegisterView(APIView):
             print('cached otp', cached)
         
             phone_number = user_instance.phone_number
-            message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+            message_body = f"Hello {user_instance.username}, your OTP is {otp}. It is only valid for 5 minutes."
             send_sms(request, to=phone_number, message_body=message_body)
             
             return Response({
@@ -119,7 +119,7 @@ class VerifyEmailView(APIView):
             user.save()
 
             html_content = render_to_string('email_verification_success.html', {
-                "message": " {user.account_type} Email is verified successfully!",
+                "message": f"{user.user_type} Email is verified successfully!",
                 "user": user,
             })
             return HttpResponse(html_content, status=200, content_type="text/html")
@@ -152,7 +152,6 @@ class ResendOTPView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        # Extract the required fields from the request
         contact_type = request.data.get('type')  # 'email' or 'phone'
         contact_value = request.data.get('contact')  # Email address or phone number
 
@@ -185,7 +184,7 @@ class ResendOTPView(APIView):
         print('Email send end')
 
         # Send OTP via SMS
-        message_body = f"Hello {user_instance.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+        message_body = f"Hello {user_instance.username}, your OTP is {otp}. It is only valid for 5 minutes."
         send_sms(request, to=user_instance.phone_number, message_body=message_body)
 
         return Response({
@@ -207,6 +206,7 @@ class SetPasswordView(APIView):
             return Response({'message': 'Password set successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 class ResetPasswordView(APIView):
     
@@ -217,7 +217,7 @@ class ResetPasswordView(APIView):
             otp = generate_otp()
             cache.set(f"otp_{user.email}", otp, timeout=300)
             phone_number = user.phone_number
-            message_body = f"Hello {user.get_full_name()}, your OTP is {otp}. It is only valid for 5 minutes."
+            message_body = f"Hello {user.username}, your OTP is {otp}. It is only valid for 5 minutes."
             send_sms(request, to=phone_number, message_body=message_body)
             return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
         else:
@@ -239,7 +239,6 @@ class UpdatePasswordView(APIView):
     
     def post(self, request, *args, **kwargs):
         user = request.user
-        print('user', user.password)
         password = user.password
         old_password = request.data.get('old_password')
         new_password = request.data.get('new_password')
@@ -318,8 +317,8 @@ class LoginView(APIView):
         if not user.check_password(password):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
         
-        if not user.is_active or not user.is_email_verified:
-            return Response({'error': 'Your account is not active. Please check your email to verify your account.'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not user.is_active:
+            return Response({'error': 'Your account is not active. Please check your email or sms to verify your account.'}, status=status.HTTP_401_UNAUTHORIZED)
         
         if user:
             refresh = RefreshToken.for_user(user)
@@ -371,28 +370,13 @@ class ProfileView(APIView):
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         if user.user_type == 'customer':
-            if user.account_type == 'individual':
-                customer = get_object_or_404(Customer, user=user)
-                serializer = CustomerSerializer(customer)
-            elif user.account_type == 'organization':
-                customer = get_object_or_404(OrgCustomer, user=user)
-                serializer = OrgCustomerSerializer(customer)
-            else:
-                return Response({'error': 'Invalid account type.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            customer = get_object_or_404(Customer, user=user)
+            serializer = CustomerSerializer(customer)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
 
         elif user.user_type == 'professional':
-            if user.account_type == 'individual':
-                professional = get_object_or_404(Professional, user=user)
-                serializer = ProfessionalSerializer(professional)
-            elif user.account_type == 'organization':
-                professional = get_object_or_404(OrgProfessional, user=user)
-                serializer = OrgProfessionalSerializer(professional)
-            else:
-                return Response({'error': 'Invalid account type.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            notify_user(user.id, 'Professional logged in successfully!')
+            professional = get_object_or_404(Professional, user=user)
+            serializer = ProfessionalSerializer(professional)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
 
         elif user.user_type == 'admin':
@@ -493,7 +477,6 @@ class UserBlockView(generics.UpdateAPIView):
 
     def put(self, request, pk, *args, **kwargs):
         user = self.get_object(pk)
-        print('user is',user)
 
         if user is None:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)

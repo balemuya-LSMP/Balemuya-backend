@@ -7,7 +7,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest
 from .models import Notification
-from users.models import Professional,Admin,Customer,User,VerificationRequest,Feedback
+from users.models import Professional,Customer,Admin,User,VerificationRequest,Feedback
 from common.models import Category
 from .serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -16,9 +16,12 @@ from .utils import get_professionals_in_proximity_and_category
 
 User = get_user_model()
 
+            
+
 
 @receiver(post_save, sender=ServicePost)
 def notify_professionals_about_new_post(sender, instance, created, **kwargs):
+    
     if created:
         channel_layer = get_channel_layer()
         message = f"New job posted: {instance.description[:50]}..."
@@ -33,14 +36,15 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
 
             if not recipients.exists():
                 return
-
+            
+            
             with transaction.atomic():
                 notification = Notification.objects.create(
                     message=message,
                     metadata={
-                        "id": str(instance.customer.user.id),
-                        "name": instance.customer.user.first_name,
-                        "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
+                        "id": str(instance.user.id),
+                        "name": instance.customer.username,
+                        "profile_image": instance.customer.profile_image.url if instance.customer.profile_image else None,
                     },
                     notification_type="new_job",
                     title='New Job Posted'
