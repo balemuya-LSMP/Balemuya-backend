@@ -43,7 +43,7 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
                     message=message,
                     metadata={
                         "id": str(instance.user.id),
-                        "name": instance.customer.username,
+                        "username": instance.customer.username,
                         "profile_image": instance.customer.profile_image.url if instance.customer.profile_image else None,
                     },
                     notification_type="new_job",
@@ -80,7 +80,7 @@ def notify_customer_about_application(sender, instance, created, **kwargs):
             notification_type="job_apply",  
             metadata={
                 "id": str(instance.professional.user.id),
-                "name": instance.professional.user.first_name,
+                "username": instance.professional.user.username,
                 "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
             },
             title='Job Application Received'
@@ -106,7 +106,7 @@ def send_verification_request_to_admin(sender, instance, created, **kwargs):
             notification_type="verify_request",  
             metadata={
                 "id": str(instance.professional.user.id),
-                "name": instance.professional.user.first_name,
+                "username": instance.professional.user.username,
                 "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
             },
             title='Verification Request Submitted'
@@ -133,8 +133,8 @@ def notify_professional_on_verification(sender, instance, created, **kwargs):
             notification_type="verify_response",  
             title='Verification Response',
             metadata={
-                'id': instance.service.customer.id,
-                'name': instance.service.customer.user.first_name,
+                'id': instance.service.customer.user.id,
+                'username': instance.service.customer.user.username,
                 "profile_image": instance.service.customer.profile_image
             }
         )
@@ -159,8 +159,8 @@ def notify_professional_on_service_booking(sender, instance, created, **kwargs):
                 message=message,
                 notification_type="new_booking",
                 metadata={
-                    "id": str(instance.application.service.customer.user.first_name),
-                    "name": instance.application.service.customer.user.first_name,
+                    "id": str(instance.application.service.customer.user.id),
+                    "username": instance.application.service.customer.user.username,
                     "profile_image": instance.application.service.customer.user.profile_image.url if instance.application.service.customer.user.profile_image else None,
                 }
             )
@@ -178,7 +178,7 @@ def notify_professional_on_service_request(sender, instance, created, **kwargs):
     if created and instance.status == 'pending':
         channel_layer = get_channel_layer()
         group_name = f"professional_{instance.professional.user.id}_new_job_request"
-        message = f"A new job request from {instance.customer.user.first_name}..."
+        message = f"A new job request from {instance.customer.user.username}..."
         
         with transaction.atomic():
             notification = Notification.objects.create(
@@ -187,7 +187,7 @@ def notify_professional_on_service_request(sender, instance, created, **kwargs):
                 notification_type="new_job_request",
                 metadata={
                     "id": str(instance.customer.id),
-                    "name": instance.customer.user.first_name,
+                    "username": instance.customer.user.username,
                     "profile_image": instance.customer.user.profile_image.url if instance.customer.user.profile_image else None,
                 }
             )
@@ -205,7 +205,7 @@ def notify_customer_on_service_response(sender, instance, created, **kwargs):
     if not created and instance.status != 'pending':
         channel_layer = get_channel_layer()
         group_name = f"customer_{instance.customer.user.id}_job_request_response"
-        message = f"{instance.professional.user.first_name} has {instance.status} your request."
+        message = f"{instance.professional.user.username} has {instance.status} your request."
         
         with transaction.atomic():
             notification = Notification.objects.create(
@@ -214,7 +214,7 @@ def notify_customer_on_service_response(sender, instance, created, **kwargs):
                 notification_type="new_job_response",
                 metadata={
                     "id": str(instance.professional.id),
-                    "name": instance.professional.first_name,
+                    "username": instance.professional.username,
                     "profile_image": instance.professional.user.profile_image.url if instance.professional.user.profile_image else None,
                 }
             )
@@ -246,7 +246,7 @@ def notify_admin_on_complain(sender, instance, created, **kwargs):
                 notification_type="new_complain",
                 metadata={
                     "id": str(instance.user.id),
-                    "name": instance.user.first_name,
+                    "username": instance.user.username,
                     "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
                 }
             )
@@ -266,7 +266,7 @@ def notify_admins_on_feedback(sender, instance, created, **kwargs):
         channel_layer = get_channel_layer()
         group_name = f"admin_feedback_notifications"
         
-        message = f"A new feedback has been made by {instance.user.first_name}..."
+        message = f"A new feedback has been made by {instance.user.username}..."
         
         with transaction.atomic():
             notification = Notification.objects.create(
@@ -275,7 +275,7 @@ def notify_admins_on_feedback(sender, instance, created, **kwargs):
                 notification_type="new_feedback",
                 metadata={
                     "id": str(instance.user.id),
-                    "name": instance.user.first_name,
+                    "username": instance.user.username,
                     "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
                 }
             )
@@ -311,7 +311,7 @@ def notify_user_on_review(sender, instance, created, **kwargs):
         if group_name is None:
             return
         
-        message = f"A new review has been made by {instance.user.first_name}..."
+        message = f"A new review has been made by {instance.user.username}..."
         
         with transaction.atomic():
             notification = Notification.objects.create(
@@ -320,7 +320,7 @@ def notify_user_on_review(sender, instance, created, **kwargs):
                 notification_type="new_review",
                 metadata={
                     "id": str(instance.user.id),
-                    "name": instance.user.first_name,
+                    "username": instance.user.username,
                     "profile_image": instance.user.profile_image.url if instance.user.profile_image else None,
                 }
             )
