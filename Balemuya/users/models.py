@@ -97,6 +97,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 ###############  Base User Mixin ###########################
 class BaseUserMixin(models.Model):
+    description = models.TextField(blank=True, null=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
     full_name = models.CharField(max_length=100,null=True,blank=True)
@@ -128,7 +129,6 @@ class Customer(BaseUserMixin):
 class Professional(BaseUserMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='professional')
-    description = models.TextField(blank=True, null=True)
     skills = models.ManyToManyField('Skill', blank=True, related_name='professionals')
     categories = models.ManyToManyField(
         'common.Category', blank=True, related_name='professionals'

@@ -188,7 +188,7 @@ class ResendOTPView(APIView):
         send_sms(request, to=user_instance.phone_number, message_body=message_body)
 
         return Response({
-            'message': f'OTP has been sent. Please check your {account_type} for further instructions.',
+            'message': f'OTP has been sent. Please check your {entity_type} for further instructions.',
             'data': {
                 'email': user_instance.email,
                 'phone': user_instance.phone_number
@@ -329,7 +329,7 @@ class LoginView(APIView):
                                  'id': user.id,
                                  'email': user.email,
                                  'user_type': user.user_type,
-                                 'account_type': user.account_type,
+                                 'entity_type': user.entity_type,
                                  'access': access,
                                  'refresh': refresh,
                              }
