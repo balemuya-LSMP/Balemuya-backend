@@ -6,8 +6,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
 from common.serializers import UserSerializer
-from users.models import User, Customer,Professional
-from users.serializers import ProfessionalSerializer,CustomerSerializer
+from users.models import User, Customer,Professional,Payment
+from users.serializers import ProfessionalSerializer,CustomerSerializer,PaymentSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking,ServiceRequest
 from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer,ServiceRequestSerializer
 
@@ -199,3 +199,18 @@ class UserSearchView(APIView):
         serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
         
         return paginator.get_paginated_response(serializer.data)
+    
+    
+class CustomerPaymentInitiateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(request):
+        professional = request.data.get('professional')
+        if not request.user.user_type=='customer':
+            return Response({'detail':'you are not customer to pay for service'},status =status.HTTP_401_UNAUTHORIZED )
+        customer = request.user.customer
+        amount = request.data.get('amount'),
+        booking = request.data.get('booking')
+        
+        
+    

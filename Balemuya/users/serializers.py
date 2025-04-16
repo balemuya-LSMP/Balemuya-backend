@@ -13,6 +13,7 @@ from .models import (
     Education,
     Portfolio,
     Certificate,
+    BankAccount,
     Payment,
     SubscriptionPlan,
     SubscriptionPayment,
@@ -186,6 +187,24 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.kebele_id_back_image.url) if request else obj.kebele_id_back_image.url
         return None
     
+    
+class BankAccountSerializer(serializers.ModelSerializer):
+    bank_name = serializers.CharField(source='get_bank_code_display', read_only=True)
+
+    class Meta:
+        model = BankAccount
+        fields = [
+            'id',
+            'professional',
+            'account_name',
+            'account_number',
+            'bank_code',
+            'bank_name',
+            'is_verified',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     professional = ProfessionalSerializer()
@@ -198,7 +217,7 @@ class PaymentSerializer(serializers.ModelSerializer):
     professional = ProfessionalSerializer()
     class Meta:
         model = Payment
-        fields = ['id', 'customer', 'professional', 'service', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        fields = ['id', 'customer', 'professional', 'booking', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
 
 class SubscriptionPaymentSerializer(serializers.ModelSerializer):
     class Meta:

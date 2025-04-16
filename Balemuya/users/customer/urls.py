@@ -1,7 +1,7 @@
 from django.urls import path
 import uuid
 from .views import CustomerProfileView,CustomerServicesView,NearbyProfessionalsView,FilterProfessionalsView,CustomerServiceRequestAPIView,\
-    CancelServiceRequestAPIView,UserSearchView
+    CancelServiceRequestAPIView,UserSearchView,CustomerPaymentInitiateView
 
 urlpatterns = [
     path('<uuid:pk>/profile/',CustomerProfileView.as_view(), name='customer-profile'),
@@ -10,8 +10,12 @@ urlpatterns = [
     
     path('search-professional/',UserSearchView.as_view(),name='search-professional'),
     
-    path('service-request/', CustomerServiceRequestAPIView.as_view(), name='create_service_request'),  
-    path('service-request/<uuid:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel_service_request'),
+    path('service-request/', CustomerServiceRequestAPIView.as_view(), name='create-service-request'),  
+    path('service-request/<uuid:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel-service-request'),
       
     path('services/',CustomerServicesView.as_view(), name='customer-services'),
+    
+    path('services/payment/initiate/',CustomerPaymentInitiateView.as_view(), name='initiate-payment'),
+    
+    
 ]
