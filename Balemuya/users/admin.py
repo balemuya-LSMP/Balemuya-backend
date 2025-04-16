@@ -12,6 +12,7 @@ from .models import (
     Education,
     Portfolio,
     Certificate,
+    BankAccount,
     SubscriptionPlan,
     Payment,
     SubscriptionPayment,
@@ -34,12 +35,16 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ('user', 'full_name','gender','number_of_employees' ,'number_of_services_booked', 'rating')
     search_fields = ('user__email', 'full_name',)
 
-
+class BankAccountInline(admin.StackedInline):
+    model = BankAccount
+    extra = 0
 
 @admin.register(Professional)
 class ProfessionalAdmin(admin.ModelAdmin):
     list_display = ('user', 'full_name','gender', 'years_of_experience', 'rating')
     search_fields = ('user__email','full_name')
+    inlines = [BankAccountInline]
+
 
 
 @admin.register(Feedback)
@@ -101,10 +106,22 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     search_fields = ('professional__email', 'plan_type')
     list_filter = ('plan_type', 'duration')
     ordering = ('-start_date',)
+    
+    
+    
+@admin.register(BankAccount)
+class BankAccountAdmin(admin.ModelAdmin):
+    list_display = ['account_name', 'account_number', 'bank_code', 'get_bank_name', 'professional', 'is_verified']
+    list_filter = ['bank_code', 'is_verified']
+    search_fields = ['account_name', 'account_number', 'professional__user__email']
+
+    def get_bank_name(self, obj):
+        return obj.get_bank_code_display()
+    get_bank_name.short_description = 'Bank Name'
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('transaction_id', 'customer', 'professional', 'service', 'amount', 'payment_date', 'payment_status')
+    list_display = ('transaction_id', 'customer', 'professional', 'booking', 'amount', 'payment_date', 'payment_status')
     search_fields = ('transaction_id', 'customer__email', 'professional__email')
     list_filter = ('payment_status', 'payment_method')
     ordering = ('-payment_date',)

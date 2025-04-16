@@ -78,6 +78,7 @@ class RegisterView(APIView):
             subject = 'Verify your email for Balemuya.'
             message = f'Please click the link below to verify your email for Balemuya.\n\n{verification_link}'
             recipient_list = [user_instance.email]
+            print('user instance  is',user_instance)
             
             # send confirmation email
             print('email send start')
@@ -85,7 +86,7 @@ class RegisterView(APIView):
             print('email send end')
             
             otp = generate_otp()
-            cache.set(f"otp_{user_instance.id}", otp, timeout=300)
+            cache.set(f"otp_{user_instance.email}", otp, timeout=300)
             
             cached = cache.get(f"otp_{user_instance.email}")
             print('cached otp', cached)

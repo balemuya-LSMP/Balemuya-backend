@@ -532,13 +532,13 @@ class InitiateSubscriptionPaymentView(APIView):
 
             with transaction.atomic():
                 subscription_plan = SubscriptionPlan.objects.create(
-                    professional=professional.user,
+                    professional=professional,
                     plan_type=plan_type,
                     duration=duration
                 )
 
                 SubscriptionPayment.objects.create(
-                    professional=professional.user,
+                    professional=professional,
                     transaction_id=str(txt_ref),
                     amount=amount,
                     payment_status='pending',

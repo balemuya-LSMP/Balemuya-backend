@@ -359,6 +359,36 @@ class SubscriptionPlan(models.Model):
         verbose_name_plural = 'Subscription Plans'
 
 
+
+BANK_CHOICES = [
+    (442, 'Awash Bank'),
+    (445, 'Commercial Bank of Ethiopia'),
+    (448, 'Dashen Bank'),
+    (451, 'Zemen Bank'),
+    (454, 'Bank of Abyssinia'),
+    (457, 'NIB International Bank'),
+    (460, 'Oromia International Bank'),
+    (463, 'United Bank'),
+    (466, 'Wegagen Bank'),
+]
+
+class BankAccount(models.Model):
+    professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='bank_account')
+    account_name = models.CharField(max_length=100)
+    account_number = models.CharField(max_length=20)
+    bank_code = models.PositiveIntegerField(choices=BANK_CHOICES)
+    is_verified = models.BooleanField(default=False)  
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.account_name} - {self.get_bank_code_display()}"
+
+    class Meta:
+        verbose_name = 'Bank Account'
+        verbose_name_plural = 'Bank Accounts'
+
 # Payment Model for Services
 class Payment(models.Model):
     PAYMENT_STATUS_CHOICES = [
@@ -371,7 +401,7 @@ class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE, related_name='service_payments', null=True)  
     professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='received_payments',null=True) 
-    service = models.ForeignKey('services.ServicePost', on_delete=models.CASCADE,null=True)
+    booking = models.ForeignKey('services.ServiceBooking', on_delete=models.CASCADE,null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2,default=0) 
     payment_date = models.DateTimeField(default=timezone.now)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
