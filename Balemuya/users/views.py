@@ -34,13 +34,13 @@ from allauth.socialaccount.models import SocialApp
 from urllib.parse import parse_qs
 
 from .models import User,Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
-    Feedback
+    Feedback,Favorite
 from common.models import Category
 from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
-        FeedbackSerializer
+        FeedbackSerializer,FavoriteSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 from .pagination import CustomPagination
@@ -519,7 +519,18 @@ class UserFeedbackView(APIView):
          
 
 
+class FavoriteListCreateAPIView(APIView):
+    def get(self, request):
+        favorites = Favorite.objects.filter(user=request.user)
+        serializer = FavoriteSerializer(favorites, many=True)
+        return Response(serializer.data)
 
+    def post(self, request):
+        serializer = FavoriteSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)  # Set the user to the logged-in user
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             
  

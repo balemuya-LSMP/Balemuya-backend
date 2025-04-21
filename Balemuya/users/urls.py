@@ -2,7 +2,7 @@ from django.urls import path, include
 import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView
+UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView,FavoriteListCreateAPIView
         
 from .address import AddressView
 urlpatterns = [
@@ -39,6 +39,9 @@ urlpatterns = [
     #feedback
     path('feedback/add/', UserFeedbackView.as_view(), name='user-feedback'),
     path('feedbacks/', UserFeedbackView.as_view(), name='user-feedback'),
+    
+    path('favorites/', FavoriteListCreateAPIView.as_view(), name='favorite_list_create'),  
+
     
     
    

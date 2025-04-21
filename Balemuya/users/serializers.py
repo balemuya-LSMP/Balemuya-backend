@@ -19,10 +19,16 @@ from .models import (
     SubscriptionPayment,
     VerificationRequest,
     Feedback,
+    Favorite,
 )
 
 from common.models import Category
 from common.serializers import CategorySerializer, UserSerializer
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favorite
+        fields = ['id', 'user', 'professional', 'created_at']
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
