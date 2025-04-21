@@ -472,3 +472,16 @@ class VerificationRequest(models.Model):
     def __str__(self):
         return f"Verification Request for {self.professional} staus {self.status}"
     
+
+class Favorite(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name='favorited_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'professional')
+
+    def __str__(self):
+        return f'{self.user.username} favorites {self.professional.name}'
+    

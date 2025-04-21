@@ -1,9 +1,11 @@
+import uuid
 from django.db import models
 from users.models import User
 from cloudinary.models import CloudinaryField
 
 
 class BlogPost(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -19,6 +21,7 @@ class Media(models.Model):
         ('image', 'Image'),
         ('video', 'Video'),
     ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     post = models.ForeignKey(BlogPost, related_name='media', on_delete=models.CASCADE)
     media_file = CloudinaryField('media', null=True, blank=True, folder='blog/medias/')
     media_type = models.CharField(max_length=5, choices=MEDIA_TYPE_CHOICES)
@@ -29,6 +32,7 @@ class Media(models.Model):
     
 
 class Comment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     post = models.ForeignKey(BlogPost, related_name='comments', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
@@ -38,6 +42,7 @@ class Comment(models.Model):
         return f'Comment by {self.user.username} on {self.post.title}'
 
 class Like(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     post = models.ForeignKey(BlogPost, related_name='likes', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
