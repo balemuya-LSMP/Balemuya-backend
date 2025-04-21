@@ -30,6 +30,8 @@ urlpatterns = [
     path('api/users/',include('users.urls')),
     path('api/admin/',include('customAdmin.urls')),
     path('api/services/',include('services.urls')),
+    path('api/blog/',include('blog.urls')),
+    
     path('api/notifications/',include('notifications.urls')),
     
     #swagger
