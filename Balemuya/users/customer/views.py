@@ -1,13 +1,19 @@
 from django.shortcuts import render
 from django.db.models import Q
+from django.conf import settings
+from django.db import transaction
+import requests
+import uuid
+from django.utils import timezone
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from geopy.distance import geodesic
 from common.serializers import UserSerializer
-from users.models import User, Customer,Professional,Payment
-from users.serializers import ProfessionalSerializer,CustomerSerializer,PaymentSerializer
+from users.models import User, Customer,Professional,Payment,BankAccount
+from users.serializers import ProfessionalSerializer,CustomerSerializer,PaymentSerializer,BankAccountSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking,ServiceRequest
 from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer,ServiceRequestSerializer
 
@@ -200,17 +206,84 @@ class UserSearchView(APIView):
         
         return paginator.get_paginated_response(serializer.data)
     
-    
-class CustomerPaymentInitiateView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def post(request):
-        professional = request.data.get('professional')
-        if not request.user.user_type=='customer':
-            return Response({'detail':'you are not customer to pay for service'},status =status.HTTP_401_UNAUTHORIZED )
+class ServicePaymentTransferView(APIView):
+
+    def post(self, request):
+        if request.user.user_type != 'customer':
+            return Response({
+                'detail': 'User is not a customer.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
         customer = request.user.customer
-        amount = request.data.get('amount'),
-        booking = request.data.get('booking')
-        
-        
-    
+        professional_id = request.data.get('professional')
+        amount = request.data.get('amount')
+        booking_id = request.data.get('booking')
+
+        # Step 1: Validate ServiceBooking exists and matches customer and professional
+        try:
+            booking = ServiceBooking.objects.get(
+                id=booking_id,
+                application__service__customer=customer,
+                application__professional__user=professional_id
+            )
+        except ServiceBooking.DoesNotExist:
+            return Response({
+                'detail': 'Booking not found or does not match the provided customer and professional.'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            professional = Professional.objects.select_related('bank_account').get(user__id=professional_id)
+        except Professional.DoesNotExist:
+            return Response({'detail': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not hasattr(professional, 'bank_account'):
+            return Response({'detail': 'Professional has no bank account configured.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a unique transaction reference
+        transaction_reference = str(uuid.uuid4())
+
+        # Prepare the payload for Chapa's API
+        transfer_url = 'https://api.chapa.co/v1/checkout'
+        payload = {
+            "amount": str(amount),
+            "currency": "ETB",
+            "reference": transaction_reference,
+            "email": request.user.email,  # Customer's email
+            "description": f"Payment for service by {professional.user.username}",
+            "redirect_url": "https://yourapp.com/payment/confirmation/",  # Update with your confirmation URL
+        }
+
+        headers = {
+            'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
+            'Content-Type': 'application/json'
+        }
+
+        # Make the request to Chapa for the checkout session
+        try:
+            response = requests.post(transfer_url, json=payload, headers=headers)
+            response.raise_for_status()  # Raises an error for HTTP errors
+            res_data = response.json()
+
+            if res_data.get("status") == "success":
+                # Create a payment record with pending status
+                Payment.objects.create(
+                    customer=customer,
+                    professional=professional,
+                    booking=booking,
+                    amount=amount,
+                    payment_status='pending',  # Status until confirmed
+                    transaction_id=transaction_reference
+                )
+                # Redirect the customer to Chapa's checkout page
+                return Response({"url": res_data['data']['checkout_url']}, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "message": f"Failed to create payment session: {res_data.get('message')}",
+                    "status": "failed"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            return Response({
+                "message": f"Error connecting to Chapa: {str(e)}",
+                "status": "failed"
+            }, status=status.HTTP_400_BAD_REQUEST)
