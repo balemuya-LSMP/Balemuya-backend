@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'common',
     'users',
     'services',
+    'blog',
     'notifications',
     'customAdmin',
     
