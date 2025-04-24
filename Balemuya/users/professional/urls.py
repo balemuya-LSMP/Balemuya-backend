@@ -2,7 +2,7 @@ from django.urls import path
 import uuid
 from .views import ProfessionalProfileView, ProfessionalProfileUpdateView,ProfessionalSkillView,ProfessionalCategoryView,CertificateView,EducationView,PortfolioView,\
     ProfessionalVerificationRequestView,InitiateSubscriptionPaymentView,CheckPaymentView,ProfessionalSubscriptionHistoryView,\
-    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView
+    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView,ProfessionalPaymentWithdrawalView
 
 urlpatterns = [
     path('<uuid:pk>/profile/',ProfessionalProfileView.as_view(), name='professional-profile'),
@@ -34,4 +34,8 @@ urlpatterns = [
     #payment related
     path('subscription/payment/initiate/', InitiateSubscriptionPaymentView.as_view(), name='initiate_subscription-payment'),
     path('subscription/payment/check/<str:transaction_id>/', CheckPaymentView.as_view(), name='check_payment'),
+    
+    
+    path('services/payment/withdraw/', ProfessionalPaymentWithdrawalView.as_view(), name='professional-withdrawal'),
+    
 ]

@@ -4,6 +4,7 @@ from .models import (
     User,
     Customer,
     Professional,
+    Favorite,
     Feedback,
     Permission,
     Admin,
@@ -16,8 +17,14 @@ from .models import (
     SubscriptionPlan,
     Payment,
     SubscriptionPayment,
+    WithdrawalTransaction,
     VerificationRequest,
+    
 )
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ('id','user','professional','created_at')
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
@@ -132,3 +139,10 @@ class SubscriptionPaymentAdmin(admin.ModelAdmin):
     search_fields = ('transaction_id', 'professional__email', 'subscription_plan__professional__email')
     list_filter = ('payment_status',)
     ordering = ('-payment_date',)
+    
+@admin.register(WithdrawalTransaction)
+class WithdrawalTransactionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'professional', 'amount', 'status', 'txt_ref', 'created_at','updated_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('professional__user__username', 'txt_ref')
+    readonly_fields = ('txt_ref', 'created_at', 'updated_at')
