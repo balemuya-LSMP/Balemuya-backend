@@ -529,6 +529,9 @@ class InitiateSubscriptionPaymentView(APIView):
             response.raise_for_status()  
 
             result = response.json()
+            
+            if not result.get("status") == "success":
+                return Response({'detail':'payment is not initiated please try again'},status = status.HTTP__400_BAD_REQUEST)
 
             with transaction.atomic():
                 subscription_plan = SubscriptionPlan.objects.create(
