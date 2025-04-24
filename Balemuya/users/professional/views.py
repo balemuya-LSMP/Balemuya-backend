@@ -34,7 +34,7 @@ from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
 
-from users.models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,SubscriptionPayment,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
+from users.models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,SubscriptionPayment,WithdrawalTransaction,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
     Feedback
 from common.models import Category
 from users.utils import send_sms, generate_otp, send_email_confirmation,notify_user
@@ -690,3 +690,76 @@ class ServicePostFilterView(APIView):
             post['distance'] = filtered_posts[i].distance 
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+class ProfessionalPaymentWithdrawalView(APIView):
+
+    def post(self, request):
+        if request.user.user_type != 'professional':
+            return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        professional = request.user.professional
+
+        if not hasattr(professional, 'bank_account'):
+            return Response({'detail': 'Professional does not have a bank account linked.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        withdrawal_amount = request.data.get('amount')
+
+        if not withdrawal_amount:
+            return Response({'detail': 'Amount is required for withdrawal.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        withdrawal_amount = float(withdrawal_amount)
+
+        if professional.balance < withdrawal_amount:
+            return Response({'detail': 'Insufficient balance for withdrawal.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bank_account = professional.bank_account
+
+        transfer_url = "https://api.chapa.co/v1/transfers"
+        payload = {
+            "account_name": bank_account.account_name,
+            "account_number": bank_account.account_number,
+            "amount": str(withdrawal_amount),
+            "currency": "ETB",  
+            "reference": str(uuid.uuid4()),
+            "bank_code": bank_account.bank_code,
+        }
+
+        headers = {
+            'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',
+            'Content-Type': 'application/json'
+        }
+
+        # Make the API request to Chapa
+        try:
+            response = requests.post(transfer_url, json=payload, headers=headers)
+            response.raise_for_status()
+            transfer_data = response.json()
+
+            if transfer_data.get('status') == 'success':
+                professional.balance -= withdrawal_amount
+                professional.save()
+
+                WithdrawalTransaction.objects.create(
+                    professional=professional,
+                    amount=withdrawal_amount,
+                    status='completed',
+                    trx_ref=transfer_data['data']['transaction_reference'],
+                )
+
+                # Respond with success message
+                return Response({
+                    'detail': f'Withdrawal of {withdrawal_amount} has been successfully initiated and processed.'
+                }, status=status.HTTP_200_OK)
+            else:
+                # Handle failure to transfer
+                return Response({
+                    'detail': 'Failed to process the withdrawal with Chapa.',
+                    'reason': transfer_data.get('message', 'Unknown error')
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            return Response({
+                'detail': f'Error communicating with Chapa API: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

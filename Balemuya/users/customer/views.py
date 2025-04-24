@@ -205,14 +205,6 @@ class UserSearchView(APIView):
         serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
         
         return paginator.get_paginated_response(serializer.data)
-    import uuid
-import requests
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from django.conf import settings
-from .models import ServiceBooking, Professional, Payment
 
 class ServicePaymentTransferView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated via JWT
@@ -314,15 +306,6 @@ class ServicePaymentTransferView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
             
             
-            
-
-import requests
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from django.conf import settings
-from .models import Payment, Professional
-
 class ServicePaymentVerifyView(APIView):
   
     def post(self, request):
