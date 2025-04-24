@@ -210,29 +210,24 @@ class ServicePaymentTransferView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated via JWT
 
     def post(self, request):
-        """
-        Initiates a payment from the customer to the professional via Chapa payment gateway.
-        """
         # Step 1: Check if the user is a customer
         if request.user.user_type != 'customer':
             return Response({
                 'detail': 'User is not a customer.'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Retrieve customer instance
         customer = request.user.customer
         
-        # Retrieve request data
         professional_id = request.data.get('professional')
         amount = request.data.get('amount')
         booking_id = request.data.get('booking')
+        return_url = request.data.get('return_url')
 
         if not professional_id or not amount or not booking_id:
             return Response({
                 'detail': 'Missing required fields: professional, amount, or booking.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Step 2: Validate ServiceBooking exists and matches customer and professional
         try:
             booking = ServiceBooking.objects.get(
                 id=booking_id,
@@ -244,30 +239,25 @@ class ServicePaymentTransferView(APIView):
                 'detail': 'Booking not found or does not match the provided customer and professional.'
             }, status=status.HTTP_404_NOT_FOUND)
 
-        # Step 3: Retrieve professional details
         try:
             professional = Professional.objects.select_related('bank_account').get(user__id=professional_id)
         except Professional.DoesNotExist:
             return Response({'detail': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Step 4: Ensure the professional has a bank account
         if not hasattr(professional, 'bank_account'):
             return Response({'detail': 'Professional has no bank account configured.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Step 5: Create a unique transaction reference
         transaction_reference = str(uuid.uuid4())
 
-        # Step 6: Prepare the payload for Chapa's Payment Initiate API
         payment_url = 'https://api.chapa.co/v1/transaction/initialize'
-        return_url = "https://yourapp.com/payment/confirmation/" 
 
         payload = {
             "amount": str(amount),
             "currency": "ETB",
             "email": request.user.email,
             "first_name": customer.user.username,
-            "phone_number": customer.phone_number, 
-            "tx_ref": transaction_reference,  # Transaction reference
+            "phone_number": customer.user.phone_number, 
+            "tx_ref": transaction_reference, 
             "description": f"Payment for service by {professional.user.username}",
             "return_url": return_url,
         }
@@ -291,8 +281,10 @@ class ServicePaymentTransferView(APIView):
                     payment_status='pending', 
                     transaction_id=transaction_reference
                 )
-                # Redirect the customer to Chapa's payment page
-                return Response({"url": res_data['data']['link']}, status=status.HTTP_200_OK)
+                return Response( {"data": {
+                        "payment_url": res_data.get("data", {}).get("checkout_url"),
+                        "transaction_id": str(transaction_reference)
+                    }}, status=status.HTTP_200_OK)
             else:
                 return Response({
                     "message": f"Failed to create payment session: {res_data.get('message')}",

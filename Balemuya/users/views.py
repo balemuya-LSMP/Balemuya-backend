@@ -218,8 +218,18 @@ class ResetPasswordView(APIView):
             otp = generate_otp()
             cache.set(f"otp_{user.email}", otp, timeout=300)
             phone_number = user.phone_number
-            message_body = f"Hello {user.username}, your OTP is {otp}. It is only valid for 5 minutes."
+            
+            subject = 'Verify Reset Password for Balemuya.'
+            message_body = f"Hello {user.username}, your Password reset  OTP is {otp}. It is only valid for 5 minutes."
+            recipient_list = [user.email]
+
+            # Send confirmation email
+            print('Email send start')
+            send_email_confirmation(subject, message_body, recipient_list)
+            print('send email end')
+            print('send sms start')
             send_sms(request, to=phone_number, message_body=message_body)
+            print('send sms end')
             return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid email.'}, status=status.HTTP_400_BAD_REQUEST)
