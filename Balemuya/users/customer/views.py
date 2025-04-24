@@ -205,52 +205,79 @@ class UserSearchView(APIView):
         serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
         
         return paginator.get_paginated_response(serializer.data)
-    
+    import uuid
+import requests
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from django.conf import settings
+from .models import ServiceBooking, Professional, Payment
+
 class ServicePaymentTransferView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated via JWT
 
     def post(self, request):
+        """
+        Initiates a payment from the customer to the professional via Chapa payment gateway.
+        """
+        # Step 1: Check if the user is a customer
         if request.user.user_type != 'customer':
             return Response({
                 'detail': 'User is not a customer.'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
+        # Retrieve customer instance
         customer = request.user.customer
+        
+        # Retrieve request data
         professional_id = request.data.get('professional')
         amount = request.data.get('amount')
         booking_id = request.data.get('booking')
 
-        # Step 1: Validate ServiceBooking exists and matches customer and professional
+        if not professional_id or not amount or not booking_id:
+            return Response({
+                'detail': 'Missing required fields: professional, amount, or booking.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 2: Validate ServiceBooking exists and matches customer and professional
         try:
             booking = ServiceBooking.objects.get(
                 id=booking_id,
                 application__service__customer=customer,
-                application__professional__user=professional_id
+                application__professional__user__id=professional_id
             )
         except ServiceBooking.DoesNotExist:
             return Response({
                 'detail': 'Booking not found or does not match the provided customer and professional.'
             }, status=status.HTTP_404_NOT_FOUND)
 
+        # Step 3: Retrieve professional details
         try:
             professional = Professional.objects.select_related('bank_account').get(user__id=professional_id)
         except Professional.DoesNotExist:
             return Response({'detail': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Step 4: Ensure the professional has a bank account
         if not hasattr(professional, 'bank_account'):
             return Response({'detail': 'Professional has no bank account configured.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create a unique transaction reference
+        # Step 5: Create a unique transaction reference
         transaction_reference = str(uuid.uuid4())
 
-        # Prepare the payload for Chapa's API
-        transfer_url = 'https://api.chapa.co/v1/checkout'
+        # Step 6: Prepare the payload for Chapa's Payment Initiate API
+        payment_url = 'https://api.chapa.co/v1/transaction/initialize'
+        return_url = "https://yourapp.com/payment/confirmation/" 
+
         payload = {
             "amount": str(amount),
             "currency": "ETB",
-            "reference": transaction_reference,
-            "email": request.user.email,  # Customer's email
+            "email": request.user.email,
+            "first_name": customer.user.username,
+            "phone_number": customer.phone_number, 
+            "tx_ref": transaction_reference,  # Transaction reference
             "description": f"Payment for service by {professional.user.username}",
-            "redirect_url": "https://yourapp.com/payment/confirmation/",  # Update with your confirmation URL
+            "return_url": return_url,
         }
 
         headers = {
@@ -258,24 +285,22 @@ class ServicePaymentTransferView(APIView):
             'Content-Type': 'application/json'
         }
 
-        # Make the request to Chapa for the checkout session
         try:
-            response = requests.post(transfer_url, json=payload, headers=headers)
-            response.raise_for_status()  # Raises an error for HTTP errors
+            response = requests.post(payment_url, json=payload, headers=headers)
+            response.raise_for_status()
             res_data = response.json()
 
             if res_data.get("status") == "success":
-                # Create a payment record with pending status
                 Payment.objects.create(
                     customer=customer,
                     professional=professional,
                     booking=booking,
                     amount=amount,
-                    payment_status='pending',  # Status until confirmed
+                    payment_status='pending', 
                     transaction_id=transaction_reference
                 )
-                # Redirect the customer to Chapa's checkout page
-                return Response({"url": res_data['data']['checkout_url']}, status=status.HTTP_200_OK)
+                # Redirect the customer to Chapa's payment page
+                return Response({"url": res_data['data']['link']}, status=status.HTTP_200_OK)
             else:
                 return Response({
                     "message": f"Failed to create payment session: {res_data.get('message')}",
@@ -287,3 +312,73 @@ class ServicePaymentTransferView(APIView):
                 "message": f"Error connecting to Chapa: {str(e)}",
                 "status": "failed"
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+            
+            
+
+import requests
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.conf import settings
+from .models import Payment, Professional
+
+class ServicePaymentVerifyView(APIView):
+  
+    def post(self, request):
+
+        tx_ref = request.data.get('tx_ref')
+        
+        if not tx_ref:
+            return Response({
+                'detail': 'Transaction reference (tx_ref) is required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payment = Payment.objects.get(transaction_id=tx_ref)
+        except Payment.DoesNotExist:
+            return Response({
+                'detail': 'Payment not found with the given transaction reference.'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        verify_url = 'https://api.chapa.co/v1/transaction/verify'
+        payload = {
+            "tx_ref": tx_ref
+        }
+
+        headers = {
+            'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            response = requests.post(verify_url, json=payload, headers=headers)
+            response.raise_for_status()
+            res_data = response.json()
+
+            if res_data.get('status') == 'success':
+                payment.payment_status = 'completed'
+                payment.save()
+
+                professional = payment.professional
+                professional.balance += payment.amount 
+                professional.save()
+
+                # Step 6: Return success response
+                return Response({
+                    'detail': 'Payment verified successfully and professional balance updated.'
+                }, status=status.HTTP_200_OK)
+            else:
+                payment.payment_status = 'failed'
+                payment.save()
+
+                return Response({
+                    'detail': 'Payment verification failed.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except requests.RequestException as e:
+            return Response({
+                'message': f"Error verifying payment with Chapa: {str(e)}",
+                'status': 'failed'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
