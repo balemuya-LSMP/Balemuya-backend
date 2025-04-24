@@ -17,6 +17,7 @@ from .models import (
     Payment,
     SubscriptionPlan,
     SubscriptionPayment,
+    WithdrawalTransaction,
     VerificationRequest,
     Feedback,
     Favorite,
@@ -229,6 +230,31 @@ class SubscriptionPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPayment
         fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        
+        
+
+
+class WithdrawalTransactionSerializer(serializers.ModelSerializer):
+    professional_email = serializers.EmailField(source='professional.user.email', read_only=True)
+    
+    class Meta:
+        model = WithdrawalTransaction
+        fields = ['id', 'professional', 'professional_email', 'amount', 'txt_ref', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['professional_email', 'created_at', 'updated_at']
+    
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Withdrawal amount must be greater than zero.")
+        return value
+
+    def validate_professional(self, value):
+        try:
+            professional = Professional.objects.get(id=value.id)
+            if not professional.is_active:
+                raise serializers.ValidationError("This professional's account is inactive.")
+        except Professional.DoesNotExist:
+            raise serializers.ValidationError("Professional not found.")
+        return value
 
 class FeedbackSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
