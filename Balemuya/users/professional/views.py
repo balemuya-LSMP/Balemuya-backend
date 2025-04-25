@@ -732,7 +732,7 @@ class ProfessionalPaymentWithdrawalView(APIView):
             "amount": str(withdrawal_amount),
             "currency": "ETB",  
             "reference": str(uuid.uuid4()),
-            "bank_code":946,
+            "bank_code":bank_account.bank_code,
         }
         print('payload',payload)
 
