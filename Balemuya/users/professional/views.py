@@ -7,6 +7,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
+from decimal import Decimal
+
 
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -57,16 +59,18 @@ class ProfessionalProfileView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        professional = user.professional
-        if not user:
+        professional = Professional.objects.get(user=user)
+        print('professional',professional)
+        if not professional:
             return Response({"detail": "Professional not found."}, status=status.HTTP_404_NOT_FOUND)
         applied_jobs = ServicePostApplication.objects.filter(professional=professional, status='pending')
         pending_jobs = ServiceBooking.objects.filter(application__professional=professional, status='pending')
         canceled_jobs = ServiceBooking.objects.filter(application__professional=professional, status='canceled')
         completed_jobs = ServiceBooking.objects.filter(application__professional=professional, status='completed')
-        reviews = Review.objects.filter(booking__application__professional=user).order_by('-created_at')
+        reviews = Review.objects.filter(booking__application__professional__user=user).order_by('-created_at')
         
-        professional_data = ProfessionalSerializer(user.professional).data
+        professional_data = ProfessionalSerializer(professional).data
+        print('prof data',professional_data)
         response_data={
             "professional":professional_data,
             "applied_jobs":ServicePostApplicationSerializer(applied_jobs,many=True).data,
@@ -697,6 +701,7 @@ class ServicePostFilterView(APIView):
 
 
 class ProfessionalPaymentWithdrawalView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         if request.user.user_type != 'professional':
@@ -712,12 +717,13 @@ class ProfessionalPaymentWithdrawalView(APIView):
         if not withdrawal_amount:
             return Response({'detail': 'Amount is required for withdrawal.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        withdrawal_amount = float(withdrawal_amount)
+        withdrawal_amount = Decimal(str(withdrawal_amount))
 
         if professional.balance < withdrawal_amount:
             return Response({'detail': 'Insufficient balance for withdrawal.'}, status=status.HTTP_400_BAD_REQUEST)
 
         bank_account = professional.bank_account
+        print('bank account',bank_account)
 
         transfer_url = "https://api.chapa.co/v1/transfers"
         payload = {
@@ -726,8 +732,9 @@ class ProfessionalPaymentWithdrawalView(APIView):
             "amount": str(withdrawal_amount),
             "currency": "ETB",  
             "reference": str(uuid.uuid4()),
-            "bank_code": bank_account.bank_code,
+            "bank_code":946,
         }
+        print('payload',payload)
 
         headers = {
             'Authorization': f'Bearer {settings.CHAPA_SECRET_KEY}',
@@ -739,6 +746,7 @@ class ProfessionalPaymentWithdrawalView(APIView):
             response = requests.post(transfer_url, json=payload, headers=headers)
             response.raise_for_status()
             transfer_data = response.json()
+            print('transfer_data',transfer_data)
 
             if transfer_data.get('status') == 'success':
                 professional.balance -= withdrawal_amount
@@ -748,15 +756,14 @@ class ProfessionalPaymentWithdrawalView(APIView):
                     professional=professional,
                     amount=withdrawal_amount,
                     status='completed',
-                    trx_ref=transfer_data['data']['transaction_reference'],
+                    tx_ref=transfer_data['data'],
                 )
+                print('professional remaining amount',professional.balance)
 
-                # Respond with success message
                 return Response({
                     'detail': f'Withdrawal of {withdrawal_amount} has been successfully initiated and processed.'
                 }, status=status.HTTP_200_OK)
             else:
-                # Handle failure to transfer
                 return Response({
                     'detail': 'Failed to process the withdrawal with Chapa.',
                     'reason': transfer_data.get('message', 'Unknown error')

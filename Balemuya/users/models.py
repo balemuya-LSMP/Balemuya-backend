@@ -456,7 +456,7 @@ class WithdrawalTransaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='withdrawal_transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    txt_ref = models.CharField(max_length=100, unique=True) 
+    tx_ref = models.CharField(max_length=100, unique=True) 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)

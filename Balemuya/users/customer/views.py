@@ -299,6 +299,7 @@ class ServicePaymentTransferView(APIView):
             
             
 class ServicePaymentVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
   
     def post(self, request):
 
@@ -316,10 +317,10 @@ class ServicePaymentVerifyView(APIView):
                 'detail': 'Payment not found with the given transaction reference.'
             }, status=status.HTTP_404_NOT_FOUND)
 
-        verify_url = 'https://api.chapa.co/v1/transaction/verify'
-        payload = {
-            "tx_ref": tx_ref
-        }
+        verify_url = f'https://api.chapa.co/v1/transaction/verify/{tx_ref}'
+        # payload = {
+        #     "tx_ref": tx_ref
+        # }
 
         headers = {
             'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
@@ -327,10 +328,13 @@ class ServicePaymentVerifyView(APIView):
         }
 
         try:
-            response = requests.post(verify_url, json=payload, headers=headers)
+            response = requests.get(verify_url, headers=headers)
             response.raise_for_status()
             res_data = response.json()
-
+            
+            payment = Payment.objects.filter(transaction_id=tx_ref,customer=request.user.customer).first()
+            if payment.payment_status =='completed':
+                return Response({'detail':"payment already verified"},status = status.HTTP_400_BAD_REQUEST)
             if res_data.get('status') == 'success':
                 payment.payment_status = 'completed'
                 payment.save()
@@ -338,10 +342,11 @@ class ServicePaymentVerifyView(APIView):
                 professional = payment.professional
                 professional.balance += payment.amount 
                 professional.save()
+                
+                print('professional balance',professional.balance)
 
-                # Step 6: Return success response
                 return Response({
-                    'detail': 'Payment verified successfully and professional balance updated.'
+                    'detail': f'Payment verified successfully and professional balance updated. balance {professional.balance}'
                 }, status=status.HTTP_200_OK)
             else:
                 payment.payment_status = 'failed'
