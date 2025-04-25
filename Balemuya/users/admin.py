@@ -136,13 +136,13 @@ class PaymentAdmin(admin.ModelAdmin):
 @admin.register(SubscriptionPayment)
 class SubscriptionPaymentAdmin(admin.ModelAdmin):
     list_display = ('transaction_id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status')
-    search_fields = ('transaction_id', 'professional__email', 'subscription_plan__professional__email')
+    search_fields = ('transaction_id', 'professional__user__email', 'subscription_plan__professional__user__email')
     list_filter = ('payment_status',)
     ordering = ('-payment_date',)
     
 @admin.register(WithdrawalTransaction)
 class WithdrawalTransactionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'professional', 'amount', 'status', 'txt_ref', 'created_at','updated_at')
+    list_display = ('id', 'professional', 'amount', 'status', 'tx_ref', 'created_at','updated_at')
     list_filter = ('status', 'created_at')
-    search_fields = ('professional__user__username', 'txt_ref')
-    readonly_fields = ('txt_ref', 'created_at', 'updated_at')
+    search_fields = ('professional__user__username', 'tx_ref')
+    readonly_fields = ('tx_ref', 'created_at', 'updated_at')
