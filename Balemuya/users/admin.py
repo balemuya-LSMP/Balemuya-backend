@@ -39,8 +39,8 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'full_name','gender','number_of_employees' ,'number_of_services_booked', 'rating')
-    search_fields = ('user__email', 'full_name',)
+    list_display = ('user', 'org_name','first_name','last_name','gender','number_of_employees' ,'number_of_services_booked', 'rating')
+    search_fields = ('user__email', 'org_name','first_name','last_name',)
 
 class BankAccountInline(admin.StackedInline):
     model = BankAccount
@@ -48,8 +48,8 @@ class BankAccountInline(admin.StackedInline):
 
 @admin.register(Professional)
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'full_name','gender', 'years_of_experience', 'rating')
-    search_fields = ('user__email','full_name')
+    list_display = ('user', 'org_name','first_name','last_name','gender','balance','num_of_request', 'years_of_experience', 'rating')
+    search_fields = ('user__email','org_name','first_name','last_name')
     inlines = [BankAccountInline]
 
 
