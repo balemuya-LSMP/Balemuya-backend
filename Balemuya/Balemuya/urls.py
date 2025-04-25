@@ -31,7 +31,8 @@ urlpatterns = [
     path('api/admin/',include('customAdmin.urls')),
     path('api/services/',include('services.urls')),
     path('api/blog/',include('blog.urls')),
-    
+    path('api/telegram/', include('telegram_bot.urls')),
+
     path('api/notifications/',include('notifications.urls')),
     
     #swagger
