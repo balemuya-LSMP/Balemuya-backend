@@ -187,6 +187,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     kebele_id_front_image_url = serializers.SerializerMethodField()
     kebele_id_back_image_url = serializers.SerializerMethodField()
     skills = SkillSerializer(many=True, read_only=True)
+    categories = CategorySerializer(many=True, read_only=True)
     educations = EducationSerializer(many=True, read_only=True)
     portfolios = PortfolioSerializer(many=True, read_only=True)
     certificates = CertificateSerializer(many=True, read_only=True)
@@ -198,7 +199,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             'number_of_employees', 'tx_number', 'description',
             'kebele_id_front_image', 'kebele_id_front_image_url',
             'kebele_id_back_image', 'kebele_id_back_image_url',
-            'skills', 'rating', 'years_of_experience',
+            'skills','categories', 'rating', 'years_of_experience',
             'balance', 'num_of_request', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
         ]
