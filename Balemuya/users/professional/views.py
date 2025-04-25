@@ -310,7 +310,7 @@ class CertificateView(APIView):
         if request.user.user_type != 'professional':
             return Response({'detail': 'User is not a professional.'}, status=status.HTTP_403_FORBIDDEN)
         
-        if request.user.account_type != 'individual':
+        if request.user.entity_type != 'individual':
             return Response({'detail': 'Professional account type must be individual.'}, status=status.HTTP_403_FORBIDDEN)
 
         professional = request.user
@@ -323,7 +323,7 @@ class CertificateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to update certificates.'}, status=status.HTTP_403_FORBIDDEN)
 
         certificate = get_object_or_404(Certificate, id=pk, professional=request.user)
