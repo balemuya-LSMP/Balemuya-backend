@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'channels',
     'django_celery_beat',
     "drf_yasg", 
+    
 
 
      #user defined apps
@@ -75,6 +76,7 @@ INSTALLED_APPS = [
     'blog',
     'notifications',
     'customAdmin',
+    'telegram_bot',
     
 
     
@@ -244,7 +246,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost','b0e0-15-204-91-72.ngrok-free.app',]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://balemuya-project.onrender.com',
@@ -325,6 +327,7 @@ TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_DEFAULT_CALLERID = os.getenv('TWILIO_DEFAULT_CALLERID')
 
 
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY')
 
