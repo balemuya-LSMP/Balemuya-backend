@@ -100,7 +100,9 @@ class BaseUserMixin(models.Model):
     description = models.TextField(blank=True, null=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
-    full_name = models.CharField(max_length=100,null=True,blank=True)
+    first_name = models.CharField(max_length=100,null=True,blank=True)
+    last_name = models.CharField(max_length=100,null=True,blank=True)
+    org_name = models.CharField(max_length=100,null=True,blank=True)
     tx_number = models.CharField(max_length=100,null=True,blank=True)
     number_of_employees = models.IntegerField(default=0)
 
@@ -361,16 +363,30 @@ class SubscriptionPlan(models.Model):
 
 
 BANK_CHOICES = [
-    (442, 'Awash Bank'),
-    (445, 'Commercial Bank of Ethiopia'),
-    (448, 'Dashen Bank'),
+    (130, 'Abay Bank'),
+    (772, 'Addis International Bank'),
+    (207, 'Ahadu Bank'),
+    (656, 'Awash Bank'),
+    (347, 'Bank of Abyssinia'),
+    (571, 'Berhan Bank'),
+    (128, 'CBEBirr'),
+    (946, 'Commercial Bank of Ethiopia (CBE)'),
+    (893, 'Coopay-Ebirr'),
+    (880, 'Dashen Bank'),
+    (1, 'Enat Bank'),
+    (301, 'Global Bank Ethiopia'),
+    (534, 'Hibret Bank'),
+    (612, 'Hijra Bank'),
+    (202, 'Lion Bank'),
+    (325, 'Nib International Bank'),
+    (896, 'Oromia Bank'),
+    (287, 'Siinqee Bank'),
+    (465, 'Tsehay Bank'),
+    (614, 'ZamZam Bank'),
     (451, 'Zemen Bank'),
-    (454, 'Bank of Abyssinia'),
-    (457, 'NIB International Bank'),
-    (460, 'Oromia International Bank'),
-    (463, 'United Bank'),
-    (466, 'Wegagen Bank'),
 ]
+
+
 
 class BankAccount(models.Model):
     professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='bank_account')

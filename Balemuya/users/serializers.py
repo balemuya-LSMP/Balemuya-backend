@@ -101,7 +101,7 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
 
     class Meta:
         model = Customer  
-        fields = ['user','full_name', 'rating','gender','description','number_of_employees', 'number_of_services_booked']
+        fields = ['user','org_name','first_name','last_name', 'rating','gender','description','number_of_employees', 'number_of_services_booked']
         read_only_fields = ['number_of_services_booked']
 
     def update(self, instance, validated_data):
@@ -175,7 +175,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
         fields = [
-            'user','gender','full_name','number_of_employees','tx_number','description','kebele_id_front_image',
+            'user','gender','org_name','first_name','last_name','number_of_employees','tx_number','description','kebele_id_front_image',
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
             'skills', 'rating', 'years_of_experience','balance','num_of_request', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
