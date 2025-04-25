@@ -95,14 +95,31 @@ class AdminLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminLog
         fields = ['admin', 'action', 'timestamp']
-
-class CustomerSerializer(serializers.ModelSerializer):  # Updated
+class CustomerSerializer(serializers.ModelSerializer):
     user = UserSerializer()
 
     class Meta:
         model = Customer  
-        fields = ['user','org_name','first_name','last_name', 'rating','gender','description','number_of_employees', 'number_of_services_booked']
+        fields = [
+            'user', 'org_name', 'first_name', 'last_name','tx_number',
+            'rating', 'gender', 'description',
+            'number_of_employees', 'number_of_services_booked'
+        ]
         read_only_fields = ['number_of_services_booked']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        entity_type = instance.user.entity_type
+
+        if entity_type == 'organization':
+            rep.pop('first_name', None)
+            rep.pop('last_name', None)
+            rep.pop('gender', None)
+        elif entity_type == 'individual':
+            rep.pop('org_name', None)
+            rep.pop('number_of_employees', None)
+
+        return rep
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
@@ -112,6 +129,8 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
             user_serializer.save()
 
         instance.rating = validated_data.get('rating', instance.rating)
+        instance.description = validated_data.get('description', instance.description)
+        instance.gender = validated_data.get('gender', instance.gender)
         instance.save()
         return instance
 
@@ -121,9 +140,9 @@ class CustomerSerializer(serializers.ModelSerializer):  # Updated
             user_serializer = UserSerializer(data=user_data)
             user_serializer.is_valid(raise_exception=True)
             user = user_serializer.save()
-            individual_customer = Customer.objects.create(user=user, **validated_data)  # Updated
-            return individual_customer
-        
+            customer = Customer.objects.create(user=user, **validated_data)
+            return customer
+
 
         
 class EducationSerializer(serializers.ModelSerializer):
@@ -175,9 +194,12 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
         fields = [
-            'user','gender','org_name','first_name','last_name','number_of_employees','tx_number','description','kebele_id_front_image',
-            'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
-            'skills', 'rating', 'years_of_experience','balance','num_of_request', 'is_available', 'is_verified',
+            'user', 'gender', 'org_name', 'first_name', 'last_name',
+            'number_of_employees', 'tx_number', 'description',
+            'kebele_id_front_image', 'kebele_id_front_image_url',
+            'kebele_id_back_image', 'kebele_id_back_image_url',
+            'skills', 'rating', 'years_of_experience',
+            'balance', 'num_of_request', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
         ]
         read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url']
@@ -193,6 +215,31 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             return request.build_absolute_uri(obj.kebele_id_back_image.url) if request else obj.kebele_id_back_image.url
         return None
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        user_type = instance.user.user_type
+        entity_type = instance.user.entity_type
+
+        # Only return relevant fields for 'individual' and 'organization' professionals
+        if user_type == 'professional':
+            if entity_type == 'organization':
+                rep.pop('gender', None)
+                rep.pop('first_name', None)
+                rep.pop('last_name', None)
+                rep.pop('kebele_id_front_image', None)
+                rep.pop('kebele_id_back_image', None)
+                rep.pop('kebele_id_front_image_url', None)
+                rep.pop('kebele_id_back_image_url', None)
+                rep.pop('educations', None)
+
+            elif entity_type == 'individual':
+                rep.pop('org_name', None)
+                rep.pop('number_of_employees', None)
+                rep.pop('tx_number', None)
+
+        return rep
+
     
     
 class BankAccountSerializer(serializers.ModelSerializer):
