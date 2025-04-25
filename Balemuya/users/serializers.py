@@ -177,7 +177,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         fields = [
             'user','gender','full_name','number_of_employees','tx_number','description','kebele_id_front_image',
             'kebele_id_front_image_url', 'kebele_id_back_image', 'kebele_id_back_image_url',
-            'skills', 'rating', 'years_of_experience', 'is_available', 'is_verified',
+            'skills', 'rating', 'years_of_experience','balance','num_of_request', 'is_available', 'is_verified',
             'educations', 'portfolios', 'certificates'
         ]
         read_only_fields = ['id', 'kebele_id_front_image_url', 'kebele_id_back_image_url']
@@ -239,7 +239,7 @@ class WithdrawalTransactionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WithdrawalTransaction
-        fields = ['id', 'professional', 'professional_email', 'amount', 'txt_ref', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'professional', 'professional_email', 'amount', 'tx_ref', 'status', 'created_at', 'updated_at']
         read_only_fields = ['professional_email', 'created_at', 'updated_at']
     
     def validate_amount(self, value):
