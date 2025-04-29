@@ -1,40 +1,35 @@
-# telegram_bot/views.py
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.conf import settings
 import json
 import requests
-
+from django.conf import settings  # To get bot token from settings
 
 class TelegramBotWebhook(View):
+
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
-        if request.method != "POST":
-            return JsonResponse({"status": "failure"}, status=400)
+        if request.method == "POST":
+            data = json.loads(request.body.decode('utf-8'))
 
-        try:
-            data = json.loads(request.body.decode('UTF-8'))
-        except json.JSONDecodeError:
-            return JsonResponse({"status": "invalid JSON"}, status=400)
+            message = data.get("message", {})
+            chat_id = message.get("chat", {}).get("id")
+            text = message.get("text")
 
-        message = data.get("message", {})
-        chat_id = message.get("chat", {}).get("id")
-        text = message.get("text", "")
-
-        if chat_id:
-            if text == "/start":
-                self.send_message(chat_id, "👋 Welcome to Balemuya Bot! How can I assist you today?")
-            else:
-                self.send_message(chat_id, "🤖 I'm here to help you with your service bookings!")
-            return JsonResponse({"status": "success"}, status=200)
-
-        return JsonResponse({"status": "no chat_id found"}, status=400)
+            if text == "/start" and chat_id:
+                self.send_message(chat_id, "Hello, user!")
+            
+            return JsonResponse({"status": "ok"})
+        
+        return JsonResponse({"status": "not allowed"}, status=405)
 
     def send_message(self, chat_id, text):
-        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": chat_id, "text": text}
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, json=payload, headers=headers)
-        return response
+        bot_token = settings.TELEGRAM_BOT_TOKEN  # Make sure this is defined in your settings.py
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text
+        }
+        headers = {"Content-Type": "application/json"}
+        requests.post(url, json=payload, headers=headers)
