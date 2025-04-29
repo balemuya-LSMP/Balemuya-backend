@@ -42,14 +42,24 @@ class TelegramAuthService:
     def send_login_request(self, email, password):
         try:
             url = f"{settings.BACKEND_URL}users/auth/login/"
-            print('url is',url)
             response = requests.post(url, data={"email": email, "password": password})
-            print('response is',response)
             if response.status_code == 200:
-                return {"status": "success"}
+                data = response.json()
+                access_token = data.get("access")
+                refresh_token = data.get("refresh")
+                if access_token and refresh_token:
+                    cache.set(f"user_access_token_{self.chat_id}", access_token, timeout=3600)  # usually short-lived
+                    cache.set(f"user_refresh_token_{self.chat_id}", refresh_token, timeout=7 * 24 * 3600)  # longer-lived
+                    return {"status": "success"}
             return {"status": "failure", "message": response.text}
         except requests.exceptions.RequestException as e:
             return {"status": "failure", "message": str(e)}
+    
+    def get_access_token(self):
+        return cache.get(f"user_access_token_{self.chat_id}")
+
+    def get_refresh_token(self):
+        return cache.get(f"user_refresh_token_{self.chat_id}")
 
 
 class TelegramBotService:
