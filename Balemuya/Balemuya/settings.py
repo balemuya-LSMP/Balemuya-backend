@@ -158,6 +158,15 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-telegram-bot",
+    }
+}
+
+
+
 ROOT_URLCONF = 'Balemuya.urls'
 
 TEMPLATES = [
@@ -246,7 +255,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = ['*']
 #ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost','b0e0-15-204-91-72.ngrok-free.app',]
 
 CSRF_TRUSTED_ORIGINS = [
