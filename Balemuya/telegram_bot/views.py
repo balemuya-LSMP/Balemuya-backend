@@ -1,13 +1,12 @@
+# views/telegram_bot_webhook.py
+
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from .services import TelegramAuthService, TelegramBotService
-from .utils import generate_keyboard
-from django.conf import settings
-import json
+from .services.telegram_facade import TelegramFacade
 from django.core.cache import cache
+import json
 
 class TelegramBotWebhook(APIView):
-
     def post(self, request, *args, **kwargs):
         # Get data from the incoming Telegram request
         data = json.loads(request.body.decode('utf-8'))
@@ -15,133 +14,108 @@ class TelegramBotWebhook(APIView):
         chat_id = message.get("chat", {}).get("id")
         text = message.get("text")
 
-        # Initialize bot service and authentication service
-        bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
-        auth_service = TelegramAuthService(chat_id)
+        # Initialize the facade service for this chat
+        facade = TelegramFacade(chat_id)
 
         # Get the current user state from the cache
-        user_state = auth_service.get_user_state()
+        user_state = facade.auth_service.get_user_state()
         print(f"Received text: {text}")
         print(f"User state: {user_state}")
 
         # Start command - Main Menu
         if text == "/start":
-            auth_service.clear_session()  # Clear any existing session data
-            bot_service.send_message(
-                chat_id,
-                "👋 Welcome to Balemuya!\nPlease choose an option:",
-                reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
-            )
+            facade.auth_service.clear_session()  # Clear any existing session data
+            facade.send_welcome_message()
 
         # Cancel operation - Reset session
         elif text == "/cancel" or text == "❌ Cancel":
-            auth_service.clear_session()
-            bot_service.send_message(
-                chat_id,
-                "🚫 Operation cancelled. You're back to the main menu.",
-                reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
-            )
+            facade.auth_service.clear_session()
+            facade.send_cancel_message()
 
         # Registration process - Asking for email
         elif text == "📝 Register":
-            bot_service.send_message(chat_id, "📧 Please provide your email address:")
-            auth_service.set_user_state("waiting_for_email")
+            facade.ask_for_email()
+            facade.auth_service.set_user_state("waiting_for_email")
 
         # Handling email entry in registration flow
         elif user_state == "waiting_for_email" and text:
             email = text.strip()
-            if not auth_service.validate_email(email):
-                bot_service.send_message(chat_id, "❌ Invalid email. Please try again.")
+            if not facade.auth_service.validate_email(email):
+                facade.bot_service.send_message(chat_id, "❌ Invalid email. Please try again.")
                 return JsonResponse({"status": "ok"})  # Exit after invalid email
 
             # Store email in the cache
-            auth_service.set_session_data("email", email)
-            auth_service.set_user_state("waiting_for_username")
-            bot_service.send_message(chat_id, "👤 Please provide your username:")
+            facade.auth_service.set_session_data("email", email)
+            facade.auth_service.set_user_state("waiting_for_username")
+            facade.ask_for_username()
 
         # Handling username entry
         elif user_state == "waiting_for_username" and text:
-            auth_service.set_session_data("username", text.strip())
-            auth_service.set_user_state("waiting_for_phone_number")
-            bot_service.send_message(chat_id, "📱 Please provide your phone number:")
+            facade.auth_service.set_session_data("username", text.strip())
+            facade.auth_service.set_user_state("waiting_for_phone_number")
+            facade.ask_for_phone_number()
 
         # Handling phone number entry
         elif user_state == "waiting_for_phone_number" and text:
-            auth_service.set_session_data("phone", text.strip())
-            auth_service.set_user_state("waiting_for_user_type")
-            bot_service.send_message(
-                chat_id,
-                "🧑‍💼 Choose user type:",
-                reply_markup=generate_keyboard([["Customer", "Professional"]])
-            )
+            facade.auth_service.set_session_data("phone", text.strip())
+            facade.auth_service.set_user_state("waiting_for_user_type")
+            facade.ask_for_user_type()
 
         # Handling user type selection
         elif user_state == "waiting_for_user_type" and text in ["Customer", "Professional"]:
-            auth_service.set_session_data("user_type", text.strip())
-            auth_service.set_user_state("waiting_for_entity_type")
-            bot_service.send_message(
-                chat_id,
-                "🏢 Choose entity type:",
-                reply_markup=generate_keyboard([["Individual", "organization"]])
-            )
+            facade.auth_service.set_session_data("user_type", text.strip())
+            facade.auth_service.set_user_state("waiting_for_entity_type")
+            facade.ask_for_entity_type()
 
         # Handling entity type selection
         elif user_state == "waiting_for_entity_type" and text in ["individual", "organization"]:
-            auth_service.set_session_data("entity_type", text.strip())
+            facade.auth_service.set_session_data("entity_type", text.strip())
 
             # Prepare registration data from cache
             user_data = {
-                "email": auth_service.get_session_data("email"),
-                "username": auth_service.get_session_data("username"),
-                "phone_number": auth_service.get_session_data("phone"),
-                "user_type": auth_service.get_session_data("user_type"),
-                "entity_type": auth_service.get_session_data("entity_type"),
+                "email": facade.auth_service.get_session_data("email"),
+                "username": facade.auth_service.get_session_data("username"),
+                "phone_number": facade.auth_service.get_session_data("phone"),
+                "user_type": facade.auth_service.get_session_data("user_type"),
+                "entity_type": facade.auth_service.get_session_data("entity_type"),
             }
 
-            response = auth_service.send_registration_request(user_data)
+            response = facade.auth_service.send_registration_request(user_data)
 
             if response.get("status") == "success":
-                bot_service.send_message(chat_id, "✅ Registration successful! Please verify your email.")
+                facade.send_registration_success()
             else:
-                bot_service.send_message(chat_id, "❌ Registration failed. Please try again.")
+                facade.send_registration_failure()
 
-            auth_service.clear_session()  # Clear session after registration
+            facade.auth_service.clear_session()  # Clear session after registration
 
         # Login process - Asking for email
         elif text == "🔐 Login":
-            bot_service.send_message(chat_id, "📧 Please provide your email:")
-            auth_service.set_user_state("waiting_for_login_email")
+            facade.ask_for_email()
+            facade.auth_service.set_user_state("waiting_for_login_email")
 
         # Handling login email entry
         elif user_state == "waiting_for_login_email" and text:
-            auth_service.set_session_data("email", text.strip())
-            auth_service.set_user_state("waiting_for_login_password")
-            bot_service.send_message(chat_id, "🔑 Please provide your password:")
+            facade.auth_service.set_session_data("email", text.strip())
+            facade.auth_service.set_user_state("waiting_for_login_password")
+            facade.bot_service.send_message(chat_id, "🔑 Please provide your password:")
 
         # Handling password entry for login
         elif user_state == "waiting_for_login_password" and text:
-            email = auth_service.get_session_data("email")
+            email = facade.auth_service.get_session_data("email")
             password = text.strip()
 
-            print('payload datas for login is', 'email:', email, 'password', password)
-
-            response = auth_service.send_login_request(email, password)
+            response = facade.auth_service.send_login_request(email, password)
 
             if response["status"] == "success":
-                bot_service.send_message(chat_id, "🎉 Login successful!")
+                facade.send_login_success()
             else:
-                bot_service.send_message(chat_id, "❌ Login failed. Check your credentials.")
+                facade.send_login_failure()
 
-            auth_service.clear_session()  # Clear session after login
+            facade.auth_service.clear_session()  # Clear session after login
 
         # Help command - Showing available options
         elif text == "ℹ️ Help":
-            bot_service.send_message(
-                chat_id,
-                "ℹ️ You can use the following options:\n"
-                "- 📝 Register: Create a new account\n"
-                "- 🔐 Login: Access your existing account\n"
-                "- ❌ Cancel: Cancel the current operation"
-            )
+            facade.send_help_message()
 
         return JsonResponse({"status": "ok"})
