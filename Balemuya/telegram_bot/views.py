@@ -48,6 +48,7 @@ class TelegramBotWebhook(APIView):
             auth_service.set_user_state("waiting_for_email")
 
         elif user_state == "waiting_for_email" and text:
+            print('user_state is',user_state)
             email = text.strip()
             if not auth_service.validate_email(email):
                 bot_service.send_message(chat_id, "❌ Invalid email. Please try again.")
