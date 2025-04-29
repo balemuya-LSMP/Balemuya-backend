@@ -4,6 +4,7 @@ from .services import TelegramAuthService, TelegramBotService
 from .utils import generate_keyboard
 from django.conf import settings
 import json
+from django.core.cache import cache
 
 class TelegramBotWebhook(APIView):
 
@@ -18,7 +19,7 @@ class TelegramBotWebhook(APIView):
         bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
         auth_service = TelegramAuthService(chat_id)
 
-        # Get the current user state from the session
+        # Get the current user state from the cache
         user_state = auth_service.get_user_state()
         print(f"Received text: {text}")
         print(f"User state: {user_state}")
@@ -53,20 +54,20 @@ class TelegramBotWebhook(APIView):
                 bot_service.send_message(chat_id, "❌ Invalid email. Please try again.")
                 return JsonResponse({"status": "ok"})  # Exit after invalid email
 
-            # Store email in the session
-            request.session['email'] = email
+            # Store email in the cache
+            auth_service.set_session_data("email", email)
             auth_service.set_user_state("waiting_for_username")
             bot_service.send_message(chat_id, "👤 Please provide your username:")
 
         # Handling username entry
         elif user_state == "waiting_for_username" and text:
-            request.session['username'] = text.strip()
+            auth_service.set_session_data("username", text.strip())
             auth_service.set_user_state("waiting_for_phone_number")
             bot_service.send_message(chat_id, "📱 Please provide your phone number:")
 
         # Handling phone number entry
         elif user_state == "waiting_for_phone_number" and text:
-            request.session['phone'] = text.strip()
+            auth_service.set_session_data("phone", text.strip())
             auth_service.set_user_state("waiting_for_user_type")
             bot_service.send_message(
                 chat_id,
@@ -76,25 +77,25 @@ class TelegramBotWebhook(APIView):
 
         # Handling user type selection
         elif user_state == "waiting_for_user_type" and text in ["Customer", "Professional"]:
-            request.session['user_type'] = text.strip()
+            auth_service.set_session_data("user_type", text.strip())
             auth_service.set_user_state("waiting_for_entity_type")
             bot_service.send_message(
                 chat_id,
                 "🏢 Choose entity type:",
-                reply_markup=generate_keyboard([["Individual", "Business"]])
+                reply_markup=generate_keyboard([["Individual", "organization"]])
             )
 
         # Handling entity type selection
-        elif user_state == "waiting_for_entity_type" and text in ["Individual", "Business"]:
-            request.session['entity_type'] = text.strip()
+        elif user_state == "waiting_for_entity_type" and text in ["individual", "organization"]:
+            auth_service.set_session_data("entity_type", text.strip())
 
-            # Prepare registration data
+            # Prepare registration data from cache
             user_data = {
-                "email": request.session.get('email'),
-                "username": request.session.get('username'),
-                "phone_number": request.session.get('phone'),
-                "user_type": request.session.get('user_type'),
-                "entity_type": request.session.get('entity_type'),
+                "email": auth_service.get_session_data("email"),
+                "username": auth_service.get_session_data("username"),
+                "phone_number": auth_service.get_session_data("phone"),
+                "user_type": auth_service.get_session_data("user_type"),
+                "entity_type": auth_service.get_session_data("entity_type"),
             }
 
             response = auth_service.send_registration_request(user_data)
@@ -113,16 +114,16 @@ class TelegramBotWebhook(APIView):
 
         # Handling login email entry
         elif user_state == "waiting_for_login_email" and text:
-            request.session['email'] = text.strip()
+            auth_service.set_session_data("email", text.strip())
             auth_service.set_user_state("waiting_for_login_password")
             bot_service.send_message(chat_id, "🔑 Please provide your password:")
 
         # Handling password entry for login
         elif user_state == "waiting_for_login_password" and text:
-            email = request.session.get('email')
+            email = auth_service.get_session_data("email")
             password = text.strip()
-            
-            print('payload datas for login is','email:',email,'password',password)
+
+            print('payload datas for login is', 'email:', email, 'password', password)
 
             response = auth_service.send_login_request(email, password)
 
