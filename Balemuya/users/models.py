@@ -300,7 +300,7 @@ class Certificate(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        if self.professional.user_type != 'professional':
+        if self.professional.user.user_type != 'professional':
             raise ValueError("Only professionals can create certificates.")
         super().save(*args, **kwargs)
 
