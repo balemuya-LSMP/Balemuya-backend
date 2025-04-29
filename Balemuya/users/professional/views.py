@@ -348,7 +348,7 @@ class EducationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional' or request.user.entity_type != 'individual':
             return Response({'detail': 'User is not authorized to add education.'}, status=status.HTTP_403_FORBIDDEN)
 
         professional = request.user.professional
@@ -361,7 +361,7 @@ class EducationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk=None):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional' or request.user.entity_type != 'individual':
             return Response({'detail': 'User is not authorized to update education.'}, status=status.HTTP_403_FORBIDDEN)
 
         education = get_object_or_404(Education, pk=pk, professional=request.user.professional)
@@ -374,7 +374,7 @@ class EducationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk=None):
-        if request.user.user_type != 'professional' or request.user.account_type != 'individual':
+        if request.user.user_type != 'professional' or request.user.entity_type != 'individual':
             return Response({'detail': 'User is not authorized to delete education.'}, status=status.HTTP_403_FORBIDDEN)
 
         education = get_object_or_404(Education, pk=pk, professional=request.user.professional)
