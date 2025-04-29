@@ -246,7 +246,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost','b0e0-15-204-91-72.ngrok-free.app',]
+ALLOWED_HOSTS = ['*']
+#ALLOWED_HOSTS = ['balemuya-project.onrender.com', '127.0.0.1', 'localhost','b0e0-15-204-91-72.ngrok-free.app',]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://balemuya-project.onrender.com',

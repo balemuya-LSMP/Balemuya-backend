@@ -22,10 +22,11 @@ class Media(models.Model):
         ('video', 'Video'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    post = models.ForeignKey(BlogPost, related_name='media', on_delete=models.CASCADE)
+    post = models.ForeignKey(BlogPost, related_name='medias', on_delete=models.CASCADE)
     media_file = CloudinaryField('media', null=True, blank=True, folder='blog/medias/')
     media_type = models.CharField(max_length=5, choices=MEDIA_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.media_type.capitalize()} for {self.post.title}'
@@ -37,6 +38,7 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'Comment by {self.user.username} on {self.post.title}'
@@ -46,6 +48,7 @@ class Like(models.Model):
     post = models.ForeignKey(BlogPost, related_name='likes', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('post', 'user')
