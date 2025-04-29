@@ -16,7 +16,7 @@ class TelegramBotWebhook(APIView):
 
         # Initialize bot service and authentication service
         bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
-        auth_service = TelegramAuthService(request.session, chat_id)
+        auth_service = TelegramAuthService(chat_id)
 
         # Get the current user state from the session
         user_state = auth_service.get_user_state()
