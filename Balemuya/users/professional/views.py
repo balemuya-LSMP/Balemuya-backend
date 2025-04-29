@@ -313,7 +313,7 @@ class CertificateView(APIView):
         if request.user.entity_type != 'individual':
             return Response({'detail': 'Professional account type must be individual.'}, status=status.HTTP_403_FORBIDDEN)
 
-        professional = request.user
+        professional = request.user.professional
         serializer = CertificateSerializer(data=request.data, context={'request': request})
 
         if serializer.is_valid():
@@ -326,7 +326,7 @@ class CertificateView(APIView):
         if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to update certificates.'}, status=status.HTTP_403_FORBIDDEN)
 
-        certificate = get_object_or_404(Certificate, id=pk, professional=request.user)
+        certificate = get_object_or_404(Certificate, id=pk, professional=request.user.professional)
 
         serializer = CertificateSerializer(certificate, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
@@ -339,7 +339,7 @@ class CertificateView(APIView):
         if request.user.user_type != 'professional':
             return Response({'detail': 'User is not authorized to delete certificates.'}, status=status.HTTP_403_FORBIDDEN)
 
-        certificate = get_object_or_404(Certificate, id=pk, professional=request.user)
+        certificate = get_object_or_404(Certificate, id=pk, professional=request.user.professional)
         certificate.delete()
         return Response({"detail": "Certificate deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
