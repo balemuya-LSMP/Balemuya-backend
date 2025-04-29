@@ -121,6 +121,8 @@ class TelegramBotWebhook(APIView):
         elif user_state == "waiting_for_login_password" and text:
             email = request.session.get('email')
             password = text.strip()
+            
+            print('payload datas for login is','email:',email,'password',password)
 
             response = auth_service.send_login_request(email, password)
 
