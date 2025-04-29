@@ -42,7 +42,9 @@ class TelegramAuthService:
     def send_login_request(self, email, password):
         try:
             url = f"{settings.BACKEND_URL}users/auth/login/"
+            print('url is',url)
             response = requests.post(url, data={"email": email, "password": password})
+            print('response is',response)
             if response.status_code == 200:
                 return {"status": "success"}
             return {"status": "failure", "message": response.text}
