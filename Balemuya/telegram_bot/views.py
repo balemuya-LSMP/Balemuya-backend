@@ -1,90 +1,137 @@
+from rest_framework.views import APIView
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views import View
-import json
-import requests
+from .services import TelegramAuthService, TelegramBotService
+from .utils import generate_keyboard
 from django.conf import settings
+import json
 
-class TelegramBotWebhook(View):
+class TelegramBotWebhook(APIView):
 
-    @method_decorator(csrf_exempt)
-    def dispatch(self, request, *args, **kwargs):
-        if request.method == "POST":
-            data = json.loads(request.body.decode('utf-8'))
+    def post(self, request, *args, **kwargs):
+        data = json.loads(request.body.decode('utf-8'))
+        message = data.get("message", {})
+        chat_id = message.get("chat", {}).get("id")
+        text = message.get("text")
 
-            message = data.get("message", {})
-            chat_id = message.get("chat", {}).get("id")
-            text = message.get("text")
+        bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
+        auth_service = TelegramAuthService(request.session, chat_id)
 
-            if text == "/start" and chat_id:
-                self.send_message(chat_id, "Welcome! Are you a Customer or a Professional?")
-                self.send_buttons(chat_id, ["I am a Customer", "I am a Professional"])
+        user_state = auth_service.get_user_state()
 
-            elif text == "I am a Customer" and chat_id:
-                self.send_message(chat_id, "Great! How can we assist you today?")
-                self.send_buttons(chat_id, ["Post a Service Request", "View Active Requests", "Cancel Request"])
+        # START command with main menu
+        if text == "/start":
+            auth_service.clear_session()
+            bot_service.send_message(
+                chat_id,
+                "👋 Welcome to Balemuya!\nPlease choose an option:",
+                reply_markup=generate_keyboard([
+                    ["📝 Register", "🔐 Login"],
+                    ["ℹ️ Help", "❌ Cancel"]
+                ])
+            )
 
-            elif text == "I am a Professional" and chat_id:
-                self.send_message(chat_id, "Great! What would you like to do?")
-                self.send_buttons(chat_id, ["View New Job Requests", "View My Applications"])
+        # CANCEL to reset session
+        elif text == "/cancel" or text == "❌ Cancel":
+            auth_service.clear_session()
+            bot_service.send_message(
+                chat_id,
+                "🚫 Operation cancelled. You're back to the main menu.",
+                reply_markup=generate_keyboard([
+                    ["📝 Register", "🔐 Login"],
+                    ["ℹ️ Help"]
+                ])
+            )
 
-            elif text == "Post a Service Request" and chat_id:
-                self.send_message(chat_id, "Please provide a description of the service you need.")
-                # Implement service posting logic here
-                self.send_message(chat_id, "Your service has been posted successfully.")
+        # Register
+        elif text == "📝 Register":
+            bot_service.send_message(chat_id, "📧 Please provide your email address:")
+            auth_service.set_user_state("waiting_for_email")
 
-            elif text == "View Active Requests" and chat_id:
-                # Fetch active requests and display them
-                self.send_message(chat_id, "Here are the active service requests.")
-                # Implement logic to show requests here
+        elif user_state == "waiting_for_email" and text:
+            email = text.strip()
+            if not auth_service.validate_email(email):
+                bot_service.send_message(chat_id, "❌ Invalid email. Please try again.")
+                return JsonResponse({"status": "ok"})
 
-            elif text == "Apply for Job" and chat_id:
-                self.send_message(chat_id, "You have applied for this job!")
-                # Implement job application logic here
+            auth_service.set_session_data("email", email)
+            auth_service.set_user_state("waiting_for_username")
+            bot_service.send_message(chat_id, "👤 Please provide your username:")
 
-            elif text == "Accept Application" and chat_id:
-                self.send_message(chat_id, "You have accepted the application.")
-                # Implement application acceptance logic here
+        elif user_state == "waiting_for_username" and text:
+            auth_service.set_session_data("username", text.strip())
+            auth_service.set_user_state("waiting_for_phone_number")
+            bot_service.send_message(chat_id, "📱 Please provide your phone number:")
 
-            elif text == "Reject Application" and chat_id:
-                self.send_message(chat_id, "You have rejected the application.")
-                # Implement application rejection logic here
+        elif user_state == "waiting_for_phone_number" and text:
+            auth_service.set_session_data("phone", text.strip())
+            auth_service.set_user_state("waiting_for_user_type")
+            bot_service.send_message(
+                chat_id,
+                "🧑‍💼 Choose user type:",
+                reply_markup=generate_keyboard([["Customer", "Professional"]])
+            )
 
-            elif text == "Pay via App" and chat_id:
-                self.send_message(chat_id, "Proceeding with app payment.")
-                # Implement payment logic here
+        elif user_state == "waiting_for_user_type" and text in ["Customer", "Professional"]:
+            auth_service.set_session_data("user_type", text.strip())
+            auth_service.set_user_state("waiting_for_entity_type")
+            bot_service.send_message(
+                chat_id,
+                "🏢 Choose entity type:",
+                reply_markup=generate_keyboard([["Individual", "Business"]])
+            )
 
-            elif text == "Pay in Cash" and chat_id:
-                self.send_message(chat_id, "You chose to pay in cash.")
-                # Implement cash payment confirmation here
+        elif user_state == "waiting_for_entity_type" and text in ["Individual", "Business"]:
+            auth_service.set_session_data("entity_type", text.strip())
 
-            return JsonResponse({"status": "ok"})
-
-        return JsonResponse({"status": "not allowed"}, status=405)
-
-    def send_message(self, chat_id, text):
-        bot_token = settings.TELEGRAM_BOT_TOKEN
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {
-            "chat_id": chat_id,
-            "text": text
-        }
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
-
-    def send_buttons(self, chat_id, options):
-        bot_token = settings.TELEGRAM_BOT_TOKEN
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        buttons = [{"text": option} for option in options]
-        payload = {
-            "chat_id": chat_id,
-            "text": "Please choose an option:",
-            "reply_markup": {
-                "keyboard": [buttons],
-                "one_time_keyboard": True,
-                "resize_keyboard": True
+            # Prepare registration data
+            user_data = {
+                "email": auth_service.get_session_data("email"),
+                "username": auth_service.get_session_data("username"),
+                "phone_number": auth_service.get_session_data("phone"),
+                "user_type": auth_service.get_session_data("user_type"),
+                "entity_type": auth_service.get_session_data("entity_type"),
             }
-        }
-        headers = {"Content-Type": "application/json"}
-        requests.post(url, json=payload, headers=headers)
+
+            response = auth_service.send_registration_request(user_data)
+
+            if response.get("status") == "success":
+                bot_service.send_message(chat_id, "✅ Registration successful! Please verify your email.")
+            else:
+                bot_service.send_message(chat_id, "❌ Registration failed. Please try again.")
+
+            auth_service.clear_session()
+
+        # Login
+        elif text == "🔐 Login":
+            bot_service.send_message(chat_id, "📧 Please provide your email:")
+            auth_service.set_user_state("waiting_for_login_email")
+
+        elif user_state == "waiting_for_login_email" and text:
+            auth_service.set_session_data("email", text.strip())
+            auth_service.set_user_state("waiting_for_login_password")
+            bot_service.send_message(chat_id, "🔑 Please provide your password:")
+
+        elif user_state == "waiting_for_login_password" and text:
+            email = auth_service.get_session_data("email")
+            password = text.strip()
+
+            response = auth_service.send_login_request(email, password)
+
+            if response["status"] == "success":
+                bot_service.send_message(chat_id, "🎉 Login successful!")
+            else:
+                bot_service.send_message(chat_id, "❌ Login failed. Check your credentials.")
+
+            auth_service.clear_session()
+
+        # Help
+        elif text == "ℹ️ Help":
+            bot_service.send_message(
+                chat_id,
+                "ℹ️ You can use the following options:\n"
+                "- 📝 Register: Create a new account\n"
+                "- 🔐 Login: Access your existing account\n"
+                "- ❌ Cancel: Cancel the current operation"
+            )
+
+        return JsonResponse({"status": "ok"})
