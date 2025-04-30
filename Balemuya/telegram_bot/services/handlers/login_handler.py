@@ -26,7 +26,7 @@ class LoginHandler:
             if response.get("status") == "success":
                 self.facade.send_login_success()
             else:
-                self.facade.send_login_failure(response.get('error'))
-                self.send_main_menu(message='please try to login again!')
+                self.facade.send_login_failure(error=response.get('error'))
+                self.facade.send_main_menu(message='please try to login again!')
 
             auth.clear_session()

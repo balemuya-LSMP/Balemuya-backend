@@ -115,7 +115,7 @@ class TelegramFacade:
         self.bot_service.send_message(self.chat_id, "🎉 Login successful!")
 
     def send_login_failure(self,error=None):
-        self.bot_service.send_message(self.chat_id, "❌ Login failed. Check your credentials.")
+        self.bot_service.send_message(self.chat_id, "❌ Login failed. Check your credentials.",error)
 
     def send_help_message(self):
         self.bot_service.send_message(
