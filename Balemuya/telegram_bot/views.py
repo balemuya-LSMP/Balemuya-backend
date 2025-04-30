@@ -82,8 +82,9 @@ class TelegramBotWebhook(APIView):
             print('user data is ',user_data)
 
             response = facade.auth_service.send_registration_request(user_data)
-
+            print('register call response is',response.get('status'))
             if response.get("status") == "success":
+                print('success!!!!')
                 facade.send_registration_success()
             else:
                 facade.send_registration_failure()
@@ -104,11 +105,14 @@ class TelegramBotWebhook(APIView):
         # Handling password entry for login
         elif user_state == "waiting_for_login_password" and text:
             email = facade.auth_service.get_session_data("email")
+            print('email is',email)
             password = text.strip()
 
             response = facade.auth_service.send_login_request(email, password)
+            print('login call response is',response.get('status'))
 
             if response["status"] == "success":
+                print('successful login send login success will be called')
                 facade.send_login_success()
             else:
                 facade.send_login_failure()
