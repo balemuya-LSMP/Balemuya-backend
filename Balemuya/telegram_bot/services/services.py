@@ -43,6 +43,7 @@ class TelegramAuthService:
         try:
             url = f"{settings.BACKEND_URL}users/auth/login/"
             response = requests.post(url, data={"email": email, "password": password})
+            print('login response is ',response)
             if response.status_code == 200:
                 data = response.json()
                 access_token = data.get("access")

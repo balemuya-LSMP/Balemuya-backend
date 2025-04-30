@@ -79,6 +79,7 @@ class TelegramBotWebhook(APIView):
                 "user_type": facade.auth_service.get_session_data("user_type"),
                 "entity_type": facade.auth_service.get_session_data("entity_type"),
             }
+            print('user data is ',user_data)
 
             response = facade.auth_service.send_registration_request(user_data)
 
