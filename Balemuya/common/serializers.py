@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'password', 'profile_image', 
-            'profile_image_url','email','username', 'phone_number', 'user_type','entity_type', 'bio',
+            'profile_image_url','email','username', 'gender', 'org_name', 'first_name', 'last_name','phone_number', 'user_type','entity_type', 'bio',
             'is_active','is_blocked','created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
@@ -75,7 +75,26 @@ class UserSerializer(serializers.ModelSerializer):
         if not re.match(r'^\+?1?\d{9,15}$', value):
             raise serializers.ValidationError("Phone number must be in a valid format.")
         return value
+    
+    
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        user_type = instance.user_type
+        entity_type = instance.entity_type
 
+        if entity_type == 'organization':
+            rep.pop('first_name', None)
+            rep.pop('last_name', None)
+            rep.pop('gender', None)
+
+        elif entity_type == 'individual':
+            rep.pop('org_name', None)
+        
+        elif entity_type =='admin':
+            rep.pop('org_name',None)
+               
+        return rep
+    
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         if not password:
