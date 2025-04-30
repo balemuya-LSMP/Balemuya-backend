@@ -63,7 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=200, unique=True)
     username = models.CharField(max_length = 100,null=True,blank=True)
-    phone_number = models.CharField(max_length=30)
+    phone_number = models.CharField(max_length=30,null=True,blank=True )
     profile_image = CloudinaryField('image', null=True, blank=True, folder='Profile/profile_images')
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
     gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
