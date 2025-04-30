@@ -46,6 +46,13 @@ class TelegramBotWebhook(APIView):
 
             # Store email in the cache
             facade.auth_service.set_session_data("email", email)
+            facade.auth_service.set_user_state("waiting_for_password")
+            facade.ask_for_password()
+        # Handling email entry in registration flow
+        elif user_state == "waiting_for_password" and text:
+            password = text.strip()
+            # Store email in the cache
+            facade.auth_service.set_session_data("password", password)
             facade.auth_service.set_user_state("waiting_for_username")
             facade.ask_for_username()
 
@@ -63,17 +70,18 @@ class TelegramBotWebhook(APIView):
 
         # Handling user type selection
         elif user_state == "waiting_for_user_type" and text in ["Customer", "Professional"]:
-            facade.auth_service.set_session_data("user_type", text.strip())
+            facade.auth_service.set_session_data("user_type", text.strip().lower())
             facade.auth_service.set_user_state("waiting_for_entity_type")
             facade.ask_for_entity_type()
 
         # Handling entity type selection
-        elif user_state == "waiting_for_entity_type" and text in ["individual", "organization"]:
-            facade.auth_service.set_session_data("entity_type", text.strip())
+        elif user_state == "waiting_for_entity_type" and text in ["Individual", "Organization"]:
+            facade.auth_service.set_session_data("entity_type", text.strip().lower())
 
             # Prepare registration data from cache
             user_data = {
                 "email": facade.auth_service.get_session_data("email"),
+                "password": facade.auth_service.get_session_data("password"),
                 "username": facade.auth_service.get_session_data("username"),
                 "phone_number": facade.auth_service.get_session_data("phone"),
                 "user_type": facade.auth_service.get_session_data("user_type"),
@@ -86,8 +94,11 @@ class TelegramBotWebhook(APIView):
             if response.get("status") == "success":
                 print('success!!!!')
                 facade.send_registration_success()
+                facade.send_main_menu(message='Welcome back Now you can login!')
             else:
                 facade.send_registration_failure()
+                facade.send_main_menu()
+
 
             facade.auth_service.clear_session()  # Clear session after registration
 

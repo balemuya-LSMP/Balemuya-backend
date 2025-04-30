@@ -11,6 +11,12 @@ class TelegramFacade:
         self.bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
         self.auth_service = TelegramAuthService(chat_id)
 
+    def send_main_menu(self,message=None):
+        self.bot_service.send_message(
+            self.chat_id,
+           message,
+            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
+        )
     def send_welcome_message(self):
         self.bot_service.send_message(
             self.chat_id,
@@ -28,6 +34,9 @@ class TelegramFacade:
     def ask_for_email(self):
         self.bot_service.send_message(self.chat_id, "📧 Please provide your email address:")
 
+    def ask_for_password(self):
+        self.bot_service.send_message(self.chat_id, "🔑 please provide your password:")
+        
     def ask_for_username(self):
         self.bot_service.send_message(self.chat_id, "👤 Please provide your username:")
 
@@ -45,7 +54,7 @@ class TelegramFacade:
         self.bot_service.send_message(
             self.chat_id,
             "🏢 Choose entity type:",
-            reply_markup=generate_keyboard([["Individual", "organization"]])
+            reply_markup=generate_keyboard([["Individual", "Oganization"]])
         )
 
     def send_registration_success(self):
