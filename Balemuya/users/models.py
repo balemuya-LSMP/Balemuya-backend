@@ -66,6 +66,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=30)
     profile_image = CloudinaryField('image', null=True, blank=True, folder='Profile/profile_images')
     address = models.ForeignKey('Address', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
+    gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
+    first_name = models.CharField(max_length=100,null=True,blank=True)
+    last_name = models.CharField(max_length=100,null=True,blank=True)
+    org_name = models.CharField(max_length=100,null=True,blank=True)
     bio = models.TextField(blank=True, null=True)
      
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
@@ -99,10 +103,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 class BaseUserMixin(models.Model):
     description = models.TextField(blank=True, null=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    gender = models.CharField(choices=[('male','Male'),('female','Female')],null=True,blank=True)
-    first_name = models.CharField(max_length=100,null=True,blank=True)
-    last_name = models.CharField(max_length=100,null=True,blank=True)
-    org_name = models.CharField(max_length=100,null=True,blank=True)
     tx_number = models.CharField(max_length=100,null=True,blank=True)
     number_of_employees = models.IntegerField(default=0)
 

@@ -33,14 +33,14 @@ class AddressAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('email','username', 'phone_number', 'user_type','entity_type','is_active', 'is_email_verified','is_phone_verified',)
-    search_fields = ('email', 'phone_number')
+    list_display = ('email','username','org_name','first_name','last_name','gender', 'phone_number', 'user_type','entity_type','is_active', 'is_email_verified','is_phone_verified',)
+    search_fields = ('email', 'phone_number','first_name','last_name')
     list_filter = ('user_type', 'is_active')
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user', 'org_name','first_name','last_name','gender','number_of_employees' ,'number_of_services_booked', 'rating')
-    search_fields = ('user__email', 'org_name','first_name','last_name',)
+    list_display = ('user','number_of_employees' ,'number_of_services_booked', 'rating')
+    search_fields = ('user__email', 'user__org_name','user__first_name','user__last_name',)
 
 class BankAccountInline(admin.StackedInline):
     model = BankAccount
@@ -48,8 +48,8 @@ class BankAccountInline(admin.StackedInline):
 
 @admin.register(Professional)
 class ProfessionalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'org_name','first_name','last_name','gender','balance','num_of_request', 'years_of_experience', 'rating')
-    search_fields = ('user__email','org_name','first_name','last_name')
+    list_display = ('user','balance','num_of_request', 'years_of_experience', 'rating')
+    search_fields = ('user__email','user__org_name','user__first_name','user__last_name')
     inlines = [BankAccountInline]
 
 
@@ -68,7 +68,7 @@ class PermissionAdmin(admin.ModelAdmin):
 @admin.register(Admin)
 class AdminAdmin(admin.ModelAdmin):
     list_display = ('user', 'admin_level')
-    search_fields = ('user__email', 'first_name', 'last_name')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')
 
 @admin.register(AdminLog)
 class AdminLogAdmin(admin.ModelAdmin):

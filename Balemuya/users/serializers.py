@@ -101,8 +101,8 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer  
         fields = [
-            'user', 'org_name', 'first_name', 'last_name','tx_number',
-            'rating', 'gender', 'description',
+            'user','tx_number',
+            'rating', 'description',
             'number_of_employees', 'number_of_services_booked'
         ]
         read_only_fields = ['number_of_services_booked']
@@ -110,13 +110,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         entity_type = instance.user.entity_type
-
-        if entity_type == 'organization':
-            rep.pop('first_name', None)
-            rep.pop('last_name', None)
-            rep.pop('gender', None)
-        elif entity_type == 'individual':
-            rep.pop('org_name', None)
+        if entity_type == 'individual':
             rep.pop('number_of_employees', None)
 
         return rep
@@ -130,7 +124,6 @@ class CustomerSerializer(serializers.ModelSerializer):
 
         instance.rating = validated_data.get('rating', instance.rating)
         instance.description = validated_data.get('description', instance.description)
-        instance.gender = validated_data.get('gender', instance.gender)
         instance.save()
         return instance
 
@@ -195,7 +188,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
         fields = [
-            'user', 'gender', 'org_name', 'first_name', 'last_name',
+            'user',
             'number_of_employees', 'tx_number', 'description',
             'kebele_id_front_image', 'kebele_id_front_image_url',
             'kebele_id_back_image', 'kebele_id_back_image_url',
@@ -225,9 +218,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         # Only return relevant fields for 'individual' and 'organization' professionals
         if user_type == 'professional':
             if entity_type == 'organization':
-                rep.pop('gender', None)
-                rep.pop('first_name', None)
-                rep.pop('last_name', None)
                 rep.pop('kebele_id_front_image', None)
                 rep.pop('kebele_id_back_image', None)
                 rep.pop('kebele_id_front_image_url', None)
@@ -235,7 +225,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
                 rep.pop('educations', None)
 
             elif entity_type == 'individual':
-                rep.pop('org_name', None)
                 rep.pop('number_of_employees', None)
                 rep.pop('tx_number', None)
 
