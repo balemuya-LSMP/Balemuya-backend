@@ -1,8 +1,10 @@
-# services/telegram_facade.py
+# bot_services/telegram_facade.py
 
-from .services import TelegramBotService
-from .services import TelegramAuthService
+from .bot_services import TelegramBotService
+from .bot_services import TelegramAuthService
 from ..utils import generate_keyboard
+from .handlers.registration_handler import RegistrationHandler
+from .handlers.login_handler import LoginHandler
 from django.conf import settings
 
 class TelegramFacade:
@@ -10,8 +12,54 @@ class TelegramFacade:
         self.chat_id = chat_id
         self.bot_service = TelegramBotService(settings.TELEGRAM_BOT_TOKEN)
         self.auth_service = TelegramAuthService(chat_id)
+        self.registration_handler = RegistrationHandler(self)
+        self.login_handler = LoginHandler(self)
 
-    def send_main_menu(self,message=None):
+    def send_main_menu(self, message="Please choose an option:"):
+        self.bot_service.send_message(
+            self.chat_id,
+            message,
+            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
+        )
+
+    def send_welcome_message(self):
+        self.send_main_menu("👋 Welcome to Balemuya!\nPlease choose an option:")
+
+    def send_cancel_message(self):
+        self.bot_service.send_message(
+            self.chat_id,
+            "🚫 Operation cancelled. You're back to the main menu.",
+            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
+        )
+
+    def send_help_message(self):
+        self.bot_service.send_message(
+            self.chat_id,
+            "ℹ️ You can use the following options:\n"
+            "- 📝 Register: Create a new account\n"
+            "- 🔐 Login: Access your existing account\n"
+            "- ❌ Cancel: Cancel the current operation"
+        )
+
+    def dispatch(self, text, user_state):
+        """Route to the correct handler based on user state or command"""
+        if text == "/start":
+            self.auth_service.clear_session()
+            self.send_welcome_message()
+        elif text in ["/cancel", "❌ Cancel"]:
+            self.auth_service.clear_session()
+            self.send_cancel_message()
+        elif text == "ℹ️ Help":
+            self.send_help_message()
+        elif text == "📝 Register" or (user_state and user_state.startswith("waiting_for_") and "register" in user_state):
+            self.registration_handler.handle(text, user_state)
+        elif text == "🔐 Login" or (user_state and user_state.startswith("waiting_for_") and "login" in user_state):
+            self.login_handler.handle(text, user_state)
+        else:
+            self.send_main_menu("⚠️ Unknown command. Please select an option.")
+
+
+    def send_main_menu(self,message):
         self.bot_service.send_message(
             self.chat_id,
            message,
@@ -66,7 +114,7 @@ class TelegramFacade:
     def send_login_success(self):
         self.bot_service.send_message(self.chat_id, "🎉 Login successful!")
 
-    def send_login_failure(self):
+    def send_login_failure(self,error=None):
         self.bot_service.send_message(self.chat_id, "❌ Login failed. Check your credentials.")
 
     def send_help_message(self):
