@@ -131,11 +131,11 @@ def notify_professional_on_verification(sender, instance, created, **kwargs):
         notification = Notification.objects.create(
             message=message,
             notification_type="verify_response",  
-            title='Verification Response',
+            title='Verification Response from admin',
             metadata={
-                'id': instance.service.customer.user.id,
-                'username': instance.service.customer.user.username,
-                "profile_image": instance.service.customer.profile_image
+                'id': str(instance.professional.user.id),
+                'username': instance.professional.user.username,
+                'profile_image': str(instance.professional.user.profile_image),
             }
         )
         notification.recipient.set([instance.professional.user])

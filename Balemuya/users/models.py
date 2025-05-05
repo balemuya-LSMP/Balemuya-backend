@@ -493,7 +493,7 @@ class VerificationRequest(models.Model):
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.OneToOneField('Professional', on_delete=models.CASCADE,null=False, related_name='verification_requests')
-    verified_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
+    verified_by = models.ForeignKey('Admin', on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     admin_comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
