@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import ServicePostListCreateAPIView, ServicePostDetailAPIView,CreateServicePostApplicationAPIView, ListServicePostApplicationsAPIView,DetailServicePostApplicationAPIView,\
    AcceptServicePostApplicationAPIView, ServiceBookingRetrieveAPIView,CompleteBookingAPIView,ServiceBookingDeleteAPIView,ReviewAPIView,ComplainAPIView,CategoryListAPIView,\
-       CancelServiceBookingAPIView,CompleteBookingAPIView
+       CancelServiceBookingAPIView,CompleteBookingAPIView,ServicePostReportAPIView
 
 urlpatterns = [
     path('categories/', CategoryListAPIView.as_view(), name='category-list'),
@@ -9,6 +9,8 @@ urlpatterns = [
     #service posts
     path('service-posts/', ServicePostListCreateAPIView.as_view(), name='service-post-list-create'),
     path('service-posts/<uuid:pk>/', ServicePostDetailAPIView.as_view(), name='service-post-detail'),
+    
+    path('service-posts/<uuid:service_post_id>/report/', ServicePostReportAPIView.as_view(), name='service-post-report'),
     
     path('service-posts/applications/create/', CreateServicePostApplicationAPIView.as_view(), name='create-service-post-application'),
     path('service-posts/customer/<uuid:service_id>/applications/', ListServicePostApplicationsAPIView.as_view(), name='list-service-post-applications'),

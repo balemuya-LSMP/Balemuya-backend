@@ -2,10 +2,10 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain
+from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServicePostReport, ServiceRequest
 from common.models import Category
 from common.serializers import CategorySerializer
-from .serializers import ServicePostSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer, ComplainSerializer
+from .serializers import ServicePostSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer, ComplainSerializer, ServicePostReportSerializer,ServiceRequestSerializer
 from users.models import Professional, Customer
 from django.utils import timezone
 from django.db import transaction
@@ -439,3 +439,32 @@ class ComplainAPIView(APIView):
             return Response({"success": "Complaint added."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+
+class ServicePostReportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request,service_post_id=None):
+        user = request.user
+        reason = request.data.get('reason')
+
+        if not reason:
+            return Response({'detail': 'reason is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service_post = ServicePost.objects.get(id=service_post_id)
+        except ServicePost.DoesNotExist:
+            return Response({'detail': 'Service post not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if ServicePostReport.objects.filter(service_post=service_post, reporter=user).exists():
+            return Response({'detail': 'You have already reported this post.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        report = ServicePostReport.objects.create(
+            service_post=service_post,
+            reporter=user,
+            reason=reason
+        )
+
+        serializer = ServicePostReportSerializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

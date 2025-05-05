@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain
+from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain,ServicePostReport
 
 @admin.register(ServicePost)
 class ServicePostAdmin(admin.ModelAdmin):
@@ -45,3 +45,13 @@ class ComplaintAdmin(admin.ModelAdmin):
     search_fields = ('id', 'message','status')
     ordering = ('-created_at',)
     autocomplete_fields = ('booking', 'user')
+    
+    
+
+@admin.register(ServicePostReport)
+class ServicePostReportAdmin(admin.ModelAdmin):
+    list_display = ('id', 'service_post', 'reporter', 'reason', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('id', 'reason')
+    ordering = ('-created_at',)
+    autocomplete_fields = ('service_post', 'reporter')
