@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
 
+from rest_framework.exceptions import NotFound
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -35,14 +36,125 @@ from users.models import User, Professional, Customer, Admin, Payment, Subscript
 from users.utils import send_sms, generate_otp,send_push_notification
 from notifications.models import Notification
 
-from users.serializers import UserSerializer, LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
+from users.serializers import  LoginSerializer, ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
   VerificationRequestSerializer
 from notifications.serializers import NotificationSerializer
 
+from common.models import Category
+from common.serializers import CategorySerializer,UserSerializer, AddressSerializer
+
+from .permissions import IsAdmin
+
 # Create your views here.
 
+class UserListView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+
+    def get(self, request):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class UserCreateView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserDetailView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+    
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.delete()
+        return Response({'detail': 'User deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+
+class UserBlockView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+
+    def patch(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_blocked = request.data.get('is_blocked', None)
+        if is_blocked is None:
+            return Response({'detail': 'is_blocked field is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_blocked = is_blocked
+        user.save()
+        return Response({'detail': f'User {"blocked" if is_blocked else "unblocked"} successfully.'}, status=status.HTTP_200_OK)
+
+
+
+class CategoryListCreateView(APIView):
+    
+    def get(self, request):
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class CategoryDetailView(APIView):
+    def get_object(self, category_id):
+        try:
+            return Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            raise NotFound(detail="Category not found")
+
+    def patch(self, request, category_id):
+        category = self.get_object(category_id)
+        serializer = CategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, category_id):
+        category = self.get_object(category_id)
+        
+        category.delete()
+        return Response({'detail': 'Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
 class ProfessionalListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
     serializer_class = ProfessionalSerializer
 
     def get_queryset(self):
@@ -80,7 +192,7 @@ class ProfessionalListView(generics.ListAPIView):
 
 
 class CustomerListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
     serializer_class = CustomerSerializer
 
     def get_queryset(self):
@@ -111,7 +223,7 @@ class CustomerListView(generics.ListAPIView):
         return Response(serializer.data)
 
 class AdminListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
     serializer_class = AdminSerializer
 
     def get_queryset(self):
@@ -144,7 +256,7 @@ class AdminListView(generics.ListAPIView):
     
     
 class AdminVerifyProfessionalView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
 
     def put(self, request, pk):
         if not request.user.user_type == 'admin':
@@ -211,7 +323,7 @@ class ProfessionalVerificationRequestListView(APIView):
     
 
 class StatisticsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
 
     def get(self, request):
         if not request.user.user_type == 'admin':
@@ -316,7 +428,7 @@ class StatisticsView(APIView):
      
 
 class AdminServicePostReportListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
 
     def get(self, request):
         reports = ServicePostReport.objects.select_related('service_post', 'reporter').all()
@@ -325,7 +437,7 @@ class AdminServicePostReportListView(APIView):
     
     
 class AdminDeleteReportedPostView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin,IsAuthenticated]
 
     def delete(self, request, service_post_id):
         try:
@@ -338,18 +450,7 @@ class AdminDeleteReportedPostView(APIView):
 
         # Delete the post
         post.delete()
-
-        customer.report_count += 1
-        customer.save()
-
-        THRESHOLD = 3
-        if customer.report_count >= THRESHOLD:
-            user.is_blocked= True
-            user.save()
-            return Response({
-                'detail': 'Post deleted. User has exceeded report limit and is now blocked.'
-            }, status=status.HTTP_200_OK)
-
+        
         return Response({
             'detail': f'Post deleted. User has {customer.report_count} reports.'
         }, status=status.HTTP_200_OK)
