@@ -41,13 +41,6 @@ class LoginSerializer(serializers.Serializer):
             'password': {'write_only': True}
         }
 
-class VerificationRequestSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True, source='user')
-
-    class Meta:
-        model = VerificationRequest
-        fields = ['id', 'professional', 'status', 'admin_comment', 'created_at', 'updated_at']
-        read_only_fields = ['status', 'admin_comment', 'created_at', 'updated_at']
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
@@ -249,6 +242,18 @@ class BankAccountSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class VerificationRequestSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VerificationRequest
+        fields = ['id', 'user', 'status', 'admin_comment', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'admin_comment', 'created_at', 'updated_at']
+
+    def get_user(self, obj):
+        return UserSerializer(obj.professional.user, context=self.context).data
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     professional = ProfessionalSerializer()
