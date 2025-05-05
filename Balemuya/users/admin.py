@@ -39,7 +39,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('user','number_of_employees' ,'number_of_services_booked', 'rating')
+    list_display = ('user','number_of_employees' ,'number_of_services_booked', 'rating','report_count')
     search_fields = ('user__email', 'user__org_name','user__first_name','user__last_name',)
 
 class BankAccountInline(admin.StackedInline):

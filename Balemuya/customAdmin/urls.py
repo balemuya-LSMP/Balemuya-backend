@@ -8,7 +8,9 @@ from .views import (
     CustomerListView,
     AdminListView,
     ProfessionalVerificationRequestListView,
-    StatisticsView    
+    StatisticsView    ,
+    AdminServicePostReportListView,
+    AdminDeleteReportedPostView
 )
 
 urlpatterns = [
@@ -20,6 +22,8 @@ urlpatterns = [
     path('customers/', CustomerListView.as_view(), name='customer-list'),
     # path('services/', ServiceListView.as_view(), name='service-list'),
     # path('services/', ServiceListView.as_view(), name='service-list'),
+    path('services/reported-posts/', AdminServicePostReportListView.as_view(), name='servicepost-report-list'),
+    path('services/<uuid:service_post_id>/delete/', AdminDeleteReportedPostView.as_view(), name='admin-delete-reported-post'),
     
     path('admins/', AdminListView.as_view(), name='admin-list'),
 

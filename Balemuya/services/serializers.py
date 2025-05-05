@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest
+from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest,ServicePostReport
 from users.models import Customer, Professional
 from common.models import Category
 from common.serializers import UserSerializer, CategorySerializer
@@ -203,3 +203,13 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return ServiceRequest.objects.create(**validated_data)
+    
+    
+
+class ServicePostReportSerializer(serializers.ModelSerializer):
+    reporter = UserSerializer(read_only=True)
+    service_post = ServicePostSerializer(read_only=True)
+    class Meta:
+        model = ServicePostReport
+        fields = ['id', 'service_post', 'reporter', 'reason', 'created_at','updated_at']
+        read_only_fields = ['id', 'created_at','updated_at', 'reporter']
