@@ -144,3 +144,20 @@ class Review(models.Model):
         """Ensure a review is linked to either a booking or a service request."""
         if not self.booking and not self.service_request:
             raise ValidationError("A review must be linked to either a booking or a service request.")
+        
+
+
+class ServicePostReport(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service_post = models.ForeignKey('ServicePost', related_name='reports', on_delete=models.CASCADE)
+    reporter = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        verbose_name = 'Service Post Report'
+        verbose_name_plural = 'Service Post Reports'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Report by {self.reporter} on {self.service_post}"

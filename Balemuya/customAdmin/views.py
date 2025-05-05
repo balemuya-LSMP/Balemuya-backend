@@ -28,7 +28,9 @@ from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.models import SocialApp
 
 from urllib.parse import parse_qs
-from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain
+from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain, ServicePostReport
+from services.serializers import ServicePostReportSerializer
+
 from users.models import User, Professional, Customer, Admin, Payment, SubscriptionPlan,VerificationRequest,Feedback
 from users.utils import send_sms, generate_otp,send_push_notification
 from notifications.models import Notification
@@ -312,7 +314,42 @@ class StatisticsView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)         
          
      
-         
+
+class AdminServicePostReportListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        reports = ServicePostReport.objects.select_related('service_post', 'reporter').all()
+        serializer = ServicePostReportSerializer(reports, many=True)
+        return Response(serializer.data)
     
     
-    
+class AdminDeleteReportedPostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, service_post_id):
+        try:
+            post = ServicePost.objects.select_related('customer__user').get(id=service_post_id)
+        except ServicePost.DoesNotExist:
+            return Response({'detail': 'Service post not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        customer = post.customer
+        user = customer.user
+
+        # Delete the post
+        post.delete()
+
+        customer.report_count += 1
+        customer.save()
+
+        THRESHOLD = 3
+        if customer.report_count >= THRESHOLD:
+            user.is_blocked= True
+            user.save()
+            return Response({
+                'detail': 'Post deleted. User has exceeded report limit and is now blocked.'
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            'detail': f'Post deleted. User has {customer.report_count} reports.'
+        }, status=status.HTTP_200_OK)

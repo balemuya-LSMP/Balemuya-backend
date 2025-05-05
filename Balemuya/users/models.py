@@ -74,6 +74,7 @@ class User(AbstractBaseUser, PermissionsMixin):
      
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     entity_type = models.CharField(max_length=30, choices=ENTITY_TYPE_CHOICES, default='individual')
+    
 
     is_active = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)
@@ -105,6 +106,8 @@ class BaseUserMixin(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     tx_number = models.CharField(max_length=100,null=True,blank=True)
     number_of_employees = models.IntegerField(default=0)
+    report_count = models.IntegerField(default=0)
+
 
     class Meta:
         abstract = True

@@ -96,7 +96,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = [
             'user','tx_number',
             'rating', 'description',
-            'number_of_employees', 'number_of_services_booked'
+            'number_of_employees', 'number_of_services_booked','report_count'
         ]
         read_only_fields = ['number_of_services_booked']
 
