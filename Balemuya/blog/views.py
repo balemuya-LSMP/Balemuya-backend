@@ -43,7 +43,7 @@ class BlogPostDetailAPIView(APIView):
         if post is not None:
             serializer = BlogPostSerializer(post)
             return Response(serializer.data)
-        return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, post_id):
         post = self.get_object(post_id)
@@ -53,14 +53,14 @@ class BlogPostDetailAPIView(APIView):
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, post_id):
         post = self.get_object(post_id)
         if post is not None:
             post.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'message':'blog deleted successfully'},status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class CommentListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
