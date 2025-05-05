@@ -1,3 +1,5 @@
+from django.db import transaction
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -47,13 +49,28 @@ class BlogPostDetailAPIView(APIView):
 
     def put(self, request, post_id):
         post = self.get_object(post_id)
-        if post is not None:
-            serializer = BlogPostSerializer(post, data=request.data)
-            if serializer.is_valid():
+        if post is None:
+            return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BlogPostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            with transaction.atomic():
                 serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+
+                post.medias.all().delete()
+
+                media_files = request.FILES.getlist('media_files')
+                for media_file in media_files:
+                    media_type = 'image' if media_file.content_type.startswith('image/') else 'video'
+                    Media.objects.create(
+                        post=post,
+                        media_file=media_file,
+                        media_type=media_type
+                    )
+
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, post_id):
         post = self.get_object(post_id)
