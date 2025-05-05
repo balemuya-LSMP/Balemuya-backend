@@ -112,7 +112,7 @@ def send_verification_request_to_admin(sender, instance, created, **kwargs):
             title='Verification Request Submitted'
         )
         recipients = User.objects.filter(user_type='admin')
-        notification.recipient.set([recipients])
+        notification.recipient.set(recipients)
         notification.save()
 
         serializer = NotificationSerializer(notification)
