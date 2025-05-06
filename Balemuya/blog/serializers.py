@@ -3,11 +3,13 @@ from users.serializers import UserSerializer
 from .models import BlogPost, Comment, Like,Media
 
 class CommentSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Comment
         fields = ['id', 'post', 'user', 'content', 'created_at','updated_at']
 
 class LikeSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Like
         fields = ['id', 'post', 'user', 'created_at','updated_at']
