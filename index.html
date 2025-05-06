@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+</head>
+
+<body>
+    <h1>WebSocket Test</h1>
+
+    <div>
+        <label for="category">Category:</label>
+        <input type="text" id="category" placeholder="Enter category (e.g., installation)">
+        <button id="connectBtn">Connect</button>
+        <button id="disconnectBtn">Disconnect</button>
+    </div>
+
+    <div>
+        <h2>Messages</h2>
+        <textarea id="messages" rows="10" cols="50" readonly></textarea>
+    </div>
+
+    <div>
+        <h2>Send Message</h2>
+        <input type="text" id="messageInput" placeholder="Enter message">
+        <button id="sendBtn">Send</button>
+    </div>
+
+    <script>
+        let socket = null;
+
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            const category = document.getElementById('category').value;
+            if (!category) {
+                alert('Please enter a category.');
+                return;
+            }
+
+            // Replace with your WebSocket URL
+            const wsUrl = `ws://127.0.0.1:8000/ws/notifications/service-post/${category}/`;
+
+            socket = new WebSocket(wsUrl);
+
+            // On connection open
+            socket.onopen = () => {
+                console.log('WebSocket connection established.');
+                addMessage('Connected to WebSocket.');
+            };
+
+            // On receiving a message
+            socket.onmessage = (event) => {
+                console.log('Message received:', event.data);
+                addMessage(`Received: ${event.data}`);
+            };
+
+            // On error
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addMessage('WebSocket error occurred.');
+            };
+
+            // On connection close
+            socket.onclose = (event) => {
+                console.log('WebSocket connection closed:', event.reason);
+                addMessage('WebSocket connection closed.');
+            };
+        });
+
+        document.getElementById('disconnectBtn').addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+                socket = null;
+                addMessage('Disconnected from WebSocket.');
+            } else {
+                alert('No active WebSocket connection to disconnect.');
+            }
+        });
+
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = document.getElementById('messageInput').value;
+                socket.send(message);
+                addMessage(`Sent: ${message}`);
+            } else {
+                alert('WebSocket is not connected.');
+            }
+        });
+
+        function addMessage(message) {
+            const messages = document.getElementById('messages');
+            messages.value += `${message}\n`;
+        }
+    </script>
+</body>
+
+</html>
