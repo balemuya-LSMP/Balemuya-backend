@@ -14,6 +14,7 @@ from .models import (
     Portfolio,
     Certificate,
     BankAccount,
+    Bank,
     Payment,
     SubscriptionPlan,
     SubscriptionPayment,
@@ -223,10 +224,16 @@ class ProfessionalSerializer(serializers.ModelSerializer):
 
         return rep
 
+
+class BankSerializer(serializers.ModelSerializer):
     
+    class Meta:
+        model = Bank
+        fields = ['id', 'name', 'code']
+        
     
 class BankAccountSerializer(serializers.ModelSerializer):
-    bank_name = serializers.CharField(source='get_bank_code_display', read_only=True)
+    bank= BankSerializer(read_only=True)
 
     class Meta:
         model = BankAccount
@@ -235,13 +242,30 @@ class BankAccountSerializer(serializers.ModelSerializer):
             'professional',
             'account_name',
             'account_number',
-            'bank_code',
-            'bank_name',
+            'bank',
             'is_verified',
             'created_at',
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        
+    def validate_account_number(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("Account number must contain only digits.")
+        return value
+    def validate_account_name(self, value):
+        if not value.isalpha():
+            raise serializers.ValidationError("Account name must contain only letters.")
+        return value
+    def validate_professional(self, value):
+        try:
+            professional = Professional.objects.get(id=value.id)
+            if not professional.is_active:
+                raise serializers.ValidationError("This professional's account is inactive.")
+        except Professional.DoesNotExist:
+            raise serializers.ValidationError("Professional not found.")
+        return value
+    
 
 
 class VerificationRequestSerializer(serializers.ModelSerializer):
