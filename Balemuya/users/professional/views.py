@@ -37,7 +37,7 @@ from allauth.socialaccount.models import SocialApp
 from urllib.parse import parse_qs
 
 from users.models import User, Professional, Customer, Admin,Payment,SubscriptionPlan,Payment,SubscriptionPayment,WithdrawalTransaction,Skill,Education,Portfolio,Certificate,Address,VerificationRequest,\
-    Feedback
+    Feedback,BankAccount,Bank
 from common.models import Category
 from users.utils import send_sms, generate_otp, send_email_confirmation,notify_user
 from services.models import ServicePost, ServicePostApplication, ServiceBooking,Review,ServiceRequest
@@ -45,7 +45,7 @@ from services.serializers import ServicePostSerializer, ServicePostApplicationSe
 
 from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPaymentSerializer,\
-        FeedbackSerializer
+        FeedbackSerializer,BankAccountSerializer,BankSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 from .utils import filter_service_posts_by_distance
@@ -180,6 +180,52 @@ class ProfessionalProfileUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'detail':"user is not professional"},status = status.HTTP_400_BAD_REQUEST)
     
+class BankListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != 'professional':
+            return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
+        banks = Bank.objects.all()
+        serializer = BankSerializer(banks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ProfessionalBankAcountView(APIView):
+    permission_classes= [IsAuthenticated]
+    
+    def get(self,request):
+        if request.user.user_type != 'professional':
+            return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        bank_account = get_object_or_404(BankAccount, professional=request.user.professional)
+        if not bank_account:
+            return Response({'detail': 'Bank account not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = BankAccountSerializer(bank_account)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    def post(self,request):
+        if request.user.user_type != 'professional':
+            return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        professional = request.user.professional
+        if professional.bank_account:
+            return Response({'detail': 'Bank account already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = BankAccountSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(professional=request.user.professional)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self,request):
+        if request.user.user_type != 'professional':
+            return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
+        bank_account = get_object_or_404(BankAccount, professional=request.user.professional)
+        if not bank_account:
+            return Response({'detail': 'Bank account not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = BankAccountSerializer(bank_account, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
 # views related to professional
 class ProfessionalSkillView(APIView):
     permission_classes = [IsAuthenticated]
@@ -731,7 +777,7 @@ class ProfessionalPaymentWithdrawalView(APIView):
             "amount": str(withdrawal_amount),
             "currency": "ETB",  
             "reference": str(uuid.uuid4()),
-            "bank_code":bank_account.bank_code,
+            "bank_code":bank_account.bank.code,
         }
         print('payload',payload)
 

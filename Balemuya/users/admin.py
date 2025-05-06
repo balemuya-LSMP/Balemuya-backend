@@ -13,6 +13,7 @@ from .models import (
     Education,
     Portfolio,
     Certificate,
+    Bank,
     BankAccount,
     SubscriptionPlan,
     Payment,
@@ -115,16 +116,17 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     ordering = ('-start_date',)
     
     
+@admin.register(Bank)  
+class BankAdmin(admin.ModelAdmin):
+    list_display =['id','name','code']
     
 @admin.register(BankAccount)
 class BankAccountAdmin(admin.ModelAdmin):
-    list_display = ['account_name', 'account_number', 'bank_code', 'get_bank_name', 'professional', 'is_verified']
-    list_filter = ['bank_code', 'is_verified']
+    list_display = ['account_name', 'account_number', 'bank', 'professional', 'is_verified']
+    list_filter = [ 'is_verified']
     search_fields = ['account_name', 'account_number', 'professional__user__email']
 
-    def get_bank_name(self, obj):
-        return obj.get_bank_code_display()
-    get_bank_name.short_description = 'Bank Name'
+
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):

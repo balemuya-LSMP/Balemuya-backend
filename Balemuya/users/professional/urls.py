@@ -2,13 +2,17 @@ from django.urls import path
 import uuid
 from .views import ProfessionalProfileView, ProfessionalProfileUpdateView,ProfessionalSkillView,ProfessionalCategoryView,CertificateView,EducationView,PortfolioView,\
     ProfessionalVerificationRequestView,InitiateSubscriptionPaymentView,CheckPaymentView,ProfessionalSubscriptionHistoryView,\
-    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView,ProfessionalPaymentWithdrawalView
+    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView,ProfessionalPaymentWithdrawalView,\
+        ProfessionalBankAcountView,BankListView
 
 urlpatterns = [
     path('<uuid:pk>/profile/',ProfessionalProfileView.as_view(), name='professional-profile'),
     path('profile/update/',ProfessionalProfileUpdateView.as_view(), name='professional-update'),
     path('profile/skills/', ProfessionalSkillView.as_view(), name='skill-create-update-delete'),
     path('profile/categories/', ProfessionalCategoryView.as_view(), name='category-create-remove'),
+    
+    path('bank-lists/',BankListView.as_view(), name='bank-list'),
+    path('bank-account/',ProfessionalBankAcountView.as_view(), name='professional-bank-account'),
     
     path('profile/certificates/add/', CertificateView.as_view(), name='certificate-create'),  # POST
     path('profile/certificates/<uuid:pk>/update/', CertificateView.as_view(), name='certificate-update'),  # PUT
