@@ -81,7 +81,7 @@ def filter_professionals(current_location=None, categories=None,entity_type=None
                 "bio": professional.user.bio,
             }
             for professional in professionals
-            if professional.address is not None
+            if professional.user.address is not None
         ]
 
     return filtered
