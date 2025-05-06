@@ -343,7 +343,7 @@ class SubscriptionPlan(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='subscription_plan',null=True) 
+    professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='subscription_plan',default=None) 
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
     cost = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
@@ -351,12 +351,16 @@ class SubscriptionPlan(models.Model):
     end_date = models.DateTimeField(editable=False)
 
     def save(self, *args, **kwargs):
-        if self.plan_type in self.MONTHLY_COSTS and self.duration:
-            monthly_cost = self.MONTHLY_COSTS[self.plan_type]
-            self.cost = monthly_cost * self.duration
-            self.end_date = self.start_date + timedelta(days=self.duration * 30)
-        else:
-            raise ValueError("Missing plan_type or duration for cost calculation.")
+        try:
+            if self.plan_type in self.MONTHLY_COSTS and self.duration:
+                monthly_cost = self.MONTHLY_COSTS[self.plan_type]
+                self.cost = monthly_cost * self.duration
+                self.end_date = self.start_date + timedelta(days=self.duration * 30)
+            else:
+                raise ValueError("Missing plan_type or duration for cost calculation.")
+        except Exception as e:
+            raise ValueError("Invalid plan_type or duration.")
+
         super().save(*args, **kwargs)
 
     def is_expired(self):

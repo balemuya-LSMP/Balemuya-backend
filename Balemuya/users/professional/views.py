@@ -464,7 +464,7 @@ class InitiateSubscriptionPaymentView(APIView):
         # Input validation
         amount = data.get("amount")
         plan_type = data.get("plan_type")
-        duration = data.get("duration")
+        duration = int(data.get("duration"))
         return_url = data.get("return_url")
         txt_ref = uuid.uuid4()
 
@@ -472,7 +472,7 @@ class InitiateSubscriptionPaymentView(APIView):
             return Response({"detail": "Plan type, duration, and amount are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check user type and fetch the professional
-                
+
         professional = Professional.objects.filter(user=user, is_verified=True).first()
 
         if not professional:
@@ -510,18 +510,17 @@ class InitiateSubscriptionPaymentView(APIView):
 
         # Prepare to initiate payment
         chapa_url = "https://api.chapa.co/v1/transaction/initialize"
-        
+
         # Prepare payload
         payload = {
-            "amount": amount,
-            "first_name":professional.user.get_full_name(),
-            "phone_number":professional.user.phone_number,
+            "amount": str(amount),
+            "first_name": professional.user.get_full_name(),
+            "phone_number": professional.user.phone_number,
             "currency": "ETB",
             "email": professional.user.email,
             "tx_ref": str(txt_ref),
             "return_url": f'{return_url}?transaction_id={txt_ref}'
         }
-
 
         headers = {
             "Authorization": f"Bearer {settings.CHAPA_SECRET_KEY}",
@@ -530,12 +529,12 @@ class InitiateSubscriptionPaymentView(APIView):
 
         try:
             response = requests.post(chapa_url, json=payload, headers=headers)
-            response.raise_for_status()  
+            response.raise_for_status()
 
             result = response.json()
-            
+
             if not result.get("status") == "success":
-                return Response({'detail':'payment is not initiated please try again'},status = status.HTTP__400_BAD_REQUEST)
+                return Response({'detail': 'payment is not initiated please try again'}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
                 subscription_plan = SubscriptionPlan.objects.create(
@@ -571,7 +570,6 @@ class InitiateSubscriptionPaymentView(APIView):
                 {"detail": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
