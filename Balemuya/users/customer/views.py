@@ -249,24 +249,28 @@ class ServicePaymentTransferView(APIView):
 
         transaction_reference = str(uuid.uuid4())
 
-        payment_url = 'https://api.chapa.co/v1/transaction/initialize'
+        payment_url = "https://api.chapa.co/v1/transaction/initialize"
 
         payload = {
             "amount": str(amount),
             "currency": "ETB",
             "email": request.user.email,
-            "first_name": customer.user.username,
+            "first_name": customer.user.first_name,
+            "last_name": customer.user.last_name,
             "phone_number": customer.user.phone_number, 
-            "tx_ref": transaction_reference, 
+            "tx_ref": str(transaction_reference), 
             "description": f"Payment for service by {professional.user.username}",
-            "return_url": return_url,
+            "return_url": f'{return_url}?transaction_id={transaction_reference}'
+,
         }
+        print('payload is',payload)
+        
 
         headers = {
             'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
             'Content-Type': 'application/json'
         }
-
+        print('header is',headers)
         try:
             response = requests.post(payment_url, json=payload, headers=headers)
             response.raise_for_status()
@@ -318,9 +322,6 @@ class ServicePaymentVerifyView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         verify_url = f'https://api.chapa.co/v1/transaction/verify/{tx_ref}'
-        # payload = {
-        #     "tx_ref": tx_ref
-        # }
 
         headers = {
             'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
