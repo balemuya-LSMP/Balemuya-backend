@@ -760,7 +760,7 @@ class ProfessionalPaymentWithdrawalView(APIView):
                 print('professional remaining amount',professional.balance)
 
                 return Response({
-                    'detail': f'Withdrawal of {withdrawal_amount} has been successfully initiated and processed.'
+                    'message': f'Withdrawal of {withdrawal_amount} has been successfully initiated and processed.'
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({
