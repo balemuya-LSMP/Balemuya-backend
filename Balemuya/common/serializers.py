@@ -31,12 +31,11 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=200)
     profile_image_url = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=True)
-
+    full_name = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
-            'id', 'password', 'profile_image', 
-            'profile_image_url','email','username', 'gender', 'org_name', 'first_name', 'last_name','phone_number', 'user_type','entity_type', 'bio',
+            'id', 'password','full_name', 'profile_image','profile_image_url','email','username', 'gender', 'org_name', 'first_name', 'last_name','phone_number', 'user_type','entity_type', 'bio',
             'is_active','is_blocked','created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
@@ -47,6 +46,21 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.profile_image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.profile_image.url) if request else obj.profile_image.url
+        return None
+    
+    def get_full_name(self, obj):
+        if obj.user_type == 'professional':
+            if obj.entity_type == 'organization':
+                return obj.org_name
+            elif obj.entity_type == 'individual':
+                return f"{obj.first_name} {obj.last_name}"
+        elif obj.user_type == 'customer':
+            if obj.entity_type == 'organization':
+                return obj.org_name
+            elif obj.entity_type == 'individual':
+                return f"{obj.first_name} {obj.last_name}"
+        elif obj.user_type == 'admin':
+            return obj.first_name
         return None
 
     def validate_email(self, value):
