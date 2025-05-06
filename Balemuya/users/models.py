@@ -329,6 +329,12 @@ class SubscriptionPlan(models.Model):
         ('diamond', 'Diamond'),
     ]
     
+    REQUEST_COINS= {
+         'silver':50,
+        'gold': 100,
+        'diamond': 150
+    }
+    
     MONTHLY_COSTS = {
         'silver': Decimal('100.00'),
         'gold': Decimal('200.00'),

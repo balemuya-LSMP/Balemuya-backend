@@ -514,7 +514,8 @@ class InitiateSubscriptionPaymentView(APIView):
         # Prepare payload
         payload = {
             "amount": str(amount),
-            "first_name": professional.user.get_full_name(),
+            "first_name": professional.user.first_name,
+            "last_name":professional.user.last_name,
             "phone_number": professional.user.phone_number,
             "currency": "ETB",
             "email": professional.user.email,
