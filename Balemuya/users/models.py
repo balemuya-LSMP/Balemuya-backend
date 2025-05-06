@@ -99,7 +99,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
     
-
+    def get_full_name(self):
+        if self.entity_type == 'individual':
+            return f"{self.first_name} {self.last_name}" if self.first_name and self.last_name else self.username
+        elif self.entity_type == 'organization':
+            return self.org_name if self.org_name else self.username
+        return self.username
 
 ###############  Base User Mixin ###########################
 class BaseUserMixin(models.Model):
