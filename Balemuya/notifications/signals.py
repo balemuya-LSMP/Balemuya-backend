@@ -16,7 +16,6 @@ from .utils import get_professionals_in_proximity_and_category
 
 User = get_user_model()
 
-            
 
 
 @receiver(post_save, sender=ServicePost)
@@ -44,7 +43,7 @@ def notify_professionals_about_new_post(sender, instance, created, **kwargs):
                     metadata={
                         "id": str(instance.user.id),
                         "username": instance.customer.username,
-                        "profile_image": str(instance.customer.profile_image) or  None,
+                        "profile_image": str(instance.customer.profile_image.url) or  None,
                     },
                     notification_type="new_job",
                     title='New Job Posted'
@@ -81,7 +80,7 @@ def notify_customer_about_application(sender, instance, created, **kwargs):
             metadata={
                 "id": str(instance.professional.user.id),
                 "username": instance.professional.user.username,
-                "profile_image": str(instance.professional.user.profile_image )or None,
+                "profile_image": str(instance.professional.user.profile_image.url) or None,
             },
             title='Job Application Received'
         )
@@ -107,7 +106,7 @@ def send_verification_request_to_admin(sender, instance, created, **kwargs):
             metadata={
                 "id": str(instance.professional.user.id),
                 "username": instance.professional.user.username,
-                "profile_image": str(instance.professional.user.profile_image) or None,
+                "profile_image": str(instance.professional.user.profile_image.url) or None,
             },
             title='Verification Request Submitted'
         )
@@ -135,7 +134,7 @@ def notify_professional_on_verification(sender, instance, created, **kwargs):
             metadata={
                 'id': str(instance.professional.user.id),
                 'username': instance.professional.user.username,
-                'profile_image': str(instance.professional.user.profile_image) or None
+                'profile_image': str(instance.professional.user.profile_image.url) or None
             }
         )
         notification.recipient.set([instance.professional.user])
@@ -161,7 +160,7 @@ def notify_professional_on_service_booking(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.application.service.customer.user.id),
                     "username": instance.application.service.customer.user.username,
-                    "profile_image": str(instance.application.service.customer.user.profile_image) or None,
+                    "profile_image": str(instance.application.service.customer.user.profile_image.url) or None,
                 }
             )
             notification.recipient.set([instance.application.professional.user])
@@ -188,7 +187,7 @@ def notify_professional_on_service_request(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.customer.id),
                     "username": instance.customer.user.username,
-                    "profile_image": str(instance.customer.user.profile_image) or None,
+                    "profile_image": str(instance.customer.user.profile_image.url) or None,
                 }
             )
             notification.recipient.set([instance.professional.user])
@@ -215,7 +214,7 @@ def notify_customer_on_service_response(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.professional.id),
                     "username": instance.professional.username,
-                    "profile_image": str(instance.professional.user.profile_image)or None,
+                    "profile_image": str(instance.professional.user.profile_image.url)or None,
                 }
             )
             notification.recipient.set(instance.customer.user)
@@ -247,7 +246,7 @@ def notify_admin_on_complain(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.user.id),
                     "username": instance.user.username,
-                    "profile_image": str(instance.user.profile_image)or None,
+                    "profile_image": str(instance.user.profile_image.url)or None,
                 }
             )
             recipients = User.objects.filter(user_type='admin')
@@ -276,7 +275,7 @@ def notify_admins_on_feedback(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.user.id),
                     "username": instance.user.username,
-                    "profile_image": str(instance.user.profile_image)or None,
+                    "profile_image": str(instance.user.profile_image.url)or None,
                 }
             )
             recipients = User.objects.filter(user_type='admin')
@@ -321,7 +320,7 @@ def notify_user_on_review(sender, instance, created, **kwargs):
                 metadata={
                     "id": str(instance.user.id),
                     "username": instance.user.username,
-                    "profile_image": str(instance.user.profile_image) or None,
+                    "profile_image": str(instance.user.profile_image.url) or None,
                 }
             )
             notification.recipient.set([instance.user])

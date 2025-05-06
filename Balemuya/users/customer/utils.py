@@ -75,6 +75,7 @@ def filter_professionals(current_location=None, categories=None,entity_type=None
                 "id": professional.user.id,
                 "name": professional.user.username,
                 "user_type": professional.user.user_type,
+                "entity_type": professional.user.entity_type,
                 "profile_image": professional.user.profile_image.url,
                 "address": AddressSerializer(professional.user.address).data,
                 "rating": professional.rating,
