@@ -7,8 +7,10 @@ from .service.views import (AdminServicePostListView,AdminServicePostDetailView,
 
 from .views import (
     CategoryListCreateView,
+    BankListCreateView,
+    BankDetailView,
     CategoryDetailView,
-    StatisticsView  
+    StatisticsView 
     
 )
 
@@ -17,6 +19,9 @@ urlpatterns = [
     
     path('categories/', CategoryListCreateView.as_view(), name='category-list'), #manage categories
     path('categories/<uuid:category_id>/', CategoryDetailView.as_view(), name='category-update'),
+    
+    path('banks/',BankListCreateView.as_view(), name='bank-list-creat'), #manage banks
+    path('banks/<uuid:bank_id>/',BankDetailView.as_view(), name='bank-update-delete'),
     
     # basic user related 
     path('users/', UserListView.as_view(), name='user-list'), 

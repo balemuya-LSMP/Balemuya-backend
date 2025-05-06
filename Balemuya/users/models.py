@@ -379,51 +379,73 @@ class SubscriptionPlan(models.Model):
         verbose_name = 'Subscription Plan'
         verbose_name_plural = 'Subscription Plans'
 
+from django.db import models
 
+class Bank(models.Model):
+    """
+    Represents a bank with its name and code.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    code = models.PositiveIntegerField(unique=True)
 
-BANK_CHOICES = [
-    (130, 'Abay Bank'),
-    (772, 'Addis International Bank'),
-    (207, 'Ahadu Bank'),
-    (656, 'Awash Bank'),
-    (347, 'Bank of Abyssinia'),
-    (571, 'Berhan Bank'),
-    (128, 'CBEBirr'),
-    (946, 'Commercial Bank of Ethiopia (CBE)'),
-    (893, 'Coopay-Ebirr'),
-    (880, 'Dashen Bank'),
-    (1, 'Enat Bank'),
-    (301, 'Global Bank Ethiopia'),
-    (534, 'Hibret Bank'),
-    (612, 'Hijra Bank'),
-    (202, 'Lion Bank'),
-    (325, 'Nib International Bank'),
-    (896, 'Oromia Bank'),
-    (287, 'Siinqee Bank'),
-    (465, 'Tsehay Bank'),
-    (614, 'ZamZam Bank'),
-    (451, 'Zemen Bank'),
-]
+    def __str__(self):
+        return self.name
 
+    class Meta:
+        verbose_name = "Bank"
+        verbose_name_plural = "Banks"
+
+def load_initial_banks():
+    """
+    Loads initial bank data into the Bank model.  This can be called from a data migration.
+    """
+    BANK_CHOICES = [
+        (130, 'Abay Bank'),
+        (772, 'Addis International Bank'),
+        (207, 'Ahadu Bank'),
+        (656, 'Awash Bank'),
+        (347, 'Bank of Abyssinia'),
+        (571, 'Berhan Bank'),
+        (128, 'CBEBirr'),
+        (946, 'Commercial Bank of Ethiopia (CBE)'),
+        (893, 'Coopay-Ebirr'),
+        (880, 'Dashen Bank'),
+        (1, 'Enat Bank'),
+        (301, 'Global Bank Ethiopia'),
+        (534, 'Hibret Bank'),
+        (612, 'Hijra Bank'),
+        (202, 'Lion Bank'),
+        (325, 'Nib International Bank'),
+        (896, 'Oromia Bank'),
+        (287, 'Siinqee Bank'),
+        (465, 'Tsehay Bank'),
+        (614, 'ZamZam Bank'),
+        (451, 'Zemen Bank'),
+    ]
+
+    for code, name in BANK_CHOICES:
+        Bank.objects.get_or_create(code=code, defaults={'name': name})
 
 
 class BankAccount(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='bank_account')
     account_name = models.CharField(max_length=100)
     account_number = models.CharField(max_length=20)
-    bank_code = models.PositiveIntegerField(choices=BANK_CHOICES)
-    is_verified = models.BooleanField(default=False)  
+    bank = models.ForeignKey('Bank', on_delete=models.PROTECT, related_name='bank_accounts', null=True, blank=True)  
+    is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.account_name} - {self.get_bank_code_display()}"
+        return f"{self.account_name}"
 
     class Meta:
         verbose_name = 'Bank Account'
         verbose_name_plural = 'Bank Accounts'
-
+        
 # Payment Model for Services
 class Payment(models.Model):
     PAYMENT_STATUS_CHOICES = [

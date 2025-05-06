@@ -1,4 +1,6 @@
 from .packages import *
+from users.models import Bank
+from users.serializers import BankSerializer
 
 class CategoryListCreateView(APIView):
     
@@ -36,6 +38,48 @@ class CategoryDetailView(APIView):
         category.delete()
         return Response({'detail': 'Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+
+class BankListCreateView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+    
+    def get(self, request):
+        banks = Bank.objects.all()
+        serializer = BankSerializer(banks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def post(self, request):
+        serializer = BankSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class BankDetailView(APIView):
+    permission_classes = [IsAdmin,IsAuthenticated]
+    
+    def put(self,request,bank_id):
+        try:
+            bank = Bank.objects.get(id=bank_id)
+        except Bank.DoesNotExist:
+            return Response({'detail': 'Bank not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = BankSerializer(bank, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,bank_id):
+        try:
+            bank =Bank.objects.get(id=bank_id)
+        except Bank.DoesNotExist:
+           return Response({'detail': 'Bank not found'}, status=status.HTTP_404_NOT_FOUND)
+         
+        bank.delete()
+         
+        return Response({'message': 'Bank deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+            
 
 class StatisticsView(APIView):
     permission_classes = [IsAdmin,IsAuthenticated]
