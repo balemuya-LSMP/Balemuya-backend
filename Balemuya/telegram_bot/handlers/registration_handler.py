@@ -1,4 +1,4 @@
-# services/handlers/registration_handler.py
+# handlers/registration_handler.py
 
 class RegistrationHandler:
     def __init__(self, facade):
