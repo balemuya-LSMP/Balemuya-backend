@@ -105,6 +105,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         elif self.entity_type == 'organization':
             return self.org_name if self.org_name else self.username
         return self.username
+    
+    
+    def clean(self):
+        if not isinstance(self.id, uuid.UUID):
+            raise ValidationError({'id': _('Invalid UUID format.')})
+
+    def save(self, *args, **kwargs):
+        self.clean() 
+        super().save(*args, **kwargs)
 
 ###############  Base User Mixin ###########################
 class BaseUserMixin(models.Model):

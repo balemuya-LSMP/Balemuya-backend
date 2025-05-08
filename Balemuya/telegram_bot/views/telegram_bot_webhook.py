@@ -1,8 +1,6 @@
-# views/telegram_bot_webhook.py
-
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from .services.telegram_facade import TelegramFacade
+from ..services.telegram_facade import TelegramFacade
 import json
 
 class TelegramBotWebhook(APIView):
@@ -15,8 +13,6 @@ class TelegramBotWebhook(APIView):
         facade = TelegramFacade(chat_id)
         user_state = facade.auth_service.get_user_state()
 
-        print(f"Received: {text}, User state: {user_state}")
         facade.dispatch(text, user_state)
 
         return JsonResponse({"status": "ok"})
-

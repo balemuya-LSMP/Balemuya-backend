@@ -25,6 +25,10 @@ class LoginHandler:
 
             if response.get("status") == "success":
                 self.facade.send_login_success()
+                if response.get('user_type')=='customer':
+                    self.facade.send_customer_menu()
+                elif response.get('user_type')=='professional':
+                    self.facade.send_professional_menu()
             else:
                 self.facade.send_login_failure(error=response.get('error'))
                 self.facade.send_main_menu(message='please try to login again!')
