@@ -1,10 +1,10 @@
 # bot_services/telegram_facade.py
 
-from .bot_services import TelegramBotService
-from .bot_services import TelegramAuthService
-from ..utils import generate_keyboard
-from .handlers.registration_handler import RegistrationHandler
-from .handlers.login_handler import LoginHandler
+from .telegram_bot_services import TelegramBotService
+from .telegram_auth_services import TelegramAuthService
+from ..utils.keyboard import generate_keyboard
+from ..handlers.registration_handler import RegistrationHandler
+from ..handlers.login_handler import LoginHandler
 from django.conf import settings
 
 class TelegramFacade:
@@ -42,7 +42,6 @@ class TelegramFacade:
         )
 
     def dispatch(self, text, user_state):
-        """Route to the correct handler based on user state or command"""
         if text == "/start":
             self.auth_service.clear_session()
             self.send_welcome_message()
@@ -71,6 +70,12 @@ class TelegramFacade:
             "👋 Welcome to Balemuya!\nPlease choose an option:",
             reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
         )
+        
+    def send_customer_menu(self):
+        pass
+    def send_professional_menu(self):
+        pass
+        
 
     def send_cancel_message(self):
         self.bot_service.send_message(

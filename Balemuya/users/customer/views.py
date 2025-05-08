@@ -205,7 +205,6 @@ class UserSearchView(APIView):
         serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
         
         return paginator.get_paginated_response(serializer.data)
-
 class ServicePaymentTransferView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated via JWT
 
@@ -228,11 +227,20 @@ class ServicePaymentTransferView(APIView):
                 'detail': 'Missing required fields: professional, amount, or booking.'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validate UUID format for professional_id and booking_id
+        try:
+            booking_uuid = uuid.UUID(booking_id)  # Validate booking_id format
+            professional_uuid = uuid.UUID(professional_id)  # Validate professional_id format
+        except ValueError:
+            return Response({
+                'detail': 'Invalid UUID format for professional or booking ID.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             booking = ServiceBooking.objects.get(
-                id=booking_id,
+                id=booking_uuid,
                 application__service__customer=customer,
-                application__professional__user__id=professional_id
+                application__professional=professional_uuid
             )
         except ServiceBooking.DoesNotExist:
             return Response({
@@ -240,9 +248,9 @@ class ServicePaymentTransferView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            professional = Professional.objects.select_related('bank_account').get(user__id=professional_id)
+            professional = Professional.objects.select_related('bank_account').get(id=professional_uuid)
         except Professional.DoesNotExist:
-            return Response({'detail': 'Professional not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Professional does not have a bank account.'}, status=status.HTTP_404_NOT_FOUND)
 
         if not hasattr(professional, 'bank_account'):
             return Response({'detail': 'Professional has no bank account configured.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -260,17 +268,14 @@ class ServicePaymentTransferView(APIView):
             "phone_number": customer.user.phone_number, 
             "tx_ref": str(transaction_reference), 
             "description": f"Payment for service by {professional.user.username}",
-            "return_url": f'{return_url}?transaction_id={transaction_reference}'
-,
+            "return_url": f'{return_url}?transaction_id={transaction_reference}',
         }
-        print('payload is',payload)
-        
 
         headers = {
             'Authorization': f"Bearer {settings.CHAPA_SECRET_KEY}",
             'Content-Type': 'application/json'
         }
-        print('header is',headers)
+
         try:
             response = requests.post(payment_url, json=payload, headers=headers)
             response.raise_for_status()
@@ -285,7 +290,7 @@ class ServicePaymentTransferView(APIView):
                     payment_status='pending', 
                     transaction_id=transaction_reference
                 )
-                return Response( {"data": {
+                return Response({"data": {
                         "payment_url": res_data.get("data", {}).get("checkout_url"),
                         "transaction_id": str(transaction_reference)
                     }}, status=status.HTTP_200_OK)
@@ -300,8 +305,6 @@ class ServicePaymentTransferView(APIView):
                 "message": f"Error connecting to Chapa: {str(e)}",
                 "status": "failed"
             }, status=status.HTTP_400_BAD_REQUEST)
-            
-            
 class ServicePaymentVerifyView(APIView):
     permission_classes = [IsAuthenticated]
   
