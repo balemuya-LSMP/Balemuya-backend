@@ -1,10 +1,10 @@
-# bot_services/telegram_facade.py
-
 from .telegram_bot_services import TelegramBotService
 from .telegram_auth_services import TelegramAuthService
 from ..utils.keyboard import generate_keyboard
 from ..handlers.registration_handler import RegistrationHandler
 from ..handlers.login_handler import LoginHandler
+from ..pages.customer.customer_home import CustomerMenu
+from ..pages.professional.professional_home import ProfessionalMenu
 from django.conf import settings
 
 class TelegramFacade:
@@ -14,6 +14,8 @@ class TelegramFacade:
         self.auth_service = TelegramAuthService(chat_id)
         self.registration_handler = RegistrationHandler(self)
         self.login_handler = LoginHandler(self)
+        self.customer_menu = None
+        self.professional_menu = None  # Initialize to None
 
     def send_main_menu(self, message="Please choose an option:"):
         self.bot_service.send_message(
@@ -43,7 +45,6 @@ class TelegramFacade:
 
     def dispatch(self, text, user_state):
         if text == "/start":
-            self.auth_service.clear_session()
             self.send_welcome_message()
         elif text in ["/cancel", "❌ Cancel"]:
             self.auth_service.clear_session()
@@ -54,42 +55,60 @@ class TelegramFacade:
             self.registration_handler.handle(text, user_state)
         elif text == "🔐 Login" or (user_state and user_state.startswith("waiting_for_") and "login" in user_state):
             self.login_handler.handle(text, user_state)
+        elif user_state == "customer_menu":
+            self.handle_customer_commands(text)
+        elif user_state == "professional_menu":
+            self.handle_professional_commands(text)
         else:
+            print('user state is', self.auth_service.get_user_state())
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
 
+    def handle_customer_commands(self, text):
+        if self.customer_menu is None:
+            self.send_customer_menu()  # Ensure menu is initialized
 
-    def send_main_menu(self,message):
-        self.bot_service.send_message(
-            self.chat_id,
-           message,
-            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
-        )
-    def send_welcome_message(self):
-        self.bot_service.send_message(
-            self.chat_id,
-            "👋 Welcome to Balemuya!\nPlease choose an option:",
-            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
-        )
-        
+        if text == "Service Posts":
+            self.customer_menu.display_service_posts_menu()
+        elif text == "Service Applications":
+            self.customer_menu.display_service_applications_menu()
+        elif text == "Bookings":
+            self.customer_menu.display_bookings_menu()
+        elif text == "Profile":
+            self.customer_menu.display_profile_menu()
+        else:
+            self.send_main_menu("⚠️ Unknown customer command.")
+
+    def handle_professional_commands(self, text):
+        if self.professional_menu is None:
+            self.send_professional_menu()  # Ensure menu is initialized
+
+        print('handle professional command is called', 'text', text)
+        if text == "View Applications":
+            self.professional_menu.display_applications_menu()
+        elif text == "Manage Bookings":
+            self.professional_menu.display_bookings_menu()
+        elif text == "View Earnings":
+            self.professional_menu.display_earnings_menu()
+        elif text == "Profile":
+            self.professional_menu.display_profile_menu()
+        else:
+            self.send_main_menu("⚠️ Unknown professional command.")
+
     def send_customer_menu(self):
-        pass
-    def send_professional_menu(self):
-        pass
-        
+        self.customer_menu = CustomerMenu(self.bot_service, self.auth_service, self.chat_id)
+        self.customer_menu.display_menu()
 
-    def send_cancel_message(self):
-        self.bot_service.send_message(
-            self.chat_id,
-            "🚫 Operation cancelled. You're back to the main menu.",
-            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
-        )
+    def send_professional_menu(self):
+        self.professional_menu = ProfessionalMenu(self.bot_service, self.auth_service, self.chat_id)
+        self.professional_menu.display_menu()
+        print('user state after menu displayed is', self.auth_service.get_user_state())
 
     def ask_for_email(self):
         self.bot_service.send_message(self.chat_id, "📧 Please provide your email address:")
 
     def ask_for_password(self):
-        self.bot_service.send_message(self.chat_id, "🔑 please provide your password:")
-        
+        self.bot_service.send_message(self.chat_id, "🔑 Please provide your password:")
+
     def ask_for_username(self):
         self.bot_service.send_message(self.chat_id, "👤 Please provide your username:")
 
@@ -107,7 +126,7 @@ class TelegramFacade:
         self.bot_service.send_message(
             self.chat_id,
             "🏢 Choose entity type:",
-            reply_markup=generate_keyboard([["Individual", "Oganization"]])
+            reply_markup=generate_keyboard([["Individual", "Organization"]])
         )
 
     def send_registration_success(self):
@@ -119,8 +138,8 @@ class TelegramFacade:
     def send_login_success(self):
         self.bot_service.send_message(self.chat_id, "🎉 Login successful!")
 
-    def send_login_failure(self,error=None):
-        self.bot_service.send_message(self.chat_id, "❌ Login failed. Check your credentials.",error)
+    def send_login_failure(self, error=None):
+        self.bot_service.send_message(self.chat_id, "❌ Login failed. Check your credentials.")
 
     def send_help_message(self):
         self.bot_service.send_message(
