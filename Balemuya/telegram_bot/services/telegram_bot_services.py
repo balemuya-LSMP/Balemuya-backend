@@ -11,6 +11,13 @@ class TelegramBotService:
         payload = {
             "chat_id": chat_id,
             "text": text,
-            "reply_markup": reply_markup
         }
-        requests.post(url, json=payload)
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        
+        response = requests.post(url, json=payload)
+        
+        if response.status_code != 200:
+            print("Error sending message:", response.json())
+        else:
+            print("Message sent successfully:", response.json())
