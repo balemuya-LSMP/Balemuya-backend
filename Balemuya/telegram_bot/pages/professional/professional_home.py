@@ -5,7 +5,7 @@ class ProfessionalMenu:
         self.chat_id = chat_id
 
     def display_menu(self):
-        self.auth_service.get_logged_in_user()
+        # self.auth_service.get_logged_in_user()
         self.auth_service.set_user_state("professional_menu")
         print('user state is', self.auth_service.get_user_state())
         menu_text = f"Welcome {self.auth_service.user_instance['user']['full_name']} to Balemuya Professional Menu!"
