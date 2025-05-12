@@ -203,23 +203,26 @@ class ProfessionalBankAccountView(APIView):
 
         serializer = BankAccountSerializer(bank_account)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
     def post(self, request):
         if request.user.user_type != 'professional':
             return Response({'detail': 'User is not a professional.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         professional = request.user.professional
-        try:
-            # Check if the professional already has a bank account
-            BankAccount.objects.get(professional=professional)
+        if BankAccount.objects.filter(professional=professional).exists():
             return Response({'detail': 'Bank account already exists.'}, status=status.HTTP_400_BAD_REQUEST)
-        except BankAccount.DoesNotExist:
-            # Proceed to create a new bank account
-            serializer = BankAccountSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save(professional=professional)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Include the professional in the data for the serializer
+        data = {
+            **request.data,
+            'professional': professional.id  # Pass the professional's ID
+        }
+
+        serializer = BankAccountSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request):
         if request.user.user_type != 'professional':
