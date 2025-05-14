@@ -531,51 +531,26 @@ class InitiateSubscriptionPaymentView(APIView):
         if not all([plan_type, duration, amount]):
             return Response({"detail": "Plan type, duration, and amount are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check user type and fetch the professional
-
         professional = Professional.objects.filter(user=user, is_verified=True).first()
 
         if not professional:
             return Response({"detail": "Professional not found or not verified."}, status=status.HTTP_404_NOT_FOUND)
 
         if professional.num_of_request > 0:
-            return Response({"detail": "You cannot subscribe while you have remaining request coins."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": f"You already have  remaining {professional.num_of_request} request coins."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check for active subscription
         active_subscription = SubscriptionPlan.objects.filter(
             professional=professional,
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
         ).first()
 
-        if active_subscription:
-            subscription_payment = SubscriptionPayment.objects.filter(
-                professional=professional,
-                subscription_plan=active_subscription,
-                payment_status='completed'
-            ).first()
-
-            if subscription_payment:
-                return Response(
-                    {
-                        "detail": "You already have an active subscription.",
-                        "plan_type": active_subscription.plan_type,
-                        "duration": active_subscription.duration,
-                        "end_date": active_subscription.end_date.isoformat(),
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            active_subscription.delete()
-
-        # Prepare to initiate payment
         chapa_url = "https://api.chapa.co/v1/transaction/initialize"
 
-        # Prepare payload
         payload = {
             "amount": str(amount),
             "first_name": professional.user.first_name,
-            "last_name":professional.user.last_name,
+            "last_name": professional.user.last_name,
             "phone_number": professional.user.phone_number,
             "currency": "ETB",
             "email": professional.user.email,
@@ -595,21 +570,26 @@ class InitiateSubscriptionPaymentView(APIView):
             result = response.json()
 
             if not result.get("status") == "success":
-                return Response({'detail': 'payment is not initiated please try again'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': 'Payment is not initiated, please try again'}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
-                subscription_plan = SubscriptionPlan.objects.create(
-                    professional=professional,
-                    plan_type=plan_type,
-                    duration=duration
-                )
+                if active_subscription:
+                    active_subscription.plan_type = plan_type
+                    active_subscription.duration = duration
+                    active_subscription.save()
+                else:
+                    active_subscription = SubscriptionPlan.objects.create(
+                        professional=professional,
+                        plan_type=plan_type,
+                        duration=duration
+                    )
 
                 SubscriptionPayment.objects.create(
                     professional=professional,
                     transaction_id=str(txt_ref),
                     amount=amount,
                     payment_status='pending',
-                    subscription_plan=subscription_plan
+                    subscription_plan=active_subscription
                 )
 
             return Response(
@@ -631,6 +611,7 @@ class InitiateSubscriptionPaymentView(APIView):
                 {"detail": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
 class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -646,6 +627,8 @@ class CheckPaymentView(APIView):
                 {"detail": "Transaction not found."},
                 status=status.HTTP_404_NOT_FOUND
             )
+        if subscription_payment.payment_status == 'completed':
+            return Response({'detail':"This payment already verified and completed"},status=status.HTTP_400_BAD_REQUEST)
 
         chapa_api_url = f"https://api.chapa.co/v1/transaction/verify/{transaction_id}"
         headers = {
