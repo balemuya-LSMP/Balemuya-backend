@@ -536,14 +536,20 @@ class InitiateSubscriptionPaymentView(APIView):
         if not professional:
             return Response({"detail": "Professional not found or not verified."}, status=status.HTTP_404_NOT_FOUND)
 
-        if professional.num_of_request > 0:
-            return Response({"detail": f"You already have  remaining {professional.num_of_request} request coins."}, status=status.HTTP_400_BAD_REQUEST)
 
         active_subscription = SubscriptionPlan.objects.filter(
             professional=professional,
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
         ).first()
+        
+        if not active_subscription and professional.is_available==True:
+            professional.is_available=False
+            professional.num_of_request=0
+            professional.save()
+        
+        if active_subscription and professional.num_of_request > 0:
+            return Response({"detail": f"You already have  remaining {professional.num_of_request} request coins."}, status=status.HTTP_400_BAD_REQUEST)
 
         chapa_url = "https://api.chapa.co/v1/transaction/initialize"
 
@@ -573,12 +579,9 @@ class InitiateSubscriptionPaymentView(APIView):
                 return Response({'detail': 'Payment is not initiated, please try again'}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
-                if active_subscription:
-                    active_subscription.plan_type = plan_type
-                    active_subscription.duration = duration
-                    active_subscription.save()
-                else:
-                    active_subscription = SubscriptionPlan.objects.create(
+                
+                
+                active_subscription = SubscriptionPlan.objects.create(
                         professional=professional,
                         plan_type=plan_type,
                         duration=duration
