@@ -358,7 +358,7 @@ class SubscriptionPlan(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    professional = models.OneToOneField('Professional', on_delete=models.CASCADE, related_name='subscription_plan',default=None) 
+    professional = models.ForeignKey('Professional', on_delete=models.CASCADE, related_name='subscription_plan',default=None) 
     plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES)
     duration = models.IntegerField(choices=DURATION_CHOICES)
     cost = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
@@ -388,7 +388,7 @@ class SubscriptionPlan(models.Model):
         verbose_name = 'Subscription Plan'
         verbose_name_plural = 'Subscription Plans'
 
-from django.db import models
+
 
 class Bank(models.Model):
     """

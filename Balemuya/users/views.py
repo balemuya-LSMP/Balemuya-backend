@@ -43,6 +43,7 @@ from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerial
         FeedbackSerializer,FavoriteSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
+from .professional.utils import check_professional_subscription
 from .pagination import CustomPagination
 class RegisterFCMDeviceView(APIView):
     permission_classes = [IsAuthenticated]
@@ -388,6 +389,7 @@ class ProfileView(APIView):
         elif user.user_type == 'professional':
             professional = get_object_or_404(Professional, user=user)
             serializer = ProfessionalSerializer(professional)
+            check_professional_subscription(professional)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
 
         elif user.user_type == 'admin':
