@@ -580,7 +580,6 @@ class InitiateSubscriptionPaymentView(APIView):
 
             with transaction.atomic():
                 
-                
                 active_subscription = SubscriptionPlan.objects.create(
                         professional=professional,
                         plan_type=plan_type,
