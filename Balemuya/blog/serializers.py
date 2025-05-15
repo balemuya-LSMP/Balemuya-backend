@@ -3,12 +3,26 @@ from users.serializers import UserSerializer
 from .models import BlogPost, Comment, Like,Media
 
 class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'post', 'user', 'content', 'created_at','updated_at']
+        
+    
+class CommentDetailSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = Comment
         fields = ['id', 'post', 'user', 'content', 'created_at','updated_at']
+        
+    
+    
 
 class LikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Like
+        fields = ['id', 'post', 'user', 'created_at','updated_at']
+        
+class LikeDetailSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = Like
@@ -27,6 +41,19 @@ class MediaSerializer(serializers.ModelSerializer):
         return None
 
 class BlogPostSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = BlogPost
+        fields = [
+            'id',
+            'title',
+            'content',
+            'author',
+            'created_at',
+            'updated_at',
+        ]
+
+class BlogPostDetailSerializer(serializers.ModelSerializer):
     medias = MediaSerializer(many=True, read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
     likes = LikeSerializer(many=True, read_only=True)

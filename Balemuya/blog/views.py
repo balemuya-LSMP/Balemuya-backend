@@ -6,13 +6,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import BlogPost, Comment, Like, Media
-from .serializers import BlogPostSerializer, CommentSerializer, LikeSerializer
+from .serializers import BlogPostSerializer,BlogPostDetailSerializer, CommentSerializer,CommentDetailSerializer, LikeSerializer,LikeDetailSerializer
 
 class BlogPostListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         posts = BlogPost.objects.all()
-        serializer = BlogPostSerializer(posts, many=True)
+        serializer = BlogPostDetailSerializer(posts, many=True)
         return Response(serializer.data)
 
     def post(self, request):
@@ -43,7 +43,7 @@ class BlogPostDetailAPIView(APIView):
     def get(self, request, post_id):
         post = self.get_object(post_id)
         if post is not None:
-            serializer = BlogPostSerializer(post)
+            serializer = BlogPostDetailSerializer(post)
             return Response(serializer.data)
         return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -84,7 +84,7 @@ class CommentListCreateAPIView(APIView):
 
     def get(self, request, post_id):
         comments = Comment.objects.filter(post=post_id)
-        serializer = CommentSerializer(comments, many=True)
+        serializer = CommentDetailSerializer(comments, many=True)
         number_of_comments= comments.count()
         return Response({'comments_count':number_of_comments,'data':serializer.data})
 
@@ -127,7 +127,7 @@ class LikeListCreateAPIView(APIView):
     def get(self, request, post_id):
         likes = Like.objects.filter(post_id=post_id)
         number_of_likes = likes.count()
-        serializer = LikeSerializer(likes, many=True)
+        serializer = LikeDetailSerializer(likes, many=True)
         return Response({'likes_count':number_of_likes,'data':serializer.data},status=status.HTTP_200_OK)
 
     def post(self, request, post_id):
