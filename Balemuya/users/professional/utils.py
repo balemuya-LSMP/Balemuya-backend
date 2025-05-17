@@ -4,7 +4,7 @@ from users.models import SubscriptionPlan, Professional
 
 from geopy.distance import geodesic
 
-def filter_service_posts_by_distance(service_posts, user_location, radius=50):
+def filter_service_posts_by_distance(service_posts, user_location, radius=500):
     filtered_posts = []
     
     user_latitude = user_location.latitude
