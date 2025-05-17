@@ -84,7 +84,7 @@ class ServicePostDetailAPIView(APIView):
         if not service_post:
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ServicePosDetailtSerializer(service_post)
+        serializer = ServicePostDetailSerializer(service_post)
         return Response(serializer.data)
 
     def put(self, request, pk):
