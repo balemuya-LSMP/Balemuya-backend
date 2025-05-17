@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 
 from services.models import ServicePostReport,ServiceBooking,ServicePost,ServicePostApplication,ServiceRequest
-from services.serializers import ServicePostSerializer,ServicePostReportSerializer,ServicePostApplicationSerializer,ServiceRequestSerializer,\
-    ServiceBookingSerializer,ServicePostReportSerializer
+from services.serializers import ServicePostSerializer,ServicePostDetailSerializer,ServicePostReportSerializer,ServicePostReportDetailSerializer,ServicePostApplicationSerializer,ServicePostApplicationDetailSerializer,\
+    ServiceRequestSerializer,ServiceRequestDetailSerializer,ServiceBookingSerializer,ServiceBookingDetailSerializer
 
 from customAdmin.permissions import IsAdmin
 
@@ -27,7 +27,7 @@ class AdminServicePostListView(APIView):
         if status_filter:
             posts = posts.filter(status=status_filter)
 
-        serializer = ServicePostReportSerializer(posts, many=True)
+        serializer = ServicePostReportDetailSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -36,7 +36,7 @@ class AdminServicePostReportListView(APIView):
 
     def get(self, request):
         reports = ServicePostReport.objects.select_related('service_post', 'reporter').all()
-        serializer = ServicePostReportSerializer(reports, many=True)
+        serializer = ServicePostReportDetailSerializer(reports, many=True)
         return Response(serializer.data)
 
 class AdminServicePostDetailView(APIView):
@@ -53,7 +53,7 @@ class AdminServicePostDetailView(APIView):
         Retrieve detailed info of a specific service post by ID.
         """
         post = self.get_object(service_post_id)
-        serializer = ServicePostReportSerializer(post)
+        serializer = ServicePostReportDetailSerializer(post)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class AdminToggleServicePostStatusView(APIView):
@@ -102,14 +102,14 @@ class AdminDeleteReportedPostView(APIView):
 
 
 class AdminServicePostReportDetailView(ListAPIView):
-    serializer_class = ServicePostReportSerializer
+    serializer_class = ServicePostReportDetailSerializer
     permission_classes = [IsAdmin, IsAuthenticated]
 
     def get_queryset(self):
         return Report.objects.filter(service_post_id=self.kwargs['service_post_id'])
     
 class AdminServicePostSearchView(ListAPIView):
-    serializer_class = ServicePostSerializer
+    serializer_class = ServicePostDetailSerializer
     permission_classes = [IsAdmin]
 
     def get_queryset(self):

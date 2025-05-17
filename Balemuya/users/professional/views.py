@@ -41,7 +41,7 @@ from users.models import User, Professional, Customer, Admin,Payment,Subscriptio
 from common.models import Category
 from users.utils import send_sms, generate_otp, send_email_confirmation,notify_user
 from services.models import ServicePost, ServicePostApplication, ServiceBooking,Review,ServiceRequest
-from services.serializers import ServicePostSerializer, ServicePostApplicationSerializer,ServiceBookingSerializer,ReviewSerializer,ServiceRequestSerializer
+from services.serializers import ServicePostSerializer,ServicePostDetailSerializer, ServicePostApplicationSerializer,ServicePostApplicationDetailSerializer,ServiceBookingSerializer,ServiceBookingDetailSerializer,ReviewSerializer,ReviewDetailSerializer,ServiceRequestDetailSerializer,ServiceRequestSerializer
 
 from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPaymentSerializer,\
@@ -73,11 +73,11 @@ class ProfessionalProfileView(APIView):
         print('prof data',professional_data)
         response_data={
             "professional":professional_data,
-            "applied_jobs":ServicePostApplicationSerializer(applied_jobs,many=True).data,
-            "pending_jobs":ServiceBookingSerializer(pending_jobs,many=True).data,
-            "canceled_jobs":ServiceBookingSerializer(canceled_jobs,many=True).data,
-            "completed_jobs":ServiceBookingSerializer(completed_jobs,many=True).data,
-            "reviews":ReviewSerializer(reviews,many=True).data
+            "applied_jobs":ServicePostApplicationDetailSerializer(applied_jobs,many=True).data,
+            "pending_jobs":ServiceBookingDetailSerializer(pending_jobs,many=True).data,
+            "canceled_jobs":ServiceBookingDetailSerializer(canceled_jobs,many=True).data,
+            "completed_jobs":ServiceBookingDetailSerializer(completed_jobs,many=True).data,
+            "reviews":ReviewDetailSerializer(reviews,many=True).data
             
         }
         return Response({"message":"Professional profile retrieved successfully", "data":response_data}, status=status.HTTP_200_OK)
@@ -91,34 +91,34 @@ class ProfessionalServiceListView(APIView):
             if query_param_status is None:
                 new_service_post = []
                 new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-urgency','-created_at')
-                new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
+                new_service_post_serializer = ServicePostDetailSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
                 service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='pending').order_by('-created_at')
-                service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)                
+                service_accepted_serializer = ServicePostApplicationDetailSerializer(service_accepted, many=True)                
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'accepted':
                 service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='accepted').order_by('-created_at')
-                service_accepted_serializer = ServicePostApplicationSerializer(service_accepted, many=True)
+                service_accepted_serializer = ServicePostApplicationDetailSerializer(service_accepted, many=True)
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'rejected':
                 service_rejected = ServicePostApplication.objects.filter(professional=request.user,status='rejected').order_by('-created_at')
-                service_rejected_serializer = ServicePostApplicationSerializer(service_rejected, many=True)
+                service_rejected_serializer = ServicePostApplicationDetailSerializer(service_rejected, many=True)
                 return Response({"data": list(service_rejected_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'booked':
                 service_booked = ServiceBooking.objects.filter(application__professional=request.user.professional,status='pending').order_by('-created_at')
-                service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
+                service_booked_serializer = ServiceBookingDetailSerializer(service_booked, many=True)
                 return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'completed':
                 service_completed = ServiceBooking.objects.filter(application__professional=request.user.professional,status='completed').order_by('-created_at')
-                service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
+                service_completed_serializer = ServiceBookingDetailSerializer(service_completed, many=True)
                 return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'canceled':
                 service_canceled = ServiceBooking.objects.filter(application__professional=request.user.professional,status='canceled').order_by('-created_at')
-                service_canceled_serializer = ServiceBookingSerializer(service_canceled, many=True)
+                service_canceled_serializer = ServiceBookingDetailSerializer(service_canceled, many=True)
                 return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
             else:
                 return Response({"detail": "Invalid status parameter."}, status=status.HTTP_400_BAD_REQUEST)
@@ -139,7 +139,7 @@ class ProfessionalServiceRequestsAPIView(APIView):
             service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
         
         if service_requests:
-             serializer = ServiceRequestSerializer(service_requests, many=True)
+             serializer = ServiceRequestDetailSerializer(service_requests, many=True)
              return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({'detail':"no service request found"},status=400)
@@ -709,7 +709,7 @@ class ServicePostSearchView(APIView):
             return Response({"detail": "please turn on your location."}, status=status.HTTP_400_BAD_REQUEST)
         filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
 
-        serializer = ServicePostSerializer(filtered_posts, many=True)
+        serializer = ServicePostDetailSerializer(filtered_posts, many=True)
 
         for i, post in enumerate(serializer.data):
             post['distance'] = filtered_posts[i].distance

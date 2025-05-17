@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServicePostReport, ServiceRequest
 from common.models import Category
 from common.serializers import CategorySerializer
-from .serializers import ServicePostSerializer,ServicePostDetailSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer,ReviewDetailSerializer, ComplainSerializer,ComplainDetailSerializer, ServicePostReportSerializer,ServiceRequestSerializer
+from .serializers import ServicePostSerializer,ServicePostDetailSerializer, ServicePostApplicationSerializer,ServicePostApplicationDetailSerializer, ServiceBookingSerializer,ServiceBookingDetailSerializer,ServiceBookingDetailSerializer, ReviewSerializer,ReviewDetailSerializer, ComplainSerializer,ComplainDetailSerializer, ServicePostReportSerializer,\
+ServiceBookingDetailSerializer,ServiceRequestSerializer
 from users.models import Professional, Customer
 from django.utils import timezone
 from django.db import transaction
@@ -83,7 +84,7 @@ class ServicePostDetailAPIView(APIView):
         if not service_post:
             return Response({"detail": "ServicePost not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ServicePostSerializer(service_post)
+        serializer = ServicePosDetailtSerializer(service_post)
         return Response(serializer.data)
 
     def put(self, request, pk):
@@ -133,8 +134,8 @@ class CreateServicePostApplicationAPIView(APIView):
         professional_id = request.user.professional.id
         print('professional id is ',professional_id)
         application_data = {
-            'service_id':service_post,
-            'professional_id':professional_id,
+            'service':service_post.id,
+            'professional':professional_id,
             **request.data
         }
         serializer = ServicePostApplicationSerializer(data=application_data)
@@ -153,6 +154,7 @@ class ListServicePostApplicationsAPIView(APIView):
     def get(self, request, service_id=None):
         status_param = request.query_params.get('status', 'pending')
         applications = ServicePostApplication.objects.filter(service=service_id, status=status_param)
+        print('applications are',applications)
 
         if request.user.user_type == "professional":
             applications = applications.filter(professional=request.user.professional, status=status_param).order_by('-created_at')
@@ -162,7 +164,7 @@ class ListServicePostApplicationsAPIView(APIView):
         if not applications.exists():
             return Response({"detail": "No applications found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ServicePostApplicationSerializer(applications, many=True)
+        serializer = ServicePostApplicationDetailSerializer(applications, many=True)
         data = list(serializer.data)
         return Response({"message": "success", "data": data}, status=status.HTTP_200_OK)
 
@@ -227,7 +229,7 @@ class ServiceBookingListAPIView(APIView):
         except ServiceBooking.DoesNotExist:
             return Response({"detail": "Bookings not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ServiceBookingSerializer(bookings, many=True)
+        serializer = ServiceBookingDetailSerializer(bookings, many=True)
         return Response({'message': 'success', 'data': serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -237,7 +239,7 @@ class ServiceBookingRetrieveAPIView(APIView):
     def get(self, request, pk=None):
         try:
             booking = ServiceBooking.objects.get(id=pk)
-            serializer = ServiceBookingSerializer(booking)
+            serializer = ServiceBookingDetailSerializer(booking)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ServiceBooking.DoesNotExist:
             return Response({"detail": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -461,7 +463,7 @@ class ServicePostReportAPIView(APIView):
             return Response({'detail': 'You have already reported this post.'}, status=status.HTTP_400_BAD_REQUEST)
 
         report = ServicePostReport.objects.create(
-            service_post=service_post,
+            service_post=service_post.id,
             reporter=user,
             reason=reason
         )
