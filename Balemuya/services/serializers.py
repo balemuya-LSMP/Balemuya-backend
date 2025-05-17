@@ -100,7 +100,7 @@ class ServicePostSerializer(serializers.ModelSerializer):
 class ServicePostDetailSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer(read_only=True)
     category = serializers.CharField()
-    location = AddressSerializer(required=False)
+    location = AddressSerializer(read_only=True)
     class Meta:
         model = ServicePost
         fields = ["id", "title", "category", "customer", "description", "location", "status", "urgency", "work_due_date", "created_at", "updated_at"]
@@ -109,16 +109,30 @@ class ServicePostDetailSerializer(serializers.ModelSerializer):
 
 # ---------- Service Post Application Serializer ----------
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(read_only=True)
-    service_id = serializers.UUIDField(write_only=True)
-    professional_id = serializers.UUIDField(write_only=True)
+    class Meta:
+        model = ServicePostApplication
+        fields = ['id', 'service', 'professional','message', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+    def create(self, validated_data):
+        if ServicePostApplication.objects.filter(
+            service=validated_data['service'], professional=validated_data['professional']
+        ).exists():
+            raise serializers.ValidationError("Already applied for this service.")
+        validated_data['status'] = 'pending'
+        return super().create(validated_data)
+    
+    
+# ---------- Service Post Application detail Serializer ----------
+class ServicePostApplicationDetailSerializer(serializers.ModelSerializer):
     service = serializers.SerializerMethodField()
     professional = serializers.SerializerMethodField()
     customer = serializers.SerializerMethodField()
 
     class Meta:
         model = ServicePostApplication
-        fields = ['id', 'service_id', 'professional_id', 'service', 'professional', 'customer', 'message', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'service_id', 'service', 'professional', 'customer', 'message', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_service(self, obj):
@@ -145,16 +159,27 @@ class ServicePostApplicationSerializer(serializers.ModelSerializer):
             "customer_rating": c.rating
         }
 
-    def create(self, validated_data):
-        if ServicePostApplication.objects.filter(
-            service=validated_data['service_id'], professional=validated_data['professional_id']
-        ).exists():
-            raise serializers.ValidationError("Already applied for this service.")
-        validated_data['status'] = 'pending'
-        return super().create(validated_data)
+    
+    
 
 # ---------- Service Booking Serializer ----------
 class ServiceBookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceBooking
+        fields = ['id', 'application','scheduled_date', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at',]
+        extra_kwargs = {'application': {'write_only': True}}
+    
+    def validate(self, data):
+        app = data.get('application')
+        if app.status != 'accepted':
+            raise serializers.ValidationError("Application must be accepted before booking.")
+        if ServiceBooking.objects.filter(application=app).exists():
+            raise serializers.ValidationError("Booking already exists for this application.")
+        return data
+        
+#------------service booking detail serializer-------------------
+class ServiceBookingDetailSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     service = serializers.SerializerMethodField()
     customer = serializers.SerializerMethodField()
@@ -162,9 +187,8 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceBooking
-        fields = ['id', 'application', 'service', 'professional', 'customer', 'scheduled_date', 'status', 'created_at', 'updated_at']
+        fields = ['id','service', 'professional', 'customer', 'scheduled_date', 'status', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'service', 'professional']
-        extra_kwargs = {'application': {'write_only': True}}
 
     def get_service(self, obj):
         try:
@@ -196,24 +220,26 @@ class ServiceBookingSerializer(serializers.ModelSerializer):
             }
         except: return None
 
-    def validate(self, data):
-        app = data.get('application')
-        if app.status != 'accepted':
-            raise serializers.ValidationError("Application must be accepted before booking.")
-        if ServiceBooking.objects.filter(application=app).exists():
-            raise serializers.ValidationError("Booking already exists for this application.")
-        return data
+
 
 # ---------- Service Request Serializer ----------
 class ServiceRequestSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer(read_only=True)
-    professional = serializers.SerializerMethodField()
-    customer_id = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), source='customer', write_only=True)
-    professional_id = serializers.PrimaryKeyRelatedField(queryset=Professional.objects.all(), source='professional', write_only=True)
-
     class Meta:
         model = ServiceRequest
-        fields = ['id', 'customer', 'customer_id', 'professional', 'professional_id', 'detail', 'status', 'created_at', 'updated_at']
+        fields = ['id', 'customer', 'professional','detail', 'status', 'created_at', 'updated_at']
+
+
+    def create(self, validated_data):
+        return ServiceRequest.objects.create(**validated_data)
+    
+
+# ---------- Service Request detail Serializer ----------
+class ServiceRequestDetailSerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+    professional = serializers.SerializerMethodField()
+    class Meta:
+        model = ServiceRequest
+        fields = ['id', 'customer', 'professional', 'detail', 'status', 'created_at', 'updated_at']
 
     def get_professional(self, obj):
         try:
@@ -226,15 +252,20 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
             }
         except: return None
 
-    def create(self, validated_data):
-        return ServiceRequest.objects.create(**validated_data)
     
     
 
+#------------service post report serlaizer---------------
 class ServicePostReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServicePostReport
+        fields = ['id', 'service_post', 'reporter', 'reason', 'created_at','updated_at']
+        
+
+#------------service post report detail serializer--------------
+class ServicePostReportDetailSerializer(serializers.ModelSerializer):
     reporter = UserSerializer(read_only=True)
     service_post = ServicePostSerializer(read_only=True)
     class Meta:
         model = ServicePostReport
         fields = ['id', 'service_post', 'reporter', 'reason', 'created_at','updated_at']
-        read_only_fields = ['id', 'created_at','updated_at', 'reporter']
