@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServicePostReport, ServiceRequest
 from common.models import Category
 from common.serializers import CategorySerializer
-from .serializers import ServicePostSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer, ComplainSerializer, ServicePostReportSerializer,ServiceRequestSerializer
+from .serializers import ServicePostSerializer,ServicePostDetailSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer, ReviewSerializer,ReviewDetailSerializer, ComplainSerializer,ComplainDetailSerializer, ServicePostReportSerializer,ServiceRequestSerializer
 from users.models import Professional, Customer
 from django.utils import timezone
 from django.db import transaction
@@ -50,7 +50,7 @@ class ServicePostListCreateAPIView(APIView):
         if not service_posts.exists():
             return Response({"detail": "No service posts found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ServicePostSerializer(service_posts, many=True)
+        serializer = ServicePostDetailSerializer(service_posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request, *args, **kwargs):
@@ -59,7 +59,7 @@ class ServicePostListCreateAPIView(APIView):
             return Response({'message':'you are not allowd to post!'},status=status.HTTP_400_BAD_REQUEST)
         
         posted_data = {
-            'customer_id':request.user.customer.id,
+            'customer':request.user.customer.id,
             **request.data
         }
         serializer = ServicePostSerializer(data=posted_data,context={'request':request})

@@ -10,12 +10,12 @@ from uuid import UUID
 
 # ---------- Review Serializer ----------
 class ReviewSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(read_only=True)
-    reviewer = UserSerializer(read_only=True)
+    # id = serializers.CharField(read_only=True)
+    # reviewer = UserSerializer(read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'user', 'booking', 'service_request', 'reviewer', 'rating', 'comment', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'booking', 'service_request', 'rating', 'comment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at', 'reviewer']
         extra_kwargs = {'user': {'write_only': True}}
 
@@ -23,12 +23,20 @@ class ReviewSerializer(serializers.ModelSerializer):
         if not validated_data.get('booking') and not validated_data.get('service_request'):
             raise serializers.ValidationError("A review must be linked to a booking or a service request.")
         return Review.objects.create(**validated_data)
+    
+class ReviewDetailSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Review
+        fields = ['id', 'user', 'booking', 'service_request', 'rating', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {'user': {'write_only': True}}
+
+    
 
 # ---------- Complain Serializer ----------
 class ComplainSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(read_only=True)
-    user = UserSerializer(read_only=True)
-
+   
     class Meta:
         model = Complain
         fields = ['id','user', 'booking', 'service_request', 'status', 'message', 'created_at', 'updated_at']
@@ -39,17 +47,23 @@ class ComplainSerializer(serializers.ModelSerializer):
         if not validated_data.get('booking') and not validated_data.get('service_request'):
             raise serializers.ValidationError("A complaint must be linked to a booking or a service request.")
         return Complain.objects.create(**validated_data)
+    
+class ComplainDetailSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Complain
+        fields = ['id','user', 'booking', 'service_request', 'status', 'message', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {'user': {'write_only': True}}
+
 
 # ---------- Service Post Serializer ----------
 class ServicePostSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer(read_only=True)
     category = serializers.CharField()
     location = AddressSerializer(required=False)
-    customer_id = serializers.UUIDField(write_only=True)
-
     class Meta:
         model = ServicePost
-        fields = ["id", "customer_id", "title", "category", "customer", "description", "location", "status", "urgency", "work_due_date", "created_at", "updated_at"]
+        fields = ["id", "title", "category", "customer", "description", "location", "status", "urgency", "work_due_date", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def validate_work_due_date(self, value):
@@ -81,6 +95,17 @@ class ServicePostSerializer(serializers.ModelSerializer):
         if not hasattr(user, 'address') or not user.address:
             raise serializers.ValidationError("User has no default address.")
         return user.address
+    
+# ---------- Service Post detail Serializer ----------
+class ServicePostDetailSerializer(serializers.ModelSerializer):
+    customer = CustomerSerializer(read_only=True)
+    category = serializers.CharField()
+    location = AddressSerializer(required=False)
+    class Meta:
+        model = ServicePost
+        fields = ["id", "title", "category", "customer", "description", "location", "status", "urgency", "work_due_date", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
 
 # ---------- Service Post Application Serializer ----------
 class ServicePostApplicationSerializer(serializers.ModelSerializer):
