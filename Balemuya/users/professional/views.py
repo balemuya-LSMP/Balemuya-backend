@@ -703,6 +703,7 @@ class ServicePostSearchView(APIView):
             status='active',
             work_due_date__lte=timezone.now()
         ).distinct() 
+        print('service posts',service_posts)
 
         user_location = request.user.address 
         if not user_location:
