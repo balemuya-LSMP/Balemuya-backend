@@ -15,7 +15,8 @@ from common.serializers import UserSerializer
 from users.models import User, Customer,Professional,Payment,BankAccount
 from users.serializers import ProfessionalSerializer,CustomerSerializer,PaymentSerializer,BankAccountSerializer
 from services.models import ServicePost, Review, ServicePostApplication, ServiceBooking,ServiceRequest
-from services.serializers import ServicePostSerializer, ReviewSerializer, ServicePostApplicationSerializer, ServiceBookingSerializer,ServiceRequestSerializer
+from services.serializers import ServicePostSerializer,ServicePostDetailSerializer, ReviewSerializer,ReviewDetailSerializer, ServicePostApplicationSerializer,ServicePostApplicationDetailSerializer, ServiceBookingSerializer,ServiceBookingDetailSerializer,\
+    ServiceRequestSerializer,ServiceRequestDetailSerializer
 
 from .utils import find_nearby_professionals,filter_professionals
 from users.pagination import CustomPagination
@@ -49,9 +50,9 @@ class CustomerProfileView(APIView):
         completed_service_posts = ServicePost.objects.filter(customer=user.customer,status='completed').order_by('-created_at')
             
         customer_serializer = CustomerSerializer(customer)
-        active_service_posts_serializer = ServicePostSerializer(active_service_posts, many=True)
-        booked_service_posts_serializer = ServicePostSerializer(booked_service_posts, many=True)
-        completed_service_posts_serializer = ServicePostSerializer(completed_service_posts, many=True)
+        active_service_posts_serializer = ServicePostDetailSerializer(active_service_posts, many=True)
+        booked_service_posts_serializer = ServicePostDetailSerializer(booked_service_posts, many=True)
+        completed_service_posts_serializer = ServicePostDetailSerializer(completed_service_posts, many=True)
         reviews = Review.objects.filter(booking__application__service__customer=user.customer).order_by('-created_at')
             
         response_data = {
@@ -59,7 +60,7 @@ class CustomerProfileView(APIView):
                 'active_service_posts': active_service_posts_serializer.data,
                 'booked_service_posts': booked_service_posts_serializer.data,
                 'completed_service_posts': completed_service_posts_serializer.data,
-                'reviews': ReviewSerializer(reviews, many=True).data
+                'reviews': ReviewDetailSerializer(reviews, many=True).data
             }
             
         return Response({'data': response_data}, status=status.HTTP_200_OK)
@@ -74,21 +75,21 @@ class CustomerServicesView(APIView):
             query_param_status = request.query_params.get('status', None)
             if query_param_status is None:
                 new_service_post = ServicePost.objects.filter(customer=request.user.customer,status='active').order_by('-created_at')
-                new_service_post_serializer = ServicePostSerializer(new_service_post, many=True)
+                new_service_post_serializer = ServicePostDetailSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
            
             elif query_param_status == 'booked':
                 service_booked = ServiceBooking.objects.filter(application__service__customer=request.user.customer,status='pending').order_by('-created_at')
-                service_booked_serializer = ServiceBookingSerializer(service_booked, many=True)
+                service_booked_serializer = ServiceBookingDetailSerializer(service_booked, many=True)
                 
                 return Response({"data": list(service_booked_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'completed':
                 service_completed = ServiceBooking.objects.filter(application__service__customer=request.user.customer,status='completed').order_by('-created_at')
-                service_completed_serializer = ServiceBookingSerializer(service_completed, many=True)
+                service_completed_serializer = ServiceBookingDetailSerializer(service_completed, many=True)
                 return Response({"data": list(service_completed_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'canceled':
                 service_canceled = ServicePost.objects.filter(customer=request.user.customer,status='canceled').order_by('-created_at')
-                service_canceled_serializer = ServicePostSerializer(service_canceled, many=True)
+                service_canceled_serializer = ServicePostDetailSerializer(service_canceled, many=True)
                 return Response({"data": list(service_canceled_serializer.data)}, status=status.HTTP_200_OK)
             else:
                 return Response({"detail": "Invalid status parameter."}, status=status.HTTP_400_BAD_REQUEST)
@@ -135,7 +136,7 @@ class CustomerServiceRequestAPIView(APIView):
         if status_param:
             service_requests = service_requests.filter(status=status_param)
         if service_requests:
-            serializer = ServiceRequestSerializer(service_requests, many=True)
+            serializer = ServiceRequestDetailSerializer(service_requests, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({'message':'request not found'},status=status.HTTP_404_NOT_FOUND)
@@ -152,8 +153,8 @@ class CustomerServiceRequestAPIView(APIView):
                 return Response({"detail": "Professional does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
             data = {
-                'customer_id': customer_user.id,  
-                'professional_id': professional_user.professional.id, 
+                'customer': customer_user.id,  
+                'professional': professional_user.professional.id, 
                 'detail': request.data.get('detail'),
             }
 
