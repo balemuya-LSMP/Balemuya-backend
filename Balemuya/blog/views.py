@@ -18,10 +18,13 @@ class BlogPostListCreateAPIView(APIView):
     def post(self, request):
         if not request.user.user_type =='professional':
             return Response({'detail':'only professionals posts blog'},status=status.HTTP_401_UNAUTHORIZED)
-        serializer = BlogPostSerializer(data=request.data)
+        post_data = request.data
+        post_data['author']=request.user.id
+        serializer = BlogPostSerializer(data=post_data)
         if serializer.is_valid():
-            blog_post = serializer.save(author=request.user)
+            blog_post = serializer.save()
             media_files = request.FILES.getlist('media_files')
+            
             print('media files',media_files)
             for media_file in media_files:
                 media_type = 'image' if media_file.content_type.startswith('image/') else 'video'
