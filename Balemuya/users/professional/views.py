@@ -94,7 +94,7 @@ class ProfessionalServiceListView(APIView):
                 new_service_post_serializer = ServicePostDetailSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
-                service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional,status='pending').order_by('-created_at')
+                service_accepted = ServicePostApplication.objects.filter(professional=request.user.professional.id,status='pending').order_by('-created_at')
                 service_accepted_serializer = ServicePostApplicationDetailSerializer(service_accepted, many=True)                
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
@@ -104,7 +104,7 @@ class ProfessionalServiceListView(APIView):
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'rejected':
-                service_rejected = ServicePostApplication.objects.filter(professional=request.user,status='rejected').order_by('-created_at')
+                service_rejected = ServicePostApplication.objects.filter(professional=request.user.id,status='rejected').order_by('-created_at')
                 service_rejected_serializer = ServicePostApplicationDetailSerializer(service_rejected, many=True)
                 return Response({"data": list(service_rejected_serializer.data)}, status=status.HTTP_200_OK)
             
