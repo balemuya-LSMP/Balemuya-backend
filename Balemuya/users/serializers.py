@@ -212,10 +212,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         # Only return relevant fields for 'individual' and 'organization' professionals
         if user_type == 'professional':
             if entity_type == 'organization':
-                rep.pop('kebele_id_front_image', None)
-                rep.pop('kebele_id_back_image', None)
-                rep.pop('kebele_id_front_image_url', None)
-                rep.pop('kebele_id_back_image_url', None)
                 rep.pop('educations', None)
 
             elif entity_type == 'individual':
