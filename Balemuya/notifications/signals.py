@@ -213,11 +213,11 @@ def notify_customer_on_service_response(sender, instance, created, **kwargs):
                 notification_type="new_job_response",
                 metadata={
                     "id": str(instance.professional.id),
-                    "username": instance.professional.username,
+                    "username": instance.professional.user.username,
                     "profile_image": str(instance.professional.user.profile_image.url)or None,
                 }
             )
-            notification.recipient.set(instance.customer.user)
+            notification.recipient.set([instance.customer.user])
             notification.save()
             
             notification_serializer = NotificationSerializer(notification)
