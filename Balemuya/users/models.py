@@ -76,6 +76,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
     entity_type = models.CharField(max_length=30, choices=ENTITY_TYPE_CHOICES, default='individual')
     
+    telegram_chat_id = models.CharField(max_length=255, null=True, blank=True)
+
 
     is_active = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)

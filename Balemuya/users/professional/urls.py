@@ -2,7 +2,7 @@ from django.urls import path
 import uuid
 from .views import ProfessionalProfileView, ProfessionalProfileUpdateView,ProfessionalSkillView,ProfessionalCategoryView,CertificateView,EducationView,PortfolioView,\
     ProfessionalVerificationRequestView,InitiateSubscriptionPaymentView,CheckPaymentView,ProfessionalSubscriptionHistoryView,\
-    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServicePostSearchView,ServicePostFilterView,ProfessionalPaymentWithdrawalView,\
+    ProfessionalServiceListView,ProfessionalServiceRequestsAPIView,ServiceRequestAcceptAPIView,ServiceRequestRejectAPIView,ServicePostSearchView,ServicePostFilterView,ProfessionalPaymentWithdrawalView,\
         ProfessionalBankAccountView,BankListView
 
 urlpatterns = [
@@ -30,10 +30,12 @@ urlpatterns = [
     
     #services
     path('services/', ProfessionalServiceListView.as_view(), name='professional-service-app-list'),
-    path('service/search/', ServicePostSearchView.as_view(), name='service_post_search'),
-    path('service/filter/', ServicePostFilterView.as_view(), name='service_post_filter'),
+    path('service/search/', ServicePostSearchView.as_view(), name='service-post-search'),
+    path('service/filter/', ServicePostFilterView.as_view(), name='service-post-filter'),
 
-    path('service-requests/', ProfessionalServiceRequestsAPIView.as_view(), name='professional_service_requests'),#professional srvices requested
+    path('service-requests/', ProfessionalServiceRequestsAPIView.as_view(), name='professional-service-requests'),
+    path('service-requests/<uuid:req_id>/accept/', ServiceRequestAcceptAPIView.as_view(), name='service-request-accept'),
+    path('service-requests/<uuid:req_id>/reject/', ServiceRequestRejectAPIView.as_view(), name='service-request-reject'),
 
     #payment related
     path('subscription/payment/initiate/', InitiateSubscriptionPaymentView.as_view(), name='initiate_subscription-payment'),
