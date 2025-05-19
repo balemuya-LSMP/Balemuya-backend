@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'password','full_name', 'profile_image','profile_image_url','email','username', 'gender', 'org_name', 'first_name', 'last_name','phone_number', 'user_type','entity_type', 'bio',
-            'is_active','is_blocked','created_at', 'updated_at', 'address'
+            'is_active','telegram_chat_id','is_blocked','created_at', 'updated_at', 'address'
         ]
         extra_kwargs = {
             'password': {'write_only': True}

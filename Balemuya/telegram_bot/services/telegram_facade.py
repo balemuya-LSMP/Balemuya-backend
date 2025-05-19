@@ -16,12 +16,16 @@ class TelegramFacade:
         self.login_handler = LoginHandler(self)
         self.customer_menu = None
         self.professional_menu = None  # Initialize to None
-
+    
     def send_main_menu(self, message="Please choose an option:"):
         self.bot_service.send_message(
             self.chat_id,
             message,
-            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help", "❌ Cancel"]])
+            reply_markup=generate_keyboard([
+                ["📝 Register", "🔐 Login"],
+                ["ℹ️ Help", "❌ Cancel"],
+                ["🔓 Logout"]
+            ])
         )
 
     def send_welcome_message(self):
@@ -31,6 +35,13 @@ class TelegramFacade:
         self.bot_service.send_message(
             self.chat_id,
             "🚫 Operation cancelled. You're back to the main menu.",
+            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
+        )
+    def send_logout_message(self):
+        self.auth_service.set_user_state('logout_user')
+        self.bot_service.send_message(
+            self.chat_id,
+            "🚫 user logedout. You're back to the main menu.",
             reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
         )
 
@@ -45,10 +56,15 @@ class TelegramFacade:
 
     def dispatch(self, text, user_state):
         if text == "/start":
+            
             self.send_welcome_message()
         elif text in ["/cancel", "❌ Cancel"]:
             self.auth_service.clear_session()
             self.send_cancel_message()
+        elif text in ["🔓 Logout"]:
+            self.auth_service.clear_session()
+            self.send_logout_message()
+            
         elif text == "ℹ️ Help":
             self.send_help_message()
         elif text == "📝 Register" or (user_state and user_state.startswith("waiting_for_") and "register" in user_state):

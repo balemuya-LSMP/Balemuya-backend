@@ -135,14 +135,13 @@ class ProfessionalServiceRequestsAPIView(APIView):
         service_requests = ServiceRequest.objects.filter(professional=user.professional).order_by('-updated_at')
 
         if status_param is not None:
-            print('status param',status)
             service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
         
         if service_requests:
-             serializer = ServiceRequestDetailSerializer(service_requests, many=True)
-             return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = ServiceRequestDetailSerializer(service_requests, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response({'detail':"no service request found"},status=400)
+            return Response({'detail': "No service request found"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, *args, **kwargs):
         request_id = kwargs.get('request_id')
@@ -163,7 +162,36 @@ class ProfessionalServiceRequestsAPIView(APIView):
 
         service_request.save()
         return Response({"success": f"Service request {action}ed."}, status=status.HTTP_200_OK)
-            
+
+class ServiceRequestAcceptAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, req_id=None):
+        if not req_id:
+            return Response({"detail": "Request ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service_request = ServiceRequest.objects.get(id=req_id, professional=request.user.professional)
+            service_request.status = 'accepted'
+            service_request.save()
+            return Response({"success": "Service request accepted."}, status=status.HTTP_200_OK)
+        except ServiceRequest.DoesNotExist:
+            return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+
+class ServiceRequestRejectAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, req_id=None):
+        if not req_id:
+            return Response({"detail": "Request ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service_request = ServiceRequest.objects.get(id=req_id, professional=request.user.professional)
+            service_request.status = 'rejected'
+            service_request.save()
+            return Response({"success": "Service request rejected."}, status=status.HTTP_200_OK)
+        except ServiceRequest.DoesNotExist:
+            return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
 class ProfessionalProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
