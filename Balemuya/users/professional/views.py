@@ -141,7 +141,7 @@ class ProfessionalServiceRequestsAPIView(APIView):
             serializer = ServiceRequestDetailSerializer(service_requests, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response({'detail': "No service request found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'data':[]}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         request_id = kwargs.get('request_id')
