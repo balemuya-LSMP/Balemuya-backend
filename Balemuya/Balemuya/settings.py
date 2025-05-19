@@ -261,6 +261,7 @@ ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
     'https://balemuya-project.onrender.com',
     'https://balemuya-fe.onrender.com',  
+    'https://balemuya-fe.vercel.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
 ]
@@ -270,6 +271,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
     'https://balemuya-project.onrender.com',
     'https://balemuya-fe.onrender.com',
+   'https://balemuya-fe.vercel.app',
 ]
 
 CORS_ALLOW_HEADERS = [

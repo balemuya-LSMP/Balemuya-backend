@@ -80,7 +80,7 @@ class TelegramFacade:
 
     def handle_professional_commands(self, text):
         if self.professional_menu is None:
-            self.send_professional_menu()  # Ensure menu is initialized
+            self.send_professional_menu()
 
         print('handle professional command is called', 'text', text)
         if text == "View Applications":
@@ -91,6 +91,8 @@ class TelegramFacade:
             self.professional_menu.display_earnings_menu()
         elif text == "Profile":
             self.professional_menu.display_profile_menu()
+        elif text == "View Profile":
+            self.professional_menu.fetch_professional_profile()
         else:
             self.send_main_menu("⚠️ Unknown professional command.")
 
