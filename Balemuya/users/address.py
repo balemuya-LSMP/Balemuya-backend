@@ -26,7 +26,7 @@ class AddressView(APIView):
     def post(self, request):
         existing_address = getattr(request.user, 'address', None)
         if existing_address:
-            return Response({"error": "User already has an address."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "User already has an address."}, status=status.HTTP_400_BAD_REQUEST)
 
         latitude = request.data.get('latitude')
         longitude = request.data.get('longitude')
