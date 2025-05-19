@@ -27,10 +27,6 @@ from .models import (
 from common.models import Category
 from common.serializers import CategorySerializer, UserSerializer
 
-class FavoriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Favorite
-        fields = ['id', 'user', 'professional', 'created_at']
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -315,8 +311,24 @@ class WithdrawalTransactionSerializer(serializers.ModelSerializer):
         return value
 
 class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback 
+        fields = '__all__'
+        
+class FeedbackDetailSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
 
     class Meta:
         model = Feedback 
         fields = '__all__'
+        
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favorite
+        fields = ['id', 'user', 'professional', 'created_at']
+        
+class FavoriteDetailSerializer(serializers.ModelSerializer):
+    professional = ProfessionalSerializer(source='professional.user',read_only=True)
+    class Meta:
+        model = Favorite
+        fields = ['id', 'user', 'professional', 'created_at']

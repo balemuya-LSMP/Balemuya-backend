@@ -40,7 +40,7 @@ from .utils import send_sms, generate_otp, send_email_confirmation,notify_user
 
 from .serializers import  LoginSerializer ,ProfessionalSerializer,CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,\
-        FeedbackSerializer,FavoriteSerializer
+        FeedbackSerializer,FeedbackDetailSerializer,FavoriteSerializer,FavoriteDetailSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 from .professional.utils import check_professional_subscription
@@ -50,7 +50,7 @@ class RegisterFCMDeviceView(APIView):
 
     def post(self, request):
         token = request.data.get("token")
-        device_type = request.data.get("type")  # e.g., "web", "android", or "ios"
+        device_type = request.data.get("type") 
 
         if token:
             device, created = FCMDevice.objects.update_or_create(
@@ -516,7 +516,7 @@ class UserFeedbackView(APIView):
             return Response({'count': 0, 'results': []})
 
         paginated_feedbacks = paginator.paginate_queryset(user_feedbacks, request)
-        serializer = FeedbackSerializer(paginated_feedbacks, many=True)
+        serializer = FeedbackDetailSerializer(paginated_feedbacks, many=True)
         return paginator.get_paginated_response(serializer.data)
     def post(self,request):
          user_feedback = Feedback.objects.filter(user=request.user).first()
@@ -534,14 +534,23 @@ class UserFeedbackView(APIView):
 class FavoriteListCreateAPIView(APIView):
     def get(self, request):
         favorites = Favorite.objects.filter(user=request.user)
-        serializer = FavoriteSerializer(favorites, many=True)
+        serializer = FavoriteDetailSerializer(favorites, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = FavoriteSerializer(data=request.data)
+        professional = request.data.get('professional')
+        try:
+            professional_user = User.objects.get(id=professional)
+        except User.DoesNotExist:
+            return Response({'message':'user not found'},status=status.HTTP_404_NOT_FOUND)
+        favorite_data =request.data
+        favorite_data['professional'] =professional_user.professional
+        favorite_data['user'] = request.user
+        
+        serializer = FavoriteSerializer(data=favorite_data)
         if serializer.is_valid():
-            serializer.save(user=request.user)  # Set the user to the logged-in user
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer.save() 
+            return Response({'message':'user added to favorite successfully!'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             
