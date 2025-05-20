@@ -131,17 +131,17 @@ class ProfessionalServiceRequestsAPIView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         status_param = request.query_params.get('status')
-    
+        print('status param',status_param)
         service_requests = ServiceRequest.objects.filter(professional=user.professional).order_by('-updated_at')
-
+        print('service requests',service_requests)
         if status_param is not None:
-            service_requests = service_requests.filter(status=status_param).order_by('-updated_at')
-        
-        if service_requests:
-            serializer = ServiceRequestDetailSerializer(service_requests, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            service_requests = service_requests.filter(status=status_param)
         else:
-            return Response({'data':[]}, status=status.HTTP_200_OK)
+            service_requests = service_requests.filter(status='pending').order_by('-updated_at')
+        
+        serializer = ServiceRequestDetailSerializer(service_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
 
     def post(self, request, *args, **kwargs):
         request_id = kwargs.get('request_id')
