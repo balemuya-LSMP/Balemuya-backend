@@ -434,6 +434,7 @@ class UserDetailView(APIView):
 
     def get(self, request, id=None, *args, **kwargs):
         user = self.get_user(id)
+        
         if user is None:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
