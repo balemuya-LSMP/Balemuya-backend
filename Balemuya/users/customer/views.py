@@ -131,21 +131,21 @@ class CustomerServiceRequestAPIView(APIView):
         user = request.user
         status_param = request.query_params.get('status')
 
-        service_requests = ServiceRequest.objects.filter(customer=user.customer,status='pending')
+        service_requests = ServiceRequest.objects.filter(customer=user.customer).order_by('-updated_at')
 
         if status_param:
             service_requests = service_requests.filter(status=status_param)
-        if service_requests:
-            serializer = ServiceRequestDetailSerializer(service_requests, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response({'message':'request not found'},status=status.HTTP_404_NOT_FOUND)
+            service_requests = service_requests.filter(status='pending')
+        serializer = ServiceRequestDetailSerializer(service_requests, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+       
     
 
     def post(self, request, *args, **kwargs):
             customer_user = request.user.customer
             professional_user_id = request.data.get('professional')
-            print('professional id ',professional_user_id)
 
             try:
                 professional_user =User.objects.get(id=professional_user_id)
