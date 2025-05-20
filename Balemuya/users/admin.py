@@ -130,7 +130,7 @@ class BankAccountAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('transaction_id', 'customer', 'professional', 'booking', 'amount', 'payment_date', 'payment_status')
+    list_display = ('transaction_id', 'customer', 'professional', 'booking','service_request', 'payment_type','amount', 'payment_date', 'payment_status')
     search_fields = ('transaction_id', 'customer__email', 'professional__email')
     list_filter = ('payment_status', 'payment_method')
     ordering = ('-payment_date',)

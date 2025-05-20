@@ -1,11 +1,19 @@
 from django.contrib import admin
-from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain,ServicePostReport
+from .models import ServicePost, ServicePostApplication, ServiceBooking,Review,Complain,ServicePostReport,ServiceRequest
 
 @admin.register(ServicePost)
 class ServicePostAdmin(admin.ModelAdmin):
     list_display = ('id', 'customer', 'category', 'description', 'status', 'urgency', 'work_due_date', 'created_at', 'updated_at')
     list_filter = ('status', 'urgency', 'category', 'created_at')
     search_fields = ('id', 'description',)
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+    
+@admin.register(ServiceRequest)
+class ServiceRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'customer', 'professional', 'detail', 'status', 'created_at', 'updated_at')
+    list_filter = ('status',)
+    search_fields = ('id', 'detail','status')
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
     
