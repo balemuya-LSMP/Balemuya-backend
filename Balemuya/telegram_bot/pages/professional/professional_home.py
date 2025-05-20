@@ -17,8 +17,8 @@ class ProfessionalMenu:
         menu_text = f"Welcome {self.auth_service.user_instance['user']['full_name']} to Balemuya Professional Menu!"
         keyboard = {
             "keyboard": [
-                ["View Applications", "Manage Bookings"],
-                ["View Earnings", "Subscription Plans"],
+                ["Manage Requests", "Manage Services"],
+                ["Payment History", "View Subscription"],
                 ["Profile", "Help"]
             ],
             "resize_keyboard": True,
@@ -26,24 +26,25 @@ class ProfessionalMenu:
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
-    def display_applications_menu(self):
-        menu_text = "Manage Your Applications:"
+    def display_Requests_menu(self):
+        menu_text = "Manage Service Requests:"
         keyboard = {
             "keyboard": [
-                ["Pending Applications", "Accepted Applications"],
-                ["Rejected Applications", "Back to Main Menu"]
+                ["Pending Requests", "Accepted Requests"],
+                ["Rejected Requests", "Back to Main Menu"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
-    def display_bookings_menu(self):
-        menu_text = "Manage Your Bookings as a Professional:"
+    def display_service_menu(self):
+        menu_text = "Manage Your Services as a Professional:"
         keyboard = {
             "keyboard": [
-                ["Upcoming Bookings", "Completed Bookings"],
-                ["Canceled Bookings", "Back to Main Menu"]
+                ["New Jobs", "Completed Jobs"],
+                ["Rejected Jobs","Canceled Jobs"],
+                [ "Back to Main Menu"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
@@ -61,6 +62,12 @@ class ProfessionalMenu:
             "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
+        
+    def fetch_subscription_plan(self):
+        pass
+    
+    def fetch_payment_history(self):
+        pass
     
     def fetch_professional_profile(self):
         profile = self.auth_service.user_instance

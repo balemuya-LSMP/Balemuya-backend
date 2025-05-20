@@ -39,21 +39,21 @@ class BlogPostListCreateAPIView(APIView):
 class BlogPostDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, post_id):
+    def get_post_object(self, request, post_id):
         try:
-            return BlogPost.objects.get(id=post_id,author=request.user.id)
+            return BlogPost.objects.get(id=post_id, author=request.user.id)
         except BlogPost.DoesNotExist:
             return None
 
     def get(self, request, post_id):
-        post = self.get_object(post_id)
+        post = self.get_post_object(request, post_id)
         if post is not None:
             serializer = BlogPostDetailSerializer(post)
             return Response(serializer.data)
         return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, post_id):
-        post = self.get_object(post_id)
+        post = self.get_post_object(request, post_id)
         if post is None:
             return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -62,6 +62,7 @@ class BlogPostDetailAPIView(APIView):
             with transaction.atomic():
                 serializer.save()
 
+                # Delete existing media files
                 post.medias.all().delete()
 
                 media_files = request.FILES.getlist('media_files')
@@ -78,12 +79,12 @@ class BlogPostDetailAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, post_id):
-        post = self.get_object(post_id)
+        post = self.get_post_object(request, post_id)
         if post is not None:
             post.delete()
-            return Response({'message':'blog deleted successfully'},status=status.HTTP_204_NO_CONTENT)
+            return Response({'message': 'Blog deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
-
+    
 class CommentListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

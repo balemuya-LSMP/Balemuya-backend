@@ -15,17 +15,26 @@ class TelegramFacade:
         self.registration_handler = RegistrationHandler(self)
         self.login_handler = LoginHandler(self)
         self.customer_menu = None
-        self.professional_menu = None  # Initialize to None
+        self.professional_menu = None 
     
     def send_main_menu(self, message="Please choose an option:"):
+        is_logged_in = self.auth_service.get_session_data("is_logged_in")
+
+        if is_logged_in: 
+            keyboard = [
+                ["📝 Register", "🔓 Logout"],
+                ["ℹ️ Help", "❌ Cancel"],
+            ]
+        else: 
+            keyboard = [
+                ["📝 Register", "🔐 Login"],
+                ["ℹ️ Help", "❌ Cancel"]
+            ]
+
         self.bot_service.send_message(
             self.chat_id,
             message,
-            reply_markup=generate_keyboard([
-                ["📝 Register", "🔐 Login"],
-                ["ℹ️ Help", "❌ Cancel"],
-                ["🔓 Logout"]
-            ])
+            reply_markup=generate_keyboard(keyboard)
         )
 
     def send_welcome_message(self):
@@ -99,12 +108,25 @@ class TelegramFacade:
             self.send_professional_menu()
 
         print('handle professional command is called', 'text', text)
-        if text == "View Applications":
-            self.professional_menu.display_applications_menu()
-        elif text == "Manage Bookings":
-            self.professional_menu.display_bookings_menu()
-        elif text == "View Earnings":
-            self.professional_menu.display_earnings_menu()
+        if text == "Payment History":
+            self.professional_menu.fetch_payment_history()
+        elif text == "Manage Services":
+            self.professional_menu.display_service_menu()
+            
+        elif text == "New Jobs":
+            self.professional_menu.fetch_new_jobs()
+        elif text == "Completed Jobs":
+            self.professional_menu.fetch_completed_jobs()
+        elif text == "Rejected Jobs":
+            self.professional_menu.fetch_rejected_jobs()
+        elif text == "Canceled Jobs":
+            self.professional_menu.fetch_canceled_jobs()
+        
+            
+        elif text == "Manage Requests":
+            self.professional_menu.display_Requests_menu()
+        elif text == "View Subscription":
+            self.professional_menu.fetch_subscription_plan()
         elif text == "Profile":
             self.professional_menu.display_profile_menu()
         elif text == "View Profile":
