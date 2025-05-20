@@ -14,15 +14,6 @@ class TelegramBotWebhook(APIView):
         chat_id = message.get("chat", {}).get("id")
         text = message.get("text")
 
-        # Retrieve the user state from the cache
-        try:
-            user = User.objects.get(telegram_chat_id=chat_id)
-        except:
-            pass
-        
-        user_state = cache.get(f'user_state_{user.telegram_chat_id}', None)
-        print('starting user state is', user_state)
-
         facade = TelegramFacade(chat_id)
 
         facade.dispatch(text, user_state)
