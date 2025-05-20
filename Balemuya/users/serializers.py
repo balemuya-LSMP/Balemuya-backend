@@ -274,13 +274,24 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         fields = ['id', 'professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date']
 
 class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = ['id', 'customer', 'professional', 'booking','service_Request','payment_type', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        
+class PaymentDetailSerializer(serializers.ModelSerializer):
     customer = CustomerSerializer()
     professional = ProfessionalSerializer()
     class Meta:
         model = Payment
-        fields = ['id', 'customer', 'professional', 'booking', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        fields = ['id', 'customer', 'professional', 'booking','service_Request','payment_type', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
 
 class SubscriptionPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPayment
+        fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        
+        
+class SubscriptionPaymentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPayment
         fields = ['id', 'subscription_plan', 'professional', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
