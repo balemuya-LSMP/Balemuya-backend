@@ -414,53 +414,55 @@ class UserUpdateView(generics.UpdateAPIView):
 
 
 
-class UserDetailView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
+class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
-    lookup_field = 'id'
 
-    def get_serializer_class(self):
-        user = self.get_object()
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return None
 
+    def get_serializer_class(self, user):
         if user.user_type == 'professional':
             return ProfessionalSerializer
         elif user.user_type == 'customer':
             return CustomerSerializer
         elif user.user_type == 'admin':
             return AdminSerializer
-        else:
-            return None
+        return None
 
-    def get(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer_class = self.get_serializer_class()
+    def get(self, request, id=None, *args, **kwargs):
+        user = self.get_user(id)
+        if user is None:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        serializer_class = self.get_serializer_class(user)
         if serializer_class is None:
             return Response({'error': 'User type not recognized'}, status=status.HTTP_400_BAD_REQUEST)
 
         if user.user_type == 'professional':
-            professional_profile = Professional.objects.filter(user=user).first()
-            if professional_profile is None:
+            profile = Professional.objects.filter(user=user).first()
+            if profile is None:
                 return Response({'error': 'Professional profile not found'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = serializer_class(professional_profile)
+            serializer = serializer_class(profile)
 
         elif user.user_type == 'customer':
-            customer_profile = Customer.objects.filter(user=user).first()
-            if customer_profile is None:
+            profile = Customer.objects.filter(user=user).first()
+            if profile is None:
                 return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = serializer_class(customer_profile)
+            serializer = serializer_class(profile)
 
         elif user.user_type == 'admin':
-            admin_profile = Admin.objects.filter(user=user).first()
-            if admin_profile is None:
+            profile = Admin.objects.filter(user=user).first()
+            if profile is None:
                 return Response({'error': 'Admin profile not found'}, status=status.HTTP_404_NOT_FOUND)
-            serializer = serializer_class(admin_profile)
+            serializer = serializer_class(profile)
 
         return Response({
             'message': "Profile fetched successfully",
             'data': serializer.data
         }, status=status.HTTP_200_OK)
-
 class UserDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
