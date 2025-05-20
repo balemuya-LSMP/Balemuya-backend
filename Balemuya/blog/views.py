@@ -37,9 +37,11 @@ class BlogPostListCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class BlogPostDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_object(self, post_id):
         try:
-            return BlogPost.objects.get(id=post_id)
+            return BlogPost.objects.get(id=post_id,author=request.user.id)
         except BlogPost.DoesNotExist:
             return None
 
