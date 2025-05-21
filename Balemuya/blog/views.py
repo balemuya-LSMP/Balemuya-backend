@@ -56,8 +56,9 @@ class BlogPostDetailAPIView(APIView):
         post = self.get_post_object(request, post_id)
         if post is None:
             return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = BlogPostSerializer(post, data=request.data)
+        
+        
+        serializer = BlogPostSerializer(post, data=request.data,partial=True)
         if serializer.is_valid():
             with transaction.atomic():
                 serializer.save()
