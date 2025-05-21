@@ -276,6 +276,9 @@ class VerifyPasswordResetOTPView(APIView):
 
 
 import logging
+from urllib.parse import unquote
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
@@ -289,6 +292,7 @@ class GoogleLoginView(APIView):
         if not code:
             logging.warning("Missing authorization code")
             return Response({'error': "Missing authorization code"}, status=status.HTTP_400_BAD_REQUEST)
+        code = unquote(code)
 
         try:
             # 1. Exchange code for tokens
@@ -299,6 +303,7 @@ class GoogleLoginView(APIView):
                     'client_id': settings.GOOGLE_CLIENT_ID,
                     'client_secret': settings.GOOGLE_CLIENT_SECRET,
                     'redirect_uri': settings.GOOGLE_REDIRECT_URI,
+
                     'grant_type': 'authorization_code',
                 },
                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
@@ -598,8 +603,8 @@ class FavoriteListCreateAPIView(APIView):
         except User.DoesNotExist:
             return Response({'message':'user not found'},status=status.HTTP_404_NOT_FOUND)
         favorite_data =request.data
-        favorite_data['professional'] =professional_user.professional
-        favorite_data['user'] = request.user
+        favorite_data['professional'] =professional_user.professional.id
+        favorite_data['user'] = request.user.id
         
         serializer = FavoriteSerializer(data=favorite_data)
         if serializer.is_valid():
