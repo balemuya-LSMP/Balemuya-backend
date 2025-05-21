@@ -591,26 +591,33 @@ class UserFeedbackView(APIView):
 
 
 class FavoriteListCreateAPIView(APIView):
+    permission_classes=[IsAuthenticated]
     def get(self, request):
         favorites = Favorite.objects.filter(user=request.user).order_by('-created_at')
         serializer = FavoriteDetailSerializer(favorites, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        professional = request.data.get('professional')
-        try:
-            professional_user = User.objects.get(id=professional)
-        except User.DoesNotExist:
-            return Response({'message':'user not found'},status=status.HTTP_404_NOT_FOUND)
-        favorite_data =request.data
-        favorite_data['professional'] =professional_user.professional.id
-        favorite_data['user'] = request.user.id
-        
-        serializer = FavoriteSerializer(data=favorite_data)
-        if serializer.is_valid():
-            serializer.save() 
-            return Response({'message':'user added to favorite successfully!'}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        professional_id = request.data.get('professional')
 
-            
+        if professional_id is None:
+            return Response({'message': 'Professional ID not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            professional_user = User.objects.get(id=professional_id)
+        except User.DoesNotExist:
+            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the favorite already exists
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user,
+            professional=professional_user.professional
+        )
+
+        if created:
+            return Response({'message': 'User added to favorites successfully!'}, status=status.HTTP_201_CREATED)
+        else:
+            # If it exists, delete it
+            favorite.delete()
+            return Response({'message': 'User removed from favorites.'}, status=status.HTTP_204_NO_CONTENT)
  
