@@ -443,16 +443,15 @@ class ComplainAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
-
 class ServicePostReportAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request,service_post_id=None):
+    def post(self, request, service_post_id):
         user = request.user
         reason = request.data.get('reason')
 
         if not reason:
-            return Response({'detail': 'reason is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Reason is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             service_post = ServicePost.objects.get(id=service_post_id)
@@ -463,7 +462,7 @@ class ServicePostReportAPIView(APIView):
             return Response({'detail': 'You have already reported this post.'}, status=status.HTTP_400_BAD_REQUEST)
 
         report = ServicePostReport.objects.create(
-            service_post=service_post.id,
+            service_post=service_post,  # Pass the instance here
             reporter=user,
             reason=reason
         )
