@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from users.models import Professional, User,Customer
+from users.models import Professional, User,Customer,Admin
 from common.serializers import AddressSerializer
 
 class ProfessionalListSerializer(serializers.ModelSerializer):
@@ -41,7 +41,7 @@ class ProfessionalListSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         if obj.user.entity_type =='individual':
-            return f"{obj.user.first_name} {obj.user.user.last_name}"
+            return f"{obj.user.first_name} {obj.user.last_name}"
         elif obj.user.entity_type =='organization':
             return f"{obj.user.org_name}"
     
@@ -88,7 +88,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         if obj.user.entity_type =='individual':
-            return f"{obj.user.first_name} {obj.user.user.last_name}"
+            return f"{obj.user.first_name} {obj.user.last_name}"
         elif obj.user.entity_type =='organization':
             return f"{obj.user.org_name}"
 
@@ -114,3 +114,43 @@ class CustomerListSerializer(serializers.ModelSerializer):
         if instance.user.entity_type == 'individual':
             rep.pop('number_of_employees', None)
         return rep
+    
+    
+    
+
+class AdminListSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='user.id')
+    full_name = serializers.SerializerMethodField()
+    username = serializers.CharField(source='user.username')
+    email = serializers.EmailField(source='user.email')
+    phone_number = serializers.CharField(source='user.phone_number')
+    profile_image = serializers.SerializerMethodField()
+    entity_type = serializers.CharField(source='user.entity_type')
+    user_type = serializers.CharField(source='user.user_type')
+    is_blocked = serializers.BooleanField(source='user.is_blocked')
+    is_active = serializers.BooleanField(source='user.is_active')
+    address = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Admin
+        fields = [
+            'id', 'full_name', 'username', 'email', 'phone_number',
+            'profile_image', 'is_blocked', 'entity_type','user_type','is_active','address'
+        ]
+        read_only_fields = ['id']
+
+    def get_full_name(self, obj):
+        if obj.user.user_type =='admin':
+            return f"{obj.user.first_name} {obj.user.last_name}"
+
+    def get_profile_image(self, obj):
+        request = self.context.get('request')
+        if obj.user.profile_image:
+            image_url = obj.user.profile_image.url
+            return request.build_absolute_uri(image_url) if request else image_url
+        return None
+
+    def get_address(self, obj):
+        if obj.user.address:
+            return AddressSerializer(obj.user.address).data
+        return None
