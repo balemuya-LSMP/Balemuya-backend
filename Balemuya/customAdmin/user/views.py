@@ -1,6 +1,7 @@
 from customAdmin.packages import *
 
-from .serializers import ProfessionalListSerializer,CustomerListSerializer
+from .serializers import ProfessionalListSerializer,CustomerListSerializer,AdminListSerializer
+
 
 class UserListView(APIView):
     permission_classes = [IsAdmin,IsAuthenticated]
@@ -76,109 +77,98 @@ class UserBlockView(APIView):
         user.save()
         return Response({'detail': f'User {"blocked" if is_blocked else "unblocked"} successfully.'}, status=status.HTTP_200_OK)
 
-
-
-class ProfessionalListView(generics.ListAPIView):
-    permission_classes = [IsAdmin,IsAuthenticated]
+class ProfessionalListView(APIView):
+    permission_classes = [IsAdmin, IsAuthenticated]
     serializer_class = ProfessionalListSerializer
 
     def get_queryset(self):
+        self._check_admin_permission()
+        queryset = Professional.objects.all()
+        return self._filter_queryset(queryset)
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        return self._generate_response(queryset)
+
+    def _check_admin_permission(self):
         if self.request.user.user_type != 'admin':
             raise PermissionDenied("You are not authorized to access this.")
-        
-        queryset = Professional.objects.all()
-        status_filter = self.request.query_params.get('status', None)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'verified':
-                queryset = queryset.filter(is_verified=True)
-            elif status_filter == 'available':
-                queryset = queryset.filter(is_available=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
-
+    def _filter_queryset(self, queryset):
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            return queryset.filter(user__is_active=True)
+        elif status_filter == 'verified':
+            return queryset.filter(is_verified=True)
+        elif status_filter == 'available':
+            return queryset.filter(is_available=True)
+        elif status_filter == 'blocked':
+            return queryset.filter(user__is_blocked=True)
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
-
-        if not queryset.exists():
-            if status_filter is None:
-                status_filter = ''
-            return Response({"message": f"No {status_filter} professionals found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    def _generate_response(self, queryset):
+        serializer = self.serializer_class(queryset, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
 
-
-
-class CustomerListView(generics.ListAPIView):
-    permission_classes = [IsAdmin,IsAuthenticated]
+class CustomerListView(APIView):
+    permission_classes = [IsAdmin, IsAuthenticated]
     serializer_class = CustomerListSerializer
 
     def get_queryset(self):
+        self._check_admin_permission()
+        queryset = Customer.objects.all()
+        return self._filter_queryset(queryset)
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        return self._generate_response(queryset)
+
+    def _check_admin_permission(self):
         if self.request.user.user_type != 'admin':
             raise PermissionDenied("You are not authorized to access this.")
-        
-        queryset = Customer.objects.all()
-        status_filter = self.request.query_params.get('status', None)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
-
+    def _filter_queryset(self, queryset):
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            return queryset.filter(user__is_active=True)
+        elif status_filter == 'blocked':
+            return queryset.filter(user__is_blocked=True)
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
+    def _generate_response(self, queryset):
+        serializer = self.serializer_class(queryset, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
-        if not queryset.exists():
-            if status_filter ==None:
-                status_filter = ''
-            return Response({"message": f"No {status_filter} customers found."}, status=404)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-class AdminListView(generics.ListAPIView):
-    permission_classes = [IsAdmin,IsAuthenticated]
-    serializer_class = AdminSerializer
+class AdminListView(APIView):
+    permission_classes = [IsAdmin, IsAuthenticated]
+    serializer_class = AdminListSerializer
 
     def get_queryset(self):
-        if self.request.user.user_type != 'admin':
-            raise PermissionDenied({"message":
-                "You are not authorized to access this."})
+        self._check_admin_permission()
         queryset = Admin.objects.all()
-        status_filter = self.request.query_params.get('status', None)
+        return self._filter_queryset(queryset)
 
-        if status_filter:
-            if status_filter == 'active':
-                queryset = queryset.filter(user__is_active=True)
-            elif status_filter == 'blocked':
-                queryset = queryset.filter(user__is_blocked=True)
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        return self._generate_response(queryset)
 
+    def _check_admin_permission(self):
+        if self.request.user.user_type != 'admin':
+            raise PermissionDenied("You are not authorized to access this.")
+
+    def _filter_queryset(self, queryset):
+        status_filter = self.request.query_params.get('status')
+        if status_filter == 'active':
+            return queryset.filter(user__is_active=True)
+        elif status_filter == 'blocked':
+            return queryset.filter(user__is_blocked=True)
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        status_filter = self.request.query_params.get('status', None)
-
-        if not queryset.exists():
-            if status_filter ==None:
-                status_filter = ''
-            return Response({"message": f"No {status_filter} Admin found."}, status=404)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    
+    def _generate_response(self, queryset):
+        serializer = self.serializer_class(queryset, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
     
 class AdminVerifyProfessionalView(APIView):
     permission_classes = [IsAdmin,IsAuthenticated]
