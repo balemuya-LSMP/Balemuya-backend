@@ -95,7 +95,7 @@ class ServicePostDetailAPIView(APIView):
         if service_post.customer != request.user.customer:
             return Response({"detail": "You are not authorized to update this post."}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = ServicePostSerializer(service_post, data=request.data, partial=True)
+        serializer = ServicePostSerializer(service_post, data=request.data, context={'request': request}, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
