@@ -608,7 +608,6 @@ class FavoriteListCreateAPIView(APIView):
         except User.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if the favorite already exists
         favorite, created = Favorite.objects.get_or_create(
             user=request.user,
             professional=professional_user.professional
