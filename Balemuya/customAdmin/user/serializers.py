@@ -3,6 +3,7 @@ from users.models import Professional, User,Customer
 from common.serializers import AddressSerializer
 
 class ProfessionalListSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='user.id')
     full_name = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username')
     email = serializers.EmailField(source='user.email')
@@ -44,6 +45,7 @@ class ProfessionalListSerializer(serializers.ModelSerializer):
     def get_address(self,obj):
         if obj.user.address:
             return AddressSerializer(obj.user.address).data
+        return None
 
     def get_profile_image(self, obj):
         request = self.context.get('request')
@@ -57,7 +59,9 @@ class ProfessionalListSerializer(serializers.ModelSerializer):
     
 
 
+
 class CustomerListSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='user.id')
     full_name = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username')
     email = serializers.EmailField(source='user.email')
@@ -73,42 +77,33 @@ class CustomerListSerializer(serializers.ModelSerializer):
         model = Customer
         fields = [
             'id', 'full_name', 'username', 'email', 'phone_number', 
-            'profile_image', 'address','entity_type','user_type','is_blocked','is_active','rating', 'description', 
+            'profile_image', 'address', 'entity_type', 'user_type',
+            'is_blocked', 'is_active', 'rating', 'description', 
             'number_of_employees', 'number_of_services_booked', 'report_count'
         ]
         read_only_fields = ['id', 'number_of_services_booked']
 
     def get_full_name(self, obj):
-        """
-        Returns the full name by combining first name and last name.
-        """
-        return f"{obj.user.first_name} {obj.user.last_name}"
+        """Returns the full name by combining first name and last name."""
+        return f"{obj.user.first_name} {obj.user.user.last_name}"
 
     def get_profile_image(self, obj):
-        """
-        Returns the absolute URL for the profile image.
-        """
+        """Returns the absolute URL for the profile image."""
         request = self.context.get('request')
         if obj.user.profile_image:
             image_url = obj.user.profile_image.url
-            if request:
-                return request.build_absolute_uri(image_url)
-            return image_url
+            return request.build_absolute_uri(image_url) if request else image_url
         return None
     
-    def get_address(self,obj):
+    def get_address(self, obj):
+        """Returns serialized address data if available."""
         if obj.user.address:
             return AddressSerializer(obj.user.address).data
+        return None
 
     def to_representation(self, instance):
-        """
-        Customize the fields based on entity type.
-        """
+        """Customize the fields based on entity type."""
         rep = super().to_representation(instance)
-        entity_type = instance.user.entity_type
-
-        if entity_type == 'individual':
+        if instance.user.entity_type == 'individual':
             rep.pop('number_of_employees', None)
-
         return rep
-    
