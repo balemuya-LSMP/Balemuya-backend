@@ -40,7 +40,10 @@ class ProfessionalListSerializer(serializers.ModelSerializer):
         ]
 
     def get_full_name(self, obj):
-        return f"{obj.user.first_name} {obj.user.last_name}"
+        if obj.user.entity_type =='individual':
+            return f"{obj.user.first_name} {obj.user.user.last_name}"
+        elif obj.user.entity_type =='organization':
+            return f"{obj.user.org_name}"
     
     def get_address(self,obj):
         if obj.user.address:
@@ -84,8 +87,12 @@ class CustomerListSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'number_of_services_booked']
 
     def get_full_name(self, obj):
-        """Returns the full name by combining first name and last name."""
-        return f"{obj.user.first_name} {obj.user.user.last_name}"
+        if obj.user.entity_type =='individual':
+            return f"{obj.user.first_name} {obj.user.user.last_name}"
+        elif obj.user.entity_type =='organization':
+            return f"{obj.user.org_name}"
+
+            
 
     def get_profile_image(self, obj):
         """Returns the absolute URL for the profile image."""
