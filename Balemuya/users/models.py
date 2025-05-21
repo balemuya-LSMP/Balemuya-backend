@@ -577,5 +577,5 @@ class Favorite(models.Model):
         unique_together = ('user', 'professional')
 
     def __str__(self):
-        return f'{self.user.username} favorites {self.professional.name}'
+        return f'{self.user.username} favorites {self.professional.user.username}'
     

@@ -273,44 +273,95 @@ class VerifyPasswordResetOTPView(APIView):
             return Response({'message': 'OTP verified successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
+import logging
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 class GoogleLoginView(APIView):
     def post(self, request):
-        access_token = request.data.get('token')
-        if not access_token:
-            return Response({'error': "Missing access token"}, status=status.HTTP_400_BAD_REQUEST)
+        code = request.data.get('code')
+        entity_type = request.data.get('entity_type')
+        user_type = request.data.get('user_type')
+        username = request.data.get('username')
+
+        if not code:
+            logging.warning("Missing authorization code")
+            return Response({'error': "Missing authorization code"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Get user info from Google
-            user_info = requests.get(
-                'https://www.googleapis.com/oauth2/v1/userinfo',
-                headers={'Authorization': f'Bearer {access_token}'}
-            ).json()
+            # 1. Exchange code for tokens
+            token_response = requests.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': code,
+                    'client_id': settings.GOOGLE_CLIENT_ID,
+                    'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                    'redirect_uri': settings.GOOGLE_REDIRECT_URI,
+                    'grant_type': 'authorization_code',
+                },
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
 
+            if token_response.status_code != 200:
+                logging.error("Failed to exchange code: %s", token_response.text)
+                return Response({'error': 'Failed to exchange code for token'}, status=status.HTTP_400_BAD_REQUEST)
+
+            tokens = token_response.json()
+            access_token = tokens.get('access_token')
+
+            # 2. Fetch user info from Google
+            user_info_response = requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+
+            if user_info_response.status_code != 200:
+                logging.error("Failed to fetch user info: %s", user_info_response.text)
+                return Response({'error': 'Failed to fetch user info'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_info = user_info_response.json()
             email = user_info.get('email')
             first_name = user_info.get('given_name', '')
             last_name = user_info.get('family_name', '')
 
             if not email:
-                return Response({'error': "Email not found"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "Email not found in Google account"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create or get user
+            # 3. Create or get the user
             user, created = User.objects.get_or_create(email=email, defaults={
                 'first_name': first_name,
                 'last_name': last_name,
-                'is_active': True
+                'is_active': True,
+                'entity_type': entity_type,
+                'user_type': user_type,
+                'username': username if entity_type == 'organization' else f"{first_name}{last_name}".lower()
             })
 
-            # Generate JWT tokens
+            if created and (not entity_type or not user_type):
+                return Response({
+                    'message': "Please provide 'entity_type' and 'user_type' for first-time users.",
+                    'needs_info': True
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 4. Generate JWT tokens
             refresh = RefreshToken.for_user(user)
+
             return Response({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'user_type': user.user_type,
+                'entity_type': user.entity_type,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+            logging.error("Unexpected error: %s", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 class LoginView(APIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
@@ -536,7 +587,7 @@ class UserFeedbackView(APIView):
 
 class FavoriteListCreateAPIView(APIView):
     def get(self, request):
-        favorites = Favorite.objects.filter(user=request.user)
+        favorites = Favorite.objects.filter(user=request.user).order_by('-created_at')
         serializer = FavoriteDetailSerializer(favorites, many=True)
         return Response(serializer.data)
 
