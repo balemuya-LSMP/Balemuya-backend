@@ -24,7 +24,7 @@ urlpatterns = [
     path('auth/set-new-password/', SetPasswordView.as_view(), name='set-password'),
     path('auth/update-password/', UpdatePasswordView.as_view(), name='update-password'),
     
-    path('auth/google-signin/',GoogleLoginView.as_view(), name='google-login'),
+    path('auth/continue-with-google/',GoogleLoginView.as_view(), name='google-login'),
     
     path('profile/',ProfileView.as_view(), name='profile'),
     path('profile/update/', UserUpdateView.as_view(), name='user-update'),
