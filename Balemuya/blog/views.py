@@ -41,22 +41,22 @@ class BlogPostDetailAPIView(APIView):
 
     def get_post_object(self, request, post_id):
         try:
-            return BlogPost.objects.get(id=post_id, author=request.user.id)
+            return BlogPost.objects.get(id=post_id,author=request.user)
         except BlogPost.DoesNotExist:
             return None
 
     def get(self, request, post_id):
         post = self.get_post_object(request, post_id)
-        if post is not None:
-            serializer = BlogPostDetailSerializer(post)
-            return Response(serializer.data)
-        return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        if post is None:
+            return Response([],status=status.HTTP_200_OK)
+        serializer = BlogPostDetailSerializer(post)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
     def put(self, request, post_id):
-        post = self.get_post_object(request,post_id)
-        if post is None:
+        try:
+            post = BlogPost.objects.get(id=post_id,author=request.user)
+        except BlogPost.DoesNotExist:
             return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
-        
         
         serializer = BlogPostSerializer(post, data=request.data,partial=True)
         if serializer.is_valid():
