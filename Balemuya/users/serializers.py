@@ -339,7 +339,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'professional', 'created_at']
         
 class FavoriteDetailSerializer(serializers.ModelSerializer):
-    professional = ProfessionalSerializer(source='professional.user',read_only=True)
+    professional = UserSerializer(source='professional.user',read_only=True)
     class Meta:
         model = Favorite
         fields = ['id', 'user', 'professional', 'created_at']
