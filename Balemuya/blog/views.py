@@ -53,7 +53,7 @@ class BlogPostDetailAPIView(APIView):
         return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, post_id):
-        post = self.get_post_object(request, post_id)
+        post = self.get_post_object(request,post_id)
         if post is None:
             return Response({"detail": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
         
