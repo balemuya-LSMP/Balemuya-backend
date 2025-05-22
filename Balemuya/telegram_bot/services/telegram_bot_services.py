@@ -16,7 +16,17 @@ class TelegramBotService:
             payload["reply_markup"] = reply_markup
         
         response = requests.post(url, json=payload)
-        
+    
+    def send_document(self, chat_id, document, filename):
+        url = f"{self.base_url}/sendDocument"
+        files = {
+            'document': (filename, document)
+        }
+        payload = {
+            "chat_id": chat_id,
+        }
+        response = requests.post(url, data=payload, files=files)
+        return response
             
     def send_photo(self, chat_id, photo_url):
         url = f"{self.base_url}/sendPhoto"
