@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.conf import settings
 from datetime import datetime
 import pytz
+from  ...utils.common import create_circular_image
 class ProfessionalMenu:
     def __init__(self, bot_service,auth_service, chat_id):
         self.bot_service = bot_service
@@ -147,9 +148,13 @@ class ProfessionalMenu:
                         service = post['service']
                         customer = post['customer']
 
-                        # Format the work due date
-                        work_due_date = datetime.strptime(service['work_due_date'], "%Y-%m-%dT%H:%M:%S.%fZ")  # Parse the date
-                        local_due_date = work_due_date.astimezone(pytz.timezone('Africa/Addis_Ababa')).strftime("%d %B %Y")  # Set to Ethiopia timezone
+                        # Check if work_due_date is not None
+                        work_due_date_str = service.get('work_due_date')
+                        if work_due_date_str:
+                            work_due_date = datetime.strptime(work_due_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")  # Parse the date
+                            local_due_date = work_due_date.astimezone(pytz.timezone('Africa/Addis_Ababa')).strftime("%d %B %Y")  # Set to Ethiopia timezone
+                        else:
+                            local_due_date = 'N/A'  # Default value if date is not available
 
                         message += (
                             f"📝 Title: {service['title']}\n"
@@ -164,17 +169,110 @@ class ProfessionalMenu:
                             f"💬 Message: {post.get('message', 'No message provided')}\n\n"
                         )
                     
-                    self.bot_service.send_message(self.chat_id, message)
+                        self.bot_service.send_message(self.chat_id, message)
                 else:
-                    self.bot_service.send_message(self.chat_id, "⚠️ No service applications available.")
+                    self.bot_service.send_message(self.chat_id,f"⚠️ No {status} service applications available.")
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service applications.")
         
         except requests.exceptions.RequestException as e:
             print(f"Error fetching service applications: {e}")  # Debugging line
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service applications.")
+    
+    
+    def fetch_service_booking(self, status=None):
+        try:
+            access_token = self.auth_service.get_access_token()
+            print('Access token:', access_token)
+            if not access_token:
+                return {"status": "failure", "message": "Access token not found in cache."}
 
+            url = f"{settings.BACKEND_URL}users/professional/services/"
+            headers = {
+                "Authorization": f"Bearer {access_token}"
+            }
             
+            params = {}
+            if status:
+                params['status'] = status
+
+            response = requests.get(url, headers=headers, params=params)
+            print('Response Status Code:', response.status_code)
+            print('Response Content:', response.json())
+
+            if response.status_code == 200:
+                service_posts = response.json().get('data', [])
+                print('Fetched service posts:', service_posts)  # Debugging line
+                
+                if service_posts:
+                    message = "📋 Service Bookings\n\n"
+
+                    for post in service_posts:
+                        service = post['service']
+                        professional = post['professional']
+                        customer = post['customer']
+
+                        # Format the scheduled date
+                        scheduled_date_str = post.get('scheduled_date')
+                        if scheduled_date_str:
+                            scheduled_date = datetime.strptime(scheduled_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            local_scheduled_date = scheduled_date.astimezone(pytz.timezone('Africa/Addis_Ababa')).strftime("%d %B %Y")
+                        else:
+                            local_scheduled_date = 'N/A'
+
+                        # Download and create circular images for professional and customer
+                        professional_image_url = professional['professional_profile_image']
+                        customer_image_url = customer['customer_profile_image']
+
+                        # Create circular professional image
+                        professional_response = requests.get(professional_image_url)
+                        professional_image = Image.open(BytesIO(professional_response.content))
+                        circular_professional_image = create_circular_image(professional_image)
+
+                        # Create circular customer image
+                        customer_response = requests.get(customer_image_url)
+                        customer_image = Image.open(BytesIO(customer_response.content))
+                        circular_customer_image = create_circular_image(customer_image)
+
+                        # Save circular images to a buffer
+                        professional_buffer = BytesIO()
+                        circular_professional_image.save(professional_buffer, format='PNG')
+                        professional_buffer.seek(0)
+
+                        customer_buffer = BytesIO()
+                        circular_customer_image.save(customer_buffer, format='PNG')
+                        customer_buffer.seek(0)
+
+                        # Add details to message
+                        message += (
+                            f"📝 Service Title: {service['title']}\n"
+                            f"📂 Category: {service['category']}\n"
+                            f"⚡ Urgency: {service['urgency']}\n"
+                            f"📅 Scheduled Date: {local_scheduled_date}\n"
+                            f"🔍 Status: {post['status']}\n"
+                            f"📜 Description: {service['description']}\n"
+                            f"📍 Location: {service['location']['city'] or 'N/A'}, {service['location']['country']}\n"
+                            f"👤 Professional: {professional['professional_name']}\n"
+                            f"📷 Professional Image: [Send Image](attachment://professional_image.png)\n"
+                            f"📞 Phone Number: {professional.get('phone_number', 'No phone number provided')}\n"
+                            f"👤 Customer: {customer['customer_name']}\n"
+                            f"📷 Customer Image: [Send Image](attachment://customer_image.png)\n"
+                            f"💬 Message: {post.get('message', 'No message provided')}\n\n"
+                        )
+                    
+                    # Send images and message
+                    self.bot_service.send_message(self.chat_id, message, 
+                                                files=[('professional_image.png', professional_buffer),
+                                                        ('customer_image.png', customer_buffer)])
+                else:
+                    self.bot_service.send_message(self.chat_id, f"⚠️ No {status} service bookings available.")
+            else:
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service bookings.")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching service bookings: {e}")  # Debugging line
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service bookings.")
+        
     def fetch_professional_profile(self):
         profile = self.auth_service.user_instance
         print('User instance is:', profile)  # Debugging line
