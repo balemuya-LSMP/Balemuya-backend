@@ -17,10 +17,6 @@ class TelegramBotService:
         
         response = requests.post(url, json=payload)
         
-        if response.status_code != 200:
-            print("Error sending message:", response.json())
-        else:
-            print("Message sent successfully:", response.json())
             
     def send_photo(self, chat_id, photo_url):
         url = f"{self.base_url}/sendPhoto"
