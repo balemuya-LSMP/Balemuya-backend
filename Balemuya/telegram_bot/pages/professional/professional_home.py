@@ -4,6 +4,8 @@ from django.core.cache import cache
 from django.conf import settings
 from datetime import datetime
 import pytz
+from PIL import Image, ImageDraw
+from io import BytesIO
 from  ...utils.common import create_circular_image
 class ProfessionalMenu:
     def __init__(self, bot_service,auth_service, chat_id):
@@ -44,8 +46,8 @@ class ProfessionalMenu:
         menu_text = "Manage Your Services as a Professional:"
         keyboard = {
             "keyboard": [
-                ["New Jobs", "Completed Job Bookings"],
-                ["Rejected Job Applications","Canceled Job Applications","Pending Job Applications"],
+                ["New Jobs", "Completed Job Bookings","Canceled Job Bookings"],
+                ["Rejected Job Applications","Accepted Job Applications","Pending Job Applications"],
                 [ "Back to Main Menu"]
             ],
             "resize_keyboard": True,
@@ -215,7 +217,7 @@ class ProfessionalMenu:
                         # Format the scheduled date
                         scheduled_date_str = post.get('scheduled_date')
                         if scheduled_date_str:
-                            scheduled_date = datetime.strptime(scheduled_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+                            scheduled_date = datetime.strptime(scheduled_date_str, "%Y-%m-%dT%H:%M:%SZ")  # Updated format
                             local_scheduled_date = scheduled_date.astimezone(pytz.timezone('Africa/Addis_Ababa')).strftime("%d %B %Y")
                         else:
                             local_scheduled_date = 'N/A'
@@ -271,8 +273,7 @@ class ProfessionalMenu:
                 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching service bookings: {e}")  # Debugging line
-            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service bookings.")
-        
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service bookings.")    
     def fetch_professional_profile(self):
         profile = self.auth_service.user_instance
         print('User instance is:', profile)  # Debugging line

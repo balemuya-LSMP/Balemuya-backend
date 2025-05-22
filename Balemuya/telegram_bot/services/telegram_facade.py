@@ -27,17 +27,28 @@ class TelegramFacade:
                 self.send_customer_menu()
         
            
-        else: 
+            else: 
+                keyboard = [
+                    ["📝 Register", "🔐 Logout"],
+                    ["ℹ️ Help", "❌ Cancel"]
+                ]
+
+                self.bot_service.send_message(
+                    self.chat_id,
+                    message,
+                    reply_markup=generate_keyboard(keyboard)
+                )
+        else:
             keyboard = [
-                ["📝 Register", "🔐 Login"],
-                ["ℹ️ Help", "❌ Cancel"]
-            ]
+                    ["📝 Register", "🔐 Login"],
+                    ["ℹ️ Help", "❌ Cancel"]
+                ]
 
             self.bot_service.send_message(
-                self.chat_id,
-                message,
-                reply_markup=generate_keyboard(keyboard)
-            )
+                    self.chat_id,
+                    message,
+                    reply_markup=generate_keyboard(keyboard)
+                )
 
     def send_welcome_message(self):
         self.send_main_menu("👋 Welcome to Balemuya!\nPlease choose an option:")
@@ -46,23 +57,20 @@ class TelegramFacade:
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
 
         if is_logged_in: 
-            keyboard = [
-                ["📝 Register", "🔓 Logout"],
-                ["ℹ️ Help", "❌ Cancel"],
-            ]
+            user_instance=self.auth_service.user_instance
+            if user_instance:
+                if user_instance['user']['user_type']=='customer':
+                    self.send_professional_menu()
+                elif user_instance['user']['user_type']=='professional':
+                    self.send_professional_menu()
+                
+        else:
+            self.bot_service.send_message(
+                self.chat_id,
+                "🚫 Operation cancelled. You're back to the main menu.",
+                reply_markup=generate_keyboard(keyboard)
+            )
             
-        else: 
-            keyboard = [
-                ["📝 Register", "🔐 Login"],
-                ["ℹ️ Help", "❌ Cancel"]
-            ]
-            
-        self.bot_service.send_message(
-            self.chat_id,
-            "🚫 Operation cancelled. You're back to the main menu.",
-            reply_markup=generate_keyboard(keyboard)
-         )
-        
     def send_logout_message(self):
         self.auth_service.set_user_state('logout_user')
         self.bot_service.send_message(
@@ -135,10 +143,10 @@ class TelegramFacade:
             
         elif text == "New Jobs":
             self.professional_menu.fetch_service_posts(status='active')
-        elif text == "Completed Jobs Bookings":
-            self.professional_menu.fetch_service_posts(status='completed')
-        elif text == "Canceled Jobs":
-            self.professional_menu.fetch_service_posts(status='canceled')    
+        elif text == "Completed Job Bookings":
+            self.professional_menu.fetch_service_booking(status='completed')
+        elif text == "Canceled Job Bookings":
+            self.professional_menu.fetch_service_booking(status='canceled')    
         
             
         elif text == "Pending Job Applications":
