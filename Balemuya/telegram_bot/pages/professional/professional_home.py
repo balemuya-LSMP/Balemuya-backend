@@ -42,8 +42,8 @@ class ProfessionalMenu:
         menu_text = "Manage Your Services as a Professional:"
         keyboard = {
             "keyboard": [
-                ["New Jobs", "Completed Jobs"],
-                ["Rejected Jobs","Canceled Jobs"],
+                ["New Jobs", "Completed Job Bookings"],
+                ["Rejected Job Applications","Canceled Job Applications","Pending Job Applications"],
                 [ "Back to Main Menu"]
             ],
             "resize_keyboard": True,
@@ -98,6 +98,48 @@ class ProfessionalMenu:
                 if service_posts:
                     message = "📋 *Service Posts*\n\n"
                     for post in service_posts:  # Assuming response is a list of posts
+                        message += (
+                            f"📝 *Title*: {post['title']}\n"
+                            f"📅 *date*: {post['work_due_date']}\n"
+                            f"🔍 *Status*: {post['status']}\n"
+                            f"📌 *Details*: {post.get('description', 'No details provided')}\n\n"
+                        )
+                    self.bot_service.send_message(self.chat_id, message)
+                else:
+                    self.bot_service.send_message(self.chat_id, "⚠️ No service posts available.")
+            else:
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service posts.")
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching service posts: {e}")  # Debugging line
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service posts.")
+    def fetch_service_applications(self, status=None):
+        try:
+            access_token = self.auth_service.get_access_token()
+            print('access token',access_token)
+            if not access_token:
+                return {"status": "failure", "message": "Access token not found in cache."}
+
+            url = f"{settings.BACKEND_URL}users/professional/services/"
+            headers = {
+                "Authorization": f"Bearer {access_token}"
+            }
+            
+            params = {}
+            if status:
+                params['status'] = status
+
+            response = requests.get(url, headers=headers, params=params)
+            print('response is',response.json())
+            print('response status code',response.status_code)
+            if response.status_code == 200:
+                service_posts = response.json()
+                print('Fetched service posts:', service_posts)  # Debugging line
+                
+                # Construct the message with enhanced formatting
+                if service_posts:
+                    message = "📋 *Service Posts applications*\n\n"
+                    for post in service_posts:
                         message += (
                             f"📝 *Title*: {post['title']}\n"
                             f"📅 *date*: {post['work_due_date']}\n"
