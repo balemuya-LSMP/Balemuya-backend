@@ -150,6 +150,7 @@ class ListServicePostApplicationsAPIView(APIView):
 
     def get(self, request, service_id=None):
         status_param = request.query_params.get('status', 'pending')
+        print('status is',status_param)
         applications = ServicePostApplication.objects.filter(service=service_id, status=status_param)
         print('applications are',applications)
 
@@ -157,9 +158,6 @@ class ListServicePostApplicationsAPIView(APIView):
             applications = applications.filter(professional=request.user.professional, status=status_param).order_by('-created_at')
         elif request.user.user_type == "customer":
             applications = applications.order_by('-created_at')
-
-        if not applications.exists():
-            return Response({"detail": "No applications found."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = ServicePostApplicationDetailSerializer(applications, many=True)
         data = list(serializer.data)
