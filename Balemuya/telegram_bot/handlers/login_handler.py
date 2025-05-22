@@ -26,7 +26,6 @@ class LoginHandler:
 
             if response.get("status") == "success":
                 user= User.objects.filter(email=auth.get_session_data('email')).first()
-                print('user is',user)
                 if user:
                     user.telegram_chat_id=self.facade.chat_id
                     user.save()
@@ -43,3 +42,5 @@ class LoginHandler:
                 self.facade.send_main_menu(message='please try to login again!')
 
             # auth.clear_session()
+            
+            
