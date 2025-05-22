@@ -16,23 +16,28 @@ class TelegramBotWebhook(APIView):
         try:
             user = User.objects.get(telegram_chat_id=chat_id)
         except User.DoesNotExist:
-            self.handle_user_not_found(chat_id)
-            return JsonResponse({"status": "user_not_found"}, status=404)
+            pass
+        
+        print('user is',user)
 
         # Get user state from cache
         user_state = cache.get(f'user_state_{chat_id}', None)
         print('Starting user state is', user_state)
 
         facade = TelegramFacade(chat_id)
+        user_type=None
+        if facade.auth_service.user_instance:
+            user_type=facade.auth_service.user_instance['user']['user_type']
+        if user:
+            facade.auth_service.set_session_data('is_logged_in', True)
+        else:
+            facade.auth_service.set_session_data('is_logged_in', False)
 
-        facade.auth_service.set_session_data('is_logged_in', True)
 
-        facade.dispatch(text, user_state)
+        facade.dispatch(text, user_state,user_type)
 
         cache.set(f'user_state_{chat_id}', facade.auth_service.get_user_state())
 
         return JsonResponse({"status": "ok"})
 
-    def handle_user_not_found(self, chat_id):
-        facade = TelegramFacade(chat_id)
-        facade.bot_service.send_message(chat_id, "⚠️ User not found. Please login to continue.")
+        

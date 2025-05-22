@@ -48,9 +48,6 @@ class ServicePostListCreateAPIView(APIView):
         else:
             return Response({"detail": "Invalid user type."}, status=status.HTTP_403_FORBIDDEN)
 
-        if not service_posts.exists():
-            return Response({"detail": "No service posts found."}, status=status.HTTP_404_NOT_FOUND)
-
         serializer = ServicePostDetailSerializer(service_posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     

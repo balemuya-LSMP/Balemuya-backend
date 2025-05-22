@@ -20,32 +20,49 @@ class TelegramFacade:
     def send_main_menu(self, message="Please choose an option:"):
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
 
-        if is_logged_in: 
-            keyboard = [
-                ["📝 Register", "🔓 Logout"],
-                ["ℹ️ Help", "❌ Cancel"],
-            ]
+        if is_logged_in and self.auth_service.user_instance: 
+            if self.auth_service.user_instance['user']['user_type']=='professional':
+                self.send_professional_menu()
+            elif self.auth_service.user_instance['user']['user_type']=='customer':
+                self.send_customer_menu()
+        
+           
         else: 
             keyboard = [
                 ["📝 Register", "🔐 Login"],
                 ["ℹ️ Help", "❌ Cancel"]
             ]
 
-        self.bot_service.send_message(
-            self.chat_id,
-            message,
-            reply_markup=generate_keyboard(keyboard)
-        )
+            self.bot_service.send_message(
+                self.chat_id,
+                message,
+                reply_markup=generate_keyboard(keyboard)
+            )
 
     def send_welcome_message(self):
         self.send_main_menu("👋 Welcome to Balemuya!\nPlease choose an option:")
 
     def send_cancel_message(self):
+        is_logged_in = self.auth_service.get_session_data("is_logged_in")
+
+        if is_logged_in: 
+            keyboard = [
+                ["📝 Register", "🔓 Logout"],
+                ["ℹ️ Help", "❌ Cancel"],
+            ]
+            
+        else: 
+            keyboard = [
+                ["📝 Register", "🔐 Login"],
+                ["ℹ️ Help", "❌ Cancel"]
+            ]
+            
         self.bot_service.send_message(
             self.chat_id,
             "🚫 Operation cancelled. You're back to the main menu.",
-            reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
-        )
+            reply_markup=generate_keyboard(keyboard)
+         )
+        
     def send_logout_message(self):
         self.auth_service.set_user_state('logout_user')
         self.bot_service.send_message(
@@ -63,14 +80,18 @@ class TelegramFacade:
             "- ❌ Cancel: Cancel the current operation"
         )
 
-    def dispatch(self, text, user_state):
-        if text == "/start":
+    def dispatch(self, text, user_state,user_type=None):
+        is_logged_in = self.auth_service.get_session_data("is_logged_in")
+        print('is logged in is',is_logged_in)
+
+        if text == "/start" and user_type == None:
             
             self.send_welcome_message()
         elif text in ["/cancel", "❌ Cancel"]:
             self.auth_service.clear_session()
             self.send_cancel_message()
         elif text in ["🔓 Logout"]:
+            self.auth_service.logout_user()
             self.auth_service.clear_session()
             self.send_logout_message()
             
@@ -80,12 +101,12 @@ class TelegramFacade:
             self.registration_handler.handle(text, user_state)
         elif text == "🔐 Login" or (user_state and user_state.startswith("waiting_for_") and "login" in user_state):
             self.login_handler.handle(text, user_state)
-        elif user_state == "customer_menu":
-            self.handle_customer_commands(text)
-        elif user_state == "professional_menu":
-            self.handle_professional_commands(text)
+        elif is_logged_in and self.auth_service.user_instance:
+            if user_state == "customer_menu" or self.auth_service.user_instance['user']['user_type']=='customer':
+                self.handle_customer_commands(text)
+            elif user_state == "professional_menu" or  self.auth_service.user_instance['user']['user_type']=='professional':
+                self.handle_professional_commands(text)
         else:
-            print('user state is', self.auth_service.get_user_state())
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
 
     def handle_customer_commands(self, text):
@@ -107,14 +128,13 @@ class TelegramFacade:
         if self.professional_menu is None:
             self.send_professional_menu()
 
-        print('handle professional command is called', 'text', text)
         if text == "Payment History":
             self.professional_menu.fetch_payment_history()
         elif text == "Manage Services":
             self.professional_menu.display_service_menu()
             
         elif text == "New Jobs":
-            self.professional_menu.fetch_new_jobs()
+            self.professional_menu.fetch_service_posts()
         elif text == "Completed Jobs":
             self.professional_menu.fetch_completed_jobs()
         elif text == "Rejected Jobs":
@@ -141,7 +161,6 @@ class TelegramFacade:
     def send_professional_menu(self):
         self.professional_menu = ProfessionalMenu(self.bot_service, self.auth_service, self.chat_id)
         self.professional_menu.display_menu()
-        print('user state after menu displayed is', self.auth_service.get_user_state())
 
     def ask_for_email(self):
         self.bot_service.send_message(self.chat_id, "📧 Please provide your email address:")
