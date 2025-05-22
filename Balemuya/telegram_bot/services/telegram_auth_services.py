@@ -9,6 +9,7 @@ class TelegramAuthService:
         self.user_instance = None
         if self.user_instance is None:
             self.get_logged_in_user()
+            
 
     def set_user_state(self, state):
         cache.set(f"user_state_{self.chat_id}", state)
@@ -58,6 +59,20 @@ class TelegramAuthService:
             return {"status": "failure", "message": response.text}
         except requests.exceptions.RequestException as e:
             return {"status": "failure", "message": str(e)}
+    
+    def logout_user(self):
+        if self.user_instance:
+            id=self.user_instance.user.id
+            user = User.objects.filter(id=id,telegram_chat_id=self.chat_id).first()
+            if user:
+                user.telegram_chat_id=None
+                user.save()
+                return True
+            return False
+        else:
+            self.get_logged_in_user()
+        
+        
 
     def get_logged_in_user(self):
         try:
@@ -72,7 +87,7 @@ class TelegramAuthService:
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.json()
-                self.user_instance = data.get("user")  # Store user instance locally
+                self.user_instance = data.get("user")
                 
         except requests.exceptions.RequestException as e:
             return {"status": "failure", "message": str(e)}
