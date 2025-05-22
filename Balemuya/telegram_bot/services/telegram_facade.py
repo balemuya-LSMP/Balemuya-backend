@@ -19,36 +19,37 @@ class TelegramFacade:
     
     def send_main_menu(self, message="Please choose an option:"):
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
+        pass
 
-        if is_logged_in and self.auth_service.user_instance: 
-            if self.auth_service.user_instance['user']['user_type']=='professional':
-                self.send_professional_menu()
-            elif self.auth_service.user_instance['user']['user_type']=='customer':
-                self.send_customer_menu()
+        # if is_logged_in and self.auth_service.user_instance: 
+        #     if self.auth_service.user_instance['user']['user_type']=='professional':
+        #         self.send_professional_menu()
+        #     elif self.auth_service.user_instance['user']['user_type']=='customer':
+        #         self.send_customer_menu()
         
            
-            else: 
-                keyboard = [
-                    ["📝 Register", "🔐 Logout"],
-                    ["ℹ️ Help", "❌ Cancel"]
-                ]
+        #     else: 
+        #         keyboard = [
+        #             ["📝 Register", "🔐 Logout"],
+        #             ["ℹ️ Help", "❌ Cancel"]
+        #         ]
 
-                self.bot_service.send_message(
-                    self.chat_id,
-                    message,
-                    reply_markup=generate_keyboard(keyboard)
-                )
-        else:
-            keyboard = [
-                    ["📝 Register", "🔐 Login"],
-                    ["ℹ️ Help", "❌ Cancel"]
-                ]
+        #         self.bot_service.send_message(
+        #             self.chat_id,
+        #             message,
+        #             reply_markup=generate_keyboard(keyboard)
+        #         )
+        # else:
+        #     keyboard = [
+        #             ["📝 Register", "🔐 Login"],
+        #             ["ℹ️ Help", "❌ Cancel"]
+        #         ]
 
-            self.bot_service.send_message(
-                    self.chat_id,
-                    message,
-                    reply_markup=generate_keyboard(keyboard)
-                )
+        #     self.bot_service.send_message(
+        #             self.chat_id,
+        #             message,
+        #             reply_markup=generate_keyboard(keyboard)
+        #         )
 
     def send_welcome_message(self):
         self.send_main_menu("👋 Welcome to Balemuya!\nPlease choose an option:")

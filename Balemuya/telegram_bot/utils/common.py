@@ -6,7 +6,7 @@ import requests
 
 def create_circular_image(image, size=(100, 100)):
     """Create a circular image from the original image."""
-    img = image.resize(size, Image.ANTIALIAS)  # Resize to desired size
+    img = image.resize(size, Image.LANCZOS)  # Use LANCZOS for high-quality resizing
     circle = Image.new('L', size, 0)
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, size[0], size[1]), fill=255)
