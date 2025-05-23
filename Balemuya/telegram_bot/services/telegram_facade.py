@@ -19,37 +19,24 @@ class TelegramFacade:
     
     def send_main_menu(self, message="Please choose an option:"):
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
-        pass
+        user_state =self.auth_service.get_user_state()
 
-        # if is_logged_in and self.auth_service.user_instance: 
-        #     if self.auth_service.user_instance['user']['user_type']=='professional':
-        #         self.send_professional_menu()
-        #     elif self.auth_service.user_instance['user']['user_type']=='customer':
-        #         self.send_customer_menu()
-        
-           
-        #     else: 
-        #         keyboard = [
-        #             ["📝 Register", "🔐 Logout"],
-        #             ["ℹ️ Help", "❌ Cancel"]
-        #         ]
+        if is_logged_in and user_State=='professional_menu': 
+            self.send_professional_menu()
+        elif is_logged_in and user_State=='customer_menu': 
+                self.send_customer_menu()
+    
+        else:
+            keyboard = [
+                    ["📝 Register", "🔐 Login"],
+                    ["ℹ️ Help", "❌ Cancel"]
+                ]
 
-        #         self.bot_service.send_message(
-        #             self.chat_id,
-        #             message,
-        #             reply_markup=generate_keyboard(keyboard)
-        #         )
-        # else:
-        #     keyboard = [
-        #             ["📝 Register", "🔐 Login"],
-        #             ["ℹ️ Help", "❌ Cancel"]
-        #         ]
-
-        #     self.bot_service.send_message(
-        #             self.chat_id,
-        #             message,
-        #             reply_markup=generate_keyboard(keyboard)
-        #         )
+            self.bot_service.send_message(
+                    self.chat_id,
+                    message,
+                    reply_markup=generate_keyboard(keyboard)
+                )
 
     def send_welcome_message(self):
         self.send_main_menu("👋 Welcome to Balemuya!\nPlease choose an option:")
@@ -80,14 +67,6 @@ class TelegramFacade:
             reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
         )
 
-    def send_help_message(self):
-        self.bot_service.send_message(
-            self.chat_id,
-            "ℹ️ You can use the following options:\n"
-            "- 📝 Register: Create a new account\n"
-            "- 🔐 Login: Access your existing account\n"
-            "- ❌ Cancel: Cancel the current operation"
-        )
 
     def dispatch(self, text, user_state,user_type=None):
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
@@ -119,9 +98,6 @@ class TelegramFacade:
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
 
     def handle_customer_commands(self, text):
-        if self.customer_menu is None:
-            self.send_customer_menu()  # Ensure menu is initialized
-
         if text == "Service Posts":
             self.customer_menu.display_service_posts_menu()
         elif text == "Service Applications":
@@ -131,11 +107,11 @@ class TelegramFacade:
         elif text == "Profile":
             self.customer_menu.display_profile_menu()
         else:
-            self.send_main_menu("⚠️ Unknown customer command.")
+            self.bot_service.send_message(self.chat_id,"⚠️ Unknown customer command. Please choose opetions below")
+            self.send_customer_menu()  
+
 
     def handle_professional_commands(self, text):
-        if self.professional_menu is None:
-            self.send_professional_menu()
 
         if text == "Payment History":
             self.professional_menu.fetch_payment_history()
@@ -169,7 +145,9 @@ class TelegramFacade:
         elif text == "View Profile":
             self.professional_menu.fetch_professional_profile()
         else:
-            self.send_main_menu("⚠️ Unknown professional command.")
+            self.bot_service.send_message(self.chat_id,"⚠️ Unknown professional command.Please select from options ")
+            self.send_professional_menu()
+
 
     def send_customer_menu(self):
         self.customer_menu = CustomerMenu(self.bot_service, self.auth_service, self.chat_id)
@@ -225,3 +203,4 @@ class TelegramFacade:
             "- 🔐 Login: Access your existing account\n"
             "- ❌ Cancel: Cancel the current operation"
         )
+        self.send_main_menu()

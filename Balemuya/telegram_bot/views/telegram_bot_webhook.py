@@ -32,6 +32,7 @@ class TelegramBotWebhook(APIView):
             facade.auth_service.set_session_data('is_logged_in', True)
         else:
             facade.auth_service.set_session_data('is_logged_in', False)
+        print('user_type',user_type)
 
 
         facade.dispatch(text, user_state,user_type)
