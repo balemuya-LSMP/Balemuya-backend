@@ -23,7 +23,7 @@ class ProfessionalMenu:
             "keyboard": [
                 ["Manage Requests", "Manage Services"],
                 ["Payment History", "View Subscription"],
-                ["Profile", "Help"]
+                ["Profile", "Help","🔐 Logout"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
