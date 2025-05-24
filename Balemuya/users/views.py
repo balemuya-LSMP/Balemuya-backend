@@ -293,9 +293,10 @@ class GoogleLoginView(APIView):
             logging.warning("Missing authorization code")
             return Response({'error': "Missing authorization code"}, status=status.HTTP_400_BAD_REQUEST)
         code = unquote(code)
+        
+        print('redirect url is',settings.GOOGLE_REDIRECT_URI)
 
         try:
-            # 1. Exchange code for tokens
             token_response = requests.post(
                 'https://oauth2.googleapis.com/token',
                 data={

@@ -182,6 +182,22 @@ class CancelServiceRequestAPIView(APIView):
 
         return Response({"message": "Service request canceled."}, status=status.HTTP_200_OK)
     
+class CompleteServiceRequestAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        request_id = kwargs.get('request_id')
+
+        try:
+            service_request = ServiceRequest.objects.get(id=request_id, customer=request.user.customer,status='accepted')
+        except ServiceRequest.DoesNotExist:
+            return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+
+        service_request.status = 'completed'
+        service_request.save()
+
+        return Response({"message": "Service request completed."}, status=status.HTTP_200_OK)
+    
     
     
 class UserSearchView(APIView):
@@ -206,15 +222,14 @@ class UserSearchView(APIView):
         serializer = UserSerializer([professional.user for professional in paginated_results], many=True)
         
         return paginator.get_paginated_response(serializer.data)
+
 class ServicePaymentTransferView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated via JWT
 
     def post(self, request):
-        # Step 1: Check if the user is a customer
+        # Check if the user is a customer
         if request.user.user_type != 'customer':
-            return Response({
-                'detail': 'User is not a customer.'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': 'User is not a customer.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         customer = request.user.customer
         payment_type = request.data.get('payment_type')
@@ -224,58 +239,48 @@ class ServicePaymentTransferView(APIView):
         request_id = request.data.get('service_request')
         return_url = request.data.get('return_url')
 
-        if not professional_id or not amount or not payment_type  :
-            return Response({
-                'detail': 'Missing required fields'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+        if not professional_id or not amount or not payment_type:
+            return Response({'detail': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate professional UUID
         try:
-            professional_uuid = uuid.UUID(professional_id) 
+            professional_uuid = uuid.UUID(professional_id)
         except ValueError:
-                return Response({
-                'detail': 'Invalid UUID format for professional.'
-                     }, status=status.HTTP_400_BAD_REQUEST)
-        
-        if payment_type =='job_post':
+            return Response({'detail': 'Invalid UUID format for professional.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        booking = None
+        service_request = None
+
+        if payment_type == 'job_post':
+            # Validate booking UUID
             try:
-                booking_uuid = uuid.UUID(booking_id) 
-            except ValueError:
-                return Response({
-                'detail': 'Invalid UUID format for booking.'
-                     }, status=status.HTTP_400_BAD_REQUEST)
-           
-            try:
+                booking_uuid = uuid.UUID(booking_id)
                 booking = ServiceBooking.objects.get(
                     id=booking_uuid,
                     application__service__customer=customer,
                     application__professional=professional_uuid
                 )
-            except ServiceBooking.DoesNotExist:
-                return Response({
-                    'detail': 'Booking not found or does not match the provided customer and professional.'
-                }, status=status.HTTP_404_NOT_FOUND)
-                
-        elif payment_type =='direct_request':
-            try:
-                service_request_uuid = uuid.UUID(request_id) 
-            except ValueError:
-                return Response({
-                'detail': 'Invalid UUID format for service_request.'
-                     }, status=status.HTTP_400_BAD_REQUEST)
-            try:
-               service_request = ServiceRequest.objects.get(
-                   id=service_request_uuid,
-                   customer=customer,
-                   professional=professional_uuid,
-                   status='accepted',
-               )
-            except ServiceRequest.DoesNotExist:
-                  return Response({
-                    'detail': 'Request not found or does not match the provided customer and professional.'
-                }, status=status.HTTP_404_NOT_FOUND)
-                
-                
+            except (ValueError, ServiceBooking.DoesNotExist):
+                return Response({'detail': 'Booking not found or invalid UUID.'}, status=status.HTTP_404_NOT_FOUND)
 
+        elif payment_type == 'direct_request':
+            # Validate service request UUID
+            
+            service_request_uuid = uuid.UUID(request_id)
+            print('professional',Professional.objects.get(id=professional_uuid))
+            serv_req = ServiceRequest.objects.get(id=service_request_uuid)
+            print('customer is,',serv_req.customer)
+            try:
+                service_request = ServiceRequest.objects.get(
+                    id=service_request_uuid,
+                    customer=customer,
+                    professional=professional_uuid,
+                    status='completed',
+                )
+            except (ValueError, ServiceRequest.DoesNotExist):
+                return Response({'detail': 'Request not found or invalid UUID.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate professional existence
         try:
             professional = Professional.objects.select_related('bank_account').get(id=professional_uuid)
         except Professional.DoesNotExist:
@@ -285,7 +290,6 @@ class ServicePaymentTransferView(APIView):
             return Response({'detail': 'Professional has no bank account configured.'}, status=status.HTTP_400_BAD_REQUEST)
 
         transaction_reference = str(uuid.uuid4())
-
         payment_url = "https://api.chapa.co/v1/transaction/initialize"
 
         payload = {
@@ -294,8 +298,8 @@ class ServicePaymentTransferView(APIView):
             "email": request.user.email,
             "first_name": customer.user.first_name,
             "last_name": customer.user.last_name,
-            "phone_number": customer.user.phone_number, 
-            "tx_ref": str(transaction_reference), 
+            "phone_number": customer.user.phone_number,
+            "tx_ref": transaction_reference,
             "description": f"Payment for service by {professional.user.username}",
             "return_url": f'{return_url}?transaction_id={transaction_reference}',
         }
@@ -305,53 +309,47 @@ class ServicePaymentTransferView(APIView):
             'Content-Type': 'application/json'
         }
 
+        # Process payment
         try:
             response = requests.post(payment_url, json=payload, headers=headers)
             response.raise_for_status()
             res_data = response.json()
 
             if res_data.get("status") == "success":
-                if payment_type =='job_post':
-                    Payment.objects.create(
-                        customer=customer,
-                        professional=professional,
-                        booking=booking,
-                        payment_type=payment_type,
-                        amount=amount,
-                        payment_status='pending', 
-                        transaction_id=transaction_reference
-                    )
-                    return Response({"data": {
-                            "payment_url": res_data.get("data", {}).get("checkout_url"),
-                            "transaction_id": str(transaction_reference)
-                        }}, status=status.HTTP_200_OK)
-                    
-                elif payment_type =='direct_request':
-                    Payment.objects.create(
-                        customer=customer,
-                        professional=professional,
-                        service_request=service_request,
-                        payment_type=payment_type,
-                        amount=amount,
-                        payment_status='pending', 
-                        transaction_id=transaction_reference
-                    )
-                    return Response({"data": {
-                            "payment_url": res_data.get("data", {}).get("checkout_url"),
-                            "transaction_id": str(transaction_reference)
-                        }}, status=status.HTTP_200_OK)
-                    
-            else:
+                payment_data = {
+                    "customer": customer,
+                    "professional": professional,
+                    "amount": amount,
+                    "payment_type": payment_type,
+                    "payment_status": 'pending',
+                    "transaction_id": transaction_reference
+                }
+                
+                if payment_type == 'job_post':
+                    payment_data["booking"] = booking
+                elif payment_type == 'direct_request':
+                    payment_data["service_request"] = service_request
+
+                Payment.objects.create(**payment_data)
+
                 return Response({
-                    "message": f"Failed to create payment session: {res_data.get('message')}",
-                    "status": "failed"
-                }, status=status.HTTP_400_BAD_REQUEST)
+                    "data": {
+                        "payment_url": res_data.get("data", {}).get("checkout_url"),
+                        "transaction_id": transaction_reference
+                    }
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                "message": f"Failed to create payment session: {res_data.get('message')}",
+                "status": "failed"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         except requests.RequestException as e:
             return Response({
                 "message": f"Error connecting to Chapa: {str(e)}",
                 "status": "failed"
             }, status=status.HTTP_400_BAD_REQUEST)
+            
             
 class ServicePaymentVerifyView(APIView):
     permission_classes = [IsAuthenticated]
