@@ -23,7 +23,7 @@ class TelegramFacade:
 
         if is_logged_in and user_state=='professional_menu': 
             self.send_professional_menu()
-        elif is_logged_in and user_State=='customer_menu': 
+        elif is_logged_in and user_state=='customer_menu': 
                 self.send_customer_menu()
     
         else:
