@@ -177,6 +177,20 @@ class ServiceRequestAcceptAPIView(APIView):
             return Response({"success": "Service request accepted."}, status=status.HTTP_200_OK)
         except ServiceRequest.DoesNotExist:
             return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
+class ServiceRequestCompleteAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, req_id=None):
+        if not req_id:
+            return Response({"detail": "Request ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service_request = ServiceRequest.objects.get(id=req_id, professional=request.user.professional,satatus='accepted')
+            service_request.status = 'completed'
+            service_request.save()
+            return Response({"message": "Service request accepted."}, status=status.HTTP_200_OK)
+        except ServiceRequest.DoesNotExist:
+            return Response({"detail": "Service request not found or you are not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
 class ServiceRequestRejectAPIView(APIView):
     permission_classes = [IsAuthenticated]
