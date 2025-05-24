@@ -21,7 +21,7 @@ class TelegramFacade:
         is_logged_in = self.auth_service.get_session_data("is_logged_in")
         user_state =self.auth_service.get_user_state()
 
-        if is_logged_in and user_State=='professional_menu': 
+        if is_logged_in and user_state=='professional_menu': 
             self.send_professional_menu()
         elif is_logged_in and user_State=='customer_menu': 
                 self.send_customer_menu()
