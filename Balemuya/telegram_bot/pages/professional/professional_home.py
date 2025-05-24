@@ -74,11 +74,10 @@ class ProfessionalMenu:
         pass
     
   
-
     def fetch_service_posts(self, status=None):
         try:
             access_token = self.auth_service.get_access_token()
-            print('access token',access_token)
+            print('Access token:', access_token)
             if not access_token:
                 return {"status": "failure", "message": "Access token not found in cache."}
 
@@ -86,39 +85,54 @@ class ProfessionalMenu:
             headers = {
                 "Authorization": f"Bearer {access_token}"
             }
-            
+
             params = {}
             if status:
                 params['status'] = status
 
             response = requests.get(url, headers=headers, params=params)
-            print('response is',response.json())
-            print('response status code',response.status_code)
+            print('Response:', response.json())
+            print('Response status code:', response.status_code)
+
             if response.status_code == 200:
                 service_posts = response.json()
-                print('Fetched service posts:', service_posts)  # Debugging line
-                
-                # Construct the message with enhanced formatting
+                print('Fetched service posts:', service_posts)
+
                 if service_posts:
-                    message = "📋 *Service Posts*\n\n"
-                    for post in service_posts:  # Assuming response is a list of posts
+                    message = "✨ *Service Posts*\n\n"
+                    for post in service_posts:
                         message += (
                             f"📝 *Title*: {post['title']}\n"
-                            f"📅 *date*: {post['work_due_date']}\n"
-                            f"🔍 *Status*: {post['status']}\n"
+                            f"📂 *Category*: {post['category']}\n"
+                            f"📅 *Due Date*: {post['work_due_date']}\n"
+                            f"✅ *Status*: {post['status']}\n"
+                            f"👤 *Customer Name*: {post['customer']['full_name']} (Type: {post['customer']['entity_type']})\n"
+                            f"⭐ *Previous Rating*: {post['customer']['rating']}\n"
                             f"📌 *Details*: {post.get('description', 'No details provided')}\n\n"
+                            f"📍 *Location*: {post['location']['city']}, {post['location']['region']}\n"
+                            f"⏰ *Posted At*: {post['created_at']}\n"
+                            f"---\n"
                         )
-                    self.bot_service.send_message(self.chat_id, message)
+
+                        # Adding the service post ID to the callback data
+                        reply_markup = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": "✉️ Apply", "callback_data": f"apply_service_{post['id']}"}
+                                ]
+                            ]
+                        }
+
+                    self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
                 else:
                     self.bot_service.send_message(self.chat_id, "⚠️ No service posts available.")
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service posts.")
-        
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching service posts: {e}")  # Debugging line
-            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service posts.")
-  
 
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching service posts: {e}")
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service posts.")
+    
     def fetch_service_applications(self, status=None):
         try:
             access_token = self.auth_service.get_access_token()
