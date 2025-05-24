@@ -91,8 +91,12 @@ class TelegramFacade:
             self.login_handler.handle(text, user_state)
         elif is_logged_in and self.auth_service.user_instance:
             if user_state == "customer_menu" or self.auth_service.user_instance['user']['user_type']=='customer':
+                if not self.customer_menu:
+                    self.send_customer_menu()
                 self.handle_customer_commands(text)
             elif user_state == "professional_menu" or  self.auth_service.user_instance['user']['user_type']=='professional':
+                if not self.professional_menu:
+                    self.send_professional_menu()
                 self.handle_professional_commands(text)
         else:
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
@@ -112,7 +116,7 @@ class TelegramFacade:
 
 
     def handle_professional_commands(self, text):
-
+            
         if text == "Payment History":
             self.professional_menu.fetch_payment_history()
         elif text == "Manage Services":
