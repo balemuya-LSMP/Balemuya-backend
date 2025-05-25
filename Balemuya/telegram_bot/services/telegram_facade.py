@@ -109,18 +109,28 @@ class TelegramFacade:
             self.professional_menu.display_service_menu()
         elif text == "New Jobs":
             self.professional_menu.fetch_service_posts(status='active')
+            
         elif text == "Completed Job Bookings":
             self.professional_menu.fetch_service_booking(status='completed')
         elif text == "Canceled Job Bookings":
             self.professional_menu.fetch_service_booking(status='canceled')    
+            
         elif text == "Pending Job Applications":
             self.professional_menu.fetch_service_applications(status='pending')
         elif text == "Rejected Job Applications":
             self.professional_menu.fetch_service_applications(status='rejected')
         elif text == "Accepted Job Applications":
             self.professional_menu.fetch_service_applications(status='accepted')
+            
         elif text == "Manage Requests":
             self.professional_menu.display_Requests_menu()
+        elif text == "Pending Requests":
+            self.professional_menu.fetch_service_requests(status='pending')
+        elif text == "Accepted Requests":
+            self.professional_menu.fetch_service_requests(status='accepted')
+        elif text == "Rejected Requests":
+            self.professional_menu.fetch_service_requests(status='rejected')
+            
         elif text == "View Subscription":
             self.professional_menu.fetch_subscription_plan()
         elif text == "Profile":
