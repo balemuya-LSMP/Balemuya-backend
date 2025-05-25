@@ -1,4 +1,4 @@
-# your_project/management/commands/set_webhook.py
+# telegram_bot/management/commands/set_webhook.py
 from django.core.management.base import BaseCommand
 import requests
 from django.conf import settings
@@ -8,8 +8,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         bot_token = settings.TELEGRAM_BOT_TOKEN
-        # webhook_url = "https://breezy-cows-wait.loca.lt/api/telegram/webhook/"
-        webhook_url = "https://balemuya-project.onrender.com/api/telegram/webhook/"
+        webhook_url = "https://clear-trees-double.loca.lt/api/telegram/webhook/"
+        # webhook_url = "https://balemuya-project.onrender.com/api/telegram/webhook/"
 
         url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
         response = requests.get(url)
