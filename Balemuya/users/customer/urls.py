@@ -10,9 +10,9 @@ urlpatterns = [
     
     path('search-professional/',UserSearchView.as_view(),name='search-professional'),
     
-    path('service-request/', CustomerServiceRequestAPIView.as_view(), name='create-service-request'),  
-    path('service-request/<uuid:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel-service-request'),
-    path('service-request/<uuid:request_id>/complete/', CompleteServiceRequestAPIView.as_view(), name='Complete-service-request'),
+    path('service-requests/', CustomerServiceRequestAPIView.as_view(), name='create-service-request'),  
+    path('service-requests/<uuid:request_id>/cancel/', CancelServiceRequestAPIView.as_view(), name='cancel-service-request'),
+    path('service-requests/<uuid:request_id>/complete/', CompleteServiceRequestAPIView.as_view(), name='Complete-service-request'),
       
     path('services/',CustomerServicesView.as_view(), name='customer-services'),
     
