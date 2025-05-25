@@ -44,7 +44,7 @@ from services.models import ServicePost, ServicePostApplication, ServiceBooking,
 from services.serializers import ServicePostSerializer,ServicePostDetailSerializer, ServicePostApplicationSerializer,ServicePostApplicationDetailSerializer,ServiceBookingSerializer,ServiceBookingDetailSerializer,ReviewSerializer,ReviewDetailSerializer,ServiceRequestDetailSerializer,ServiceRequestSerializer
 
 from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
-    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPaymentSerializer,\
+    VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPlanDetailSerializer,SubscriptionPaymentSerializer,\
         FeedbackSerializer,BankAccountSerializer,BankSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
@@ -550,8 +550,8 @@ class ProfessionalSubscriptionHistoryView(APIView):
 
     def get(self, request):
         if request.user.user_type =='professional':
-            subscription_history = SubscriptionPlan.objects.filter(user=request.user)
-            serializer = SubscriptionPlanSerializer(subscription_history, many=True)
+            subscription_history = SubscriptionPlan.objects.filter(professional=request.user.professional)
+            serializer = SubscriptionPlanDetailSerializer(subscription_history, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({'detail':'This user is not Professional'},status=status.HTTP_401_UNAUTHORIZED)
