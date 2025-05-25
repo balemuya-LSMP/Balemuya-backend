@@ -7,38 +7,34 @@ from users.models import User
 
 class TelegramBotWebhook(APIView):
     def post(self, request, *args, **kwargs):
+        # Parse the incoming update from Telegram
         data = json.loads(request.body.decode('utf-8'))
-        message = data.get("message", {})
-        chat_id = message.get("chat", {}).get("id")
-        text = message.get("text")
-
-        user = None
-        try:
-            user = User.objects.get(telegram_chat_id=chat_id)
-        except User.DoesNotExist:
-            pass
         
-        print('user is',user)
+        # Extract chat_id from either message or callback_query
+        chat_id = data.get("message", {}).get("chat", {}).get("id") or data.get("callback_query", {}).get("from", {}).get("id")
 
-        # Get user state from cache
+        # User lookup and state retrieval
+        user = self.get_user(chat_id)
         user_state = cache.get(f'user_state_{chat_id}', None)
-        print('Starting user state is', user_state)
 
+        # Create an instance of TelegramFacade
         facade = TelegramFacade(chat_id)
-        user_type=None
-        if facade.auth_service.user_instance:
-            user_type=facade.auth_service.user_instance['user']['user_type']
-        if user:
-            facade.auth_service.set_session_data('is_logged_in', True)
-        else:
-            facade.auth_service.set_session_data('is_logged_in', False)
-        print('user_type',user_type)
 
+        # Check if user is logged in
+        is_logged_in = user is not None
+        facade.auth_service.set_session_data('is_logged_in', is_logged_in)
 
-        facade.dispatch(text, user_state,user_type)
+        # Call the handle_update method with the incoming data
+        facade.handle_update(data)
 
+        # Update user state in cache
         cache.set(f'user_state_{chat_id}', facade.auth_service.get_user_state())
 
         return JsonResponse({"status": "ok"})
 
-        
+    def get_user(self, chat_id):
+        """Retrieve the user from the database based on chat_id."""
+        try:
+            return User.objects.get(telegram_chat_id=chat_id)
+        except User.DoesNotExist:
+            return None
