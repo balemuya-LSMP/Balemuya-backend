@@ -9,6 +9,9 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
+import logging
+from urllib.parse import unquote
+
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -275,26 +278,23 @@ class VerifyPasswordResetOTPView(APIView):
             return Response({'error': 'Invalid OTP, please type again.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-import logging
-from urllib.parse import unquote
+
 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-
 class GoogleLoginView(APIView):
     def post(self, request):
         code = request.data.get('code')
-        entity_type = request.data.get('entity_type')
         user_type = request.data.get('user_type')
+        entity_type = request.data.get('entity_type')
         username = request.data.get('username')
 
         if not code:
             logging.warning("Missing authorization code")
             return Response({'error': "Missing authorization code"}, status=status.HTTP_400_BAD_REQUEST)
+
         code = unquote(code)
-        
-        print('redirect url is',settings.GOOGLE_REDIRECT_URI)
 
         try:
             token_response = requests.post(
@@ -304,7 +304,6 @@ class GoogleLoginView(APIView):
                     'client_id': settings.GOOGLE_CLIENT_ID,
                     'client_secret': settings.GOOGLE_CLIENT_SECRET,
                     'redirect_uri': settings.GOOGLE_REDIRECT_URI,
-
                     'grant_type': 'authorization_code',
                 },
                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
@@ -317,7 +316,6 @@ class GoogleLoginView(APIView):
             tokens = token_response.json()
             access_token = tokens.get('access_token')
 
-            # 2. Fetch user info from Google
             user_info_response = requests.get(
                 'https://www.googleapis.com/oauth2/v3/userinfo',
                 headers={'Authorization': f'Bearer {access_token}'}
@@ -335,23 +333,21 @@ class GoogleLoginView(APIView):
             if not email:
                 return Response({'error': "Email not found in Google account"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 3. Create or get the user
             user, created = User.objects.get_or_create(email=email, defaults={
                 'first_name': first_name,
                 'last_name': last_name,
                 'is_active': True,
-                'entity_type': entity_type,
                 'user_type': user_type,
-                'username': username if entity_type == 'organization' else f"{first_name}{last_name}".lower()
+                'entity_type': entity_type,
+                'username': username if user_type == 'organization' else f"{first_name}{last_name}".lower()
             })
 
-            if created and (not entity_type or not user_type):
-                return Response({
-                    'message': "Please provide 'entity_type' and 'user_type' for first-time users.",
-                    'needs_info': True
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if created:
+                if user_type == 'customer':
+                    Customer.objects.get_or_create(user=user)
+                elif user_type == 'professional':
+                    Professional.objects.get_or_create(user=user)
 
-            # 4. Generate JWT tokens
             refresh = RefreshToken.for_user(user)
 
             return Response({
@@ -359,7 +355,6 @@ class GoogleLoginView(APIView):
                 'username': user.username,
                 'email': user.email,
                 'user_type': user.user_type,
-                'entity_type': user.entity_type,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
             }, status=status.HTTP_200_OK)
