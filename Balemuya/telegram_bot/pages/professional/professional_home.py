@@ -18,7 +18,7 @@ class ProfessionalMenu:
         print('user state is', self.auth_service.get_user_state())
         if not self.auth_service:
             self.auth_service.get_logged_in_user()
-        menu_text = f"Welcome {self.auth_service.user_instance['user']['full_name']} to Balemuya Professional Menu!"
+        menu_text = f"Choose Options"
         keyboard = {
         "keyboard": [
             ["📋 Manage Requests", "🛠️ Manage Services"],
