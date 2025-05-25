@@ -566,30 +566,47 @@ class UserBlockView(generics.UpdateAPIView):
 
 class UserFeedbackView(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = CustomPagination
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [] 
+        return super().get_permissions()
 
     def get(self, request, *args, **kwargs):
         user_feedbacks = Feedback.objects.all().order_by('-created_at', '-rating')        
-        paginator = self.pagination_class() 
+        paginator = CustomPagination() 
         
         if not user_feedbacks.exists():
-            return Response({'count': 0, 'results': []})
+            return Response({'count': 0, 'results': []}, status=status.HTTP_200_OK)
 
         paginated_feedbacks = paginator.paginate_queryset(user_feedbacks, request)
         serializer = FeedbackDetailSerializer(paginated_feedbacks, many=True)
         return paginator.get_paginated_response(serializer.data)
-    def post(self,request):
-         user_feedback = Feedback.objects.filter(user=request.user).first()
-         if user_feedback:
-             user_feedback.message = request.data.get('message')
-             user_feedback.save()
-             return Response({'message': 'Feedback updated successfully.'}, status=status.HTTP_200_OK)
-         else:
-             user_feedback = Feedback.objects.create(user=request.user,message=request.data.get('message'),rating=request.data.get('rating'))
-             user_feedback.save()
-             return Response({'message': 'Feedback created successfully.'}, status=status.HTTP_201_CREATED)
-         
 
+    def post(self, request):
+        message = request.data.get('message')
+        rating = request.data.get('rating')
+
+        if message is None or rating is None:
+            return Response({'detail': 'Message and rating are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_feedback = Feedback.objects.create(user=request.user, message=message, rating=rating)
+        return Response({'message': 'Feedback created successfully.'}, status=status.HTTP_201_CREATED)
+         
+    def put(self, request):
+        feedback_id = request.data.get('feedback_id')
+        user_feedback = Feedback.objects.filter(id=feedback_id, user=request.user).first()
+
+        if not user_feedback:
+            return Response({'detail': 'Feedback not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = FeedbackSerializer(user_feedback, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Feedback updated successfully.'}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 
 class FavoriteListCreateAPIView(APIView):
     permission_classes=[IsAuthenticated]
