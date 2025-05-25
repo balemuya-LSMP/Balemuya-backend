@@ -103,40 +103,44 @@ class TelegramFacade:
             self.send_customer_menu()  
 
     def handle_professional_commands(self, text):
-        if text == "Payment History":
+        if text == "💳 Payment History":
             self.professional_menu.fetch_payment_history()
-        elif text == "Manage Services":
+        elif text == "🛠️ Manage Services":
             self.professional_menu.display_service_menu()
-        elif text == "New Jobs":
+        elif text == "🆕 New Jobs":
             self.professional_menu.fetch_service_posts(status='active')
             
-        elif text == "Completed Job Bookings":
+        elif text == "🔄 Active Bookings":
+            self.professional_menu.fetch_service_booking(status='booked')
+        elif text == "✅ Completed Job Bookings":
             self.professional_menu.fetch_service_booking(status='completed')
-        elif text == "Canceled Job Bookings":
+        elif text == "❌ Canceled Job Bookings":
             self.professional_menu.fetch_service_booking(status='canceled')    
             
-        elif text == "Pending Job Applications":
+        elif text == "🔄 Pending Job Applications":
             self.professional_menu.fetch_service_applications(status='pending')
-        elif text == "Rejected Job Applications":
+        elif text == "📄 Rejected Job Applications":
             self.professional_menu.fetch_service_applications(status='rejected')
-        elif text == "Accepted Job Applications":
+        elif text == "✔️ Accepted Job Applications":
             self.professional_menu.fetch_service_applications(status='accepted')
             
-        elif text == "Manage Requests":
+        elif text == "📋 Manage Requests":
             self.professional_menu.display_Requests_menu()
-        elif text == "Pending Requests":
+        elif text == "⌛ Pending Requests":
             self.professional_menu.fetch_service_requests(status='pending')
-        elif text == "Accepted Requests":
+        elif text == "✅ Accepted Requests":
             self.professional_menu.fetch_service_requests(status='accepted')
-        elif text == "Rejected Requests":
+        elif text == "❌ Rejected Requests":
             self.professional_menu.fetch_service_requests(status='rejected')
+        elif text == "✅ Completed Requests":
+            self.professional_menu.fetch_service_requests(status='completed')
             
-        elif text == "View Subscription":
+        elif text == "📄 View Subscription":
             self.professional_menu.fetch_subscription_plan()
-        elif text == "Profile":
-            self.professional_menu.display_profile_menu()
-        elif text == "View Profile":
+        elif text == "👤 View Profile":
             self.professional_menu.fetch_professional_profile()
+        elif text == "🔙 Back to Main Menu":
+            self.professional_menu.display_menu()
         else:
             self.bot_service.send_message(self.chat_id, "⚠️ Unknown professional command. Please select from options.")
 
