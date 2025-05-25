@@ -106,7 +106,7 @@ class ProfessionalMenu:
                             f"📂 *Category*: {post['category']}\n"
                             f"📅 *Due Date*: {post['work_due_date']}\n"
                             f"✅ *Status*: {post['status']}\n"
-                            f"👤 *Customer Name*: {post['customer']['full_name']} (Type: {post['customer']['entity_type']})\n"
+                            f"👤 *Customer Name*: {post['customer']['user']['full_name']} (Type: {post['customer']['user']['entity_type']})\n"
                             f"⭐ *Previous Rating*: {post['customer']['rating']}\n"
                             f"📌 *Details*: {post.get('description', 'No details provided')}\n\n"
                             f"📍 *Location*: {post['location']['city']}, {post['location']['region']}\n"

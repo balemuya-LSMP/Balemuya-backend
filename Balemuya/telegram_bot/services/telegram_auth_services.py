@@ -9,6 +9,11 @@ class TelegramAuthService:
         self.user_instance = None
         if self.user_instance is None:
             self.get_logged_in_user()
+    
+    def get_user_type(self):
+        if self.user_instance:
+            return self.user_instance['user']['user_type']
+        return None
             
 
     def set_user_state(self, state):
