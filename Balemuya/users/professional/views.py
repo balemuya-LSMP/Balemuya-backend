@@ -185,7 +185,7 @@ class ServiceRequestCompleteAPIView(APIView):
             return Response({"detail": "Request ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            service_request = ServiceRequest.objects.get(id=req_id, professional=request.user.professional,satatus='accepted')
+            service_request = ServiceRequest.objects.get(id=req_id, professional=request.user.professional,status='accepted')
             service_request.status = 'completed'
             service_request.save()
             return Response({"message": "Service request accepted."}, status=status.HTTP_200_OK)

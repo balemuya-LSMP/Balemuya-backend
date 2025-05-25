@@ -94,8 +94,16 @@ class TelegramFacade:
             self.customer_menu.display_service_applications_menu()
         elif text == "Bookings":
             self.customer_menu.display_bookings_menu()
+            
         elif text == "Profile":
             self.customer_menu.display_profile_menu()
+            
+        elif text == "⭐ View Favorites":
+            self.customer_menu.fetch_favorites()
+            
+        elif text == "👥 View Professionals":
+            self.customer_menu.fetch_nearby_professionals()
+            
         else:
             self.bot_service.send_message(self.chat_id, "⚠️ Unknown customer command. Please choose options below.")
             self.send_customer_menu()  
