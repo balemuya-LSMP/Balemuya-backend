@@ -105,9 +105,47 @@ class ProfessionalMenu:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching subscription plans: {e}")  # Debugging line
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching subscription plans.")
-    
+            
     def fetch_payment_history(self):
-        pass
+        access_token = self.auth_service.get_access_token()
+        if not access_token:
+            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch subscription plans. Access token not found.")
+            return
+
+        url = f"{settings.BACKEND_URL}users/professional/subscription/history/"
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+            print('response text is',response)
+            print('Response Status Code:', response.status_code)  # Debugging line
+            
+            if response.status_code == 200:
+                subscription_plans = response.json()
+                print('subscription plans ',subscription_plans)
+                if subscription_plans:
+                    message = "📋 *Subscription Plans*\n\n"
+                    for plan in subscription_plans:
+                        message += (
+                            f"🌟 *Plan Type*: {plan['plan_type']}\n"
+                            f"💰 *Price*: {plan['cost']} Birr\n"
+                            f"🗓️ *Duration*: {plan['duration']} days\n"
+                            f"🗓️ *Start Date*: {plan['start_date']} days\n"
+                            f"🗓️ *End Date*: {plan['end_date']} days\n"
+                            f"---------------\n"
+                        )
+                    self.bot_service.send_message(self.chat_id, message)
+                else:
+                    self.bot_service.send_message(self.chat_id, "⚠️ No subscription plans available.")
+            else:
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch subscription plans. Please try again.")
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching subscription plans: {e}")  # Debugging line
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching subscription plans.")
+    
+    
     
   
     def fetch_service_posts(self, status=None):
