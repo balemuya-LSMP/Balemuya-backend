@@ -268,11 +268,16 @@ class VerificationRequestSerializer(serializers.ModelSerializer):
         return UserSerializer(obj.professional.user, context=self.context).data
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
-    professional = ProfessionalSerializer()
     class Meta:
         model = SubscriptionPlan
         fields = ['id', 'professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date']
+        
+class SubscriptionPlanDetailSerializer(serializers.ModelSerializer):
+    professional = UserSerializer(source='professional.user', read_only=True)
 
+    class Meta:
+        model = SubscriptionPlan
+        fields = ['id', 'professional', 'plan_type', 'duration', 'cost', 'start_date', 'end_date']
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
