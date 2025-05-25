@@ -20,52 +20,41 @@ class ProfessionalMenu:
             self.auth_service.get_logged_in_user()
         menu_text = f"Welcome {self.auth_service.user_instance['user']['full_name']} to Balemuya Professional Menu!"
         keyboard = {
-            "keyboard": [
-                ["Manage Requests", "Manage Services"],
-                ["Payment History", "View Subscription"],
-                ["Profile", "Help","🔐 Logout"]
-            ],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
+        "keyboard": [
+            ["📋 Manage Requests", "🛠️ Manage Services"],
+            ["💳 Payment History", "📄 View Subscription"],
+            ["👤 View Profile", "❓ Help", "🔐 Logout"]
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
     def display_Requests_menu(self):
         menu_text = "View Service Requests:"
         keyboard = {
-            "keyboard": [
-                ["Pending Requests", "Accepted Requests"],
-                ["Rejected Requests", "Back to Main Menu"]
-            ],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
-        }
+        "keyboard": [
+            ["⌛ Pending Requests", "✅ Accepted Requests"],
+            ["✅ Completed Requests","❌ Rejected Requests","🔙 Back to Main Menu"]
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True
+    }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
     def display_service_menu(self):
         menu_text = "Manage Your Services as a Professional:"
         keyboard = {
             "keyboard": [
-                ["New Jobs", "Completed Job Bookings","Canceled Job Bookings"],
-                ["Rejected Job Applications","Accepted Job Applications","Pending Job Applications"],
-                [ "Back to Main Menu"]
+                ["🆕 New Jobs", "🔄 Active Bookings", "✅ Completed Job Bookings", "❌ Canceled Job Bookings"],
+                ["📄 Rejected Job Applications", "✔️ Accepted Job Applications", "🔄 Pending Job Applications"],
+                ["🔙 Back to Main Menu"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
-    def display_profile_menu(self):
-        menu_text = "Manage Your Profile as a Professional:"
-        keyboard = {
-            "keyboard": [
-                ["View Profile", "Edit Profile"],
-                ["Back to Main Menu"]
-            ],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
-        }
-        self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
         
     def fetch_subscription_plan(self):
         access_token = self.auth_service.get_access_token()
@@ -365,7 +354,21 @@ class ProfessionalMenu:
                         )
 
                         # Create the inline keyboard
-                        reply_markup = {
+                        if status == 'booked':
+                            reply_markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "Report", "callback_data": f"report_booking_{post['id']}"},
+                                        {"text": "Review", "callback_data": f"review_booking_{post['id']}"}
+                                    ],
+                                    [
+                                        {"text": "Cancel", "callback_data": f"cancel_booking_{post['id']}"},
+                                        {"text": "✅ Mark as Completed", "callback_data": f"complete_booking_{post['id']}"}
+                                    ]
+                                ]
+                            }
+                        else:
+                            reply_markup = {
                                 "inline_keyboard": [
                                     [
                                         {"text": "Report", "callback_data": f"report_booking_{post['id']}"},
@@ -373,13 +376,9 @@ class ProfessionalMenu:
                                     ]
                                 ]
                             }
-                        
 
-                        if post and status=='completed':
-                         self.bot_service.send_message(self.chat_id, message,reply_markup=reply_markup)
-                        elif post and status=='canceled':
-                            self.bot_service.send_message(self.chat_id, message,reply_markup=reply_markup)
-
+                        self.bot_service.send_message(self.chat_id, message,reply_markup=reply_markup)
+                       
                             
                 else:
                     self.bot_service.send_message(self.chat_id, f"⚠️ No {status} service bookings available.")
@@ -430,51 +429,62 @@ class ProfessionalMenu:
             if not access_token:
                 return {"status": "failure", "message": "Access token not found in cache."}
 
-            url = f"{settings.BACKEND_URL}users/professional/service_requests/"
-            headers = {
-                "Authorization": f"Bearer {access_token}"
-            }
+            url = f"{settings.BACKEND_URL}users/professional/service-requests/"
+            headers = {"Authorization": f"Bearer {access_token}"}
 
             params = {}
             if status:
                 params['status'] = status
 
             response = requests.get(url, headers=headers, params=params)
+            print('Response of service requests is', response)
+
             if response.status_code == 200:
                 service_requests = response.json()
                 if service_requests:
-                    message = "✨ *Service Requests*\n\n"
+                    message = "✨ *Customer Service Requests*\n\n"
                     for request in service_requests:
                         created_at = request.get('created_at')
                         if created_at:
                             created_at = format_date(created_at)
 
+                        customer = request.get('customer', {}).get('user', {})
+                        customer_name = customer.get('full_name', 'Unknown Customer')
+                        customer_address = customer.get('address', None)  # Address can be None
+
+                        # Check if customer_address is not None before accessing its attributes
+                        if customer_address:
+                            customer_city = customer_address.get('city', 'Unknown City')
+                        else:
+                            customer_city = 'Unknown City'  # Default value if address is None
+
+                        customer_phone = customer.get('phone_number', 'No phone number')
+
                         message += (
-                            f"📝 Detail: {request['detail']}\n"
-                            f"🔍 Status: {request['status']}\n"
-                            f"👤 Customer: {request['customer']['user']['full_name']}\n"
-                            f" Customer Address: {request['customer']['user']['address']['city']}\n"
-                            f"📞 Phone: {request['customer']['user']['phone_number']}\n"
-                            f"🏢 Professional: {request['professional']['professional_name']}\n"
-                            f"⭐ Rating: {request['professional']['rating']}\n"
+                            f"📝 Detail: {request.get('detail', 'No detail provided')}\n"
+                            f"🔍 Status: {request.get('status', 'No status provided')}\n"
+                            f"👤 Customer: {customer_name}\n"
+                            f" Customer Address: {customer_city}\n"
+                            f"📞 Phone: {customer_phone}\n"
+                            f"⭐ Rating: {request.get('professional', {}).get('rating', 'No rating')}\n"
                             f"📅 Created At: {created_at}\n"
-                            f"----------------------------------------------------\name()\n"
+                            f"----------------------------------------------------\n"
                         )
 
-                        # Adding inline keyboard for accept/reject if status is empty or pending
                         if request['status'] in ["", "pending"]:
                             reply_markup = {
                                 "inline_keyboard": [
                                     [
                                         {"text": "✅ Accept", "callback_data": f"accept_request_{request['id']}"},
                                         {"text": "❌ Reject", "callback_data": f"reject_request_{request['id']}"}
+                                    ],
+                                    [
+                                        {"text": "🔍 See Customer Detail", "callback_data": f"view_customer_detail_{customer['id']}"}
                                     ]
                                 ]
                             }
                         else:
-                            reply_markup = None  # No buttons if status is not empty or pending
-
-                        # Send message to Telegram with inline markup
+                            reply_markup = None  # No butt
                         self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
 
                 else:
