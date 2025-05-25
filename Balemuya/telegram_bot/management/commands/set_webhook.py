@@ -8,7 +8,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         bot_token = settings.TELEGRAM_BOT_TOKEN
-        # webhook_url = "https://old-ways-exist.loca.lt/api/telegram/webhook/"
+        # webhook_url = "https://clear-pans-share.loca.lt/api/telegram/webhook/"
         
         webhook_url = "https://balemuya-project.onrender.com/api/telegram/webhook/"
 
