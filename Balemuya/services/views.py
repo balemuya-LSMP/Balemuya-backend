@@ -115,7 +115,7 @@ class CreateServicePostApplicationAPIView(APIView):
 
     def post(self, request, service_id=None):
         if request.user.user_type != "professional":
-            return Response({"detail": "Only professionals can apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Only professionals can't apply for service posts."}, status=status.HTTP_403_FORBIDDEN)
         
         try:
             service_id = request.data.get('service_id')
