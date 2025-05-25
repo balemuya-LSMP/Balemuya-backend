@@ -43,10 +43,8 @@ class TelegramFacade:
 
     def handle_update(self, update):
         if update.get("callback_query"):
-            # Handle callback query
             self.handle_callback_query(update["callback_query"])
         else:
-            # Handle message
             message = update.get("message", {})
             text = message.get("text", "")
             user_state = self.auth_service.get_user_state()
