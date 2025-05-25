@@ -284,11 +284,11 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = ['id', 'customer', 'professional', 'booking','service_Request','payment_type', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
         
 class PaymentDetailSerializer(serializers.ModelSerializer):
-    customer = CustomerSerializer()
-    professional = ProfessionalSerializer()
+    customer = UserSerializer(source='customer.user')
+    professional = UserSerializer(source='professional.user')
     class Meta:
         model = Payment
-        fields = ['id', 'customer', 'professional', 'booking','service_Request','payment_type', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
+        fields = ['id', 'customer', 'professional', 'booking','service_request','payment_type', 'amount', 'payment_date', 'payment_status', 'payment_method', 'transaction_id']
 
 class SubscriptionPaymentSerializer(serializers.ModelSerializer):
     class Meta:

@@ -108,42 +108,67 @@ class ProfessionalMenu:
             
     def fetch_payment_history(self):
         access_token = self.auth_service.get_access_token()
+        
         if not access_token:
-            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch subscription plans. Access token not found.")
+            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch payments. Access token not found.")
             return
 
-        url = f"{settings.BACKEND_URL}users/professional/subscription/history/"
+        url = f"{settings.BACKEND_URL}users/professional/payment/history/"
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
+        print('payment history fetched')
 
         try:
             response = requests.get(url, headers=headers)
-            print('response text is',response)
-            print('Response Status Code:', response.status_code)  # Debugging line
-            
+            print('Response Status Code:', response.status_code)
+            print('Response Content:', response.json())  # Log the response for debugging
+
             if response.status_code == 200:
-                subscription_plans = response.json()
-                print('subscription plans ',subscription_plans)
-                if subscription_plans:
-                    message = "📋 *Subscription Plans*\n\n"
-                    for plan in subscription_plans:
+                payment_data = response.json()
+                subscription_payments = payment_data.get('subscription_payments', [])
+                transfer_payments = payment_data.get('transfer_payments', [])
+
+                message = "💰 *Payments Overview*\n\n"
+
+                # Format subscription payments
+                message += "📜 *Subscription Payments:*\n"
+                if subscription_payments:
+                    for payment in subscription_payments:
                         message += (
-                            f"🌟 *Plan Type*: {plan['plan_type']}\n"
-                            f"💰 *Price*: {plan['cost']} Birr\n"
-                            f"🗓️ *Duration*: {plan['duration']} days\n"
-                            f"🗓️ *Start Date*: {plan['start_date']} days\n"
-                            f"🗓️ *End Date*: {plan['end_date']} days\n"
+                            f"🔹 *Amount*: {payment['amount']} Birr\n"
+                            f"🔹 *Payment Date*: {payment['payment_date']}\n"
+                            f"🔹 *Status*: {payment['payment_status']}\n"
+                            f"🔹 *Transaction ID*: {payment['transaction_id']}\n"
                             f"---------------\n"
                         )
-                    self.bot_service.send_message(self.chat_id, message)
                 else:
-                    self.bot_service.send_message(self.chat_id, "⚠️ No subscription plans available.")
+                    message += "⚠️ No subscription payments found.\n"
+
+                # Format transfer payments
+                message += "📜 *Transfer Payments:*\n"
+                if transfer_payments:
+                    for payment in transfer_payments:
+                        customer_name = payment['customer']['full_name']
+                        amount = payment['amount']
+                        payment_date = payment['payment_date']
+                        status = payment['payment_status']
+                        message += (
+                            f"🔹 *Customer*: {customer_name}\n"
+                            f"🔹 *Amount*: {amount} Birr\n"
+                            f"🔹 *Payment Date*: {payment_date}\n"
+                            f"🔹 *Status*: {status}\n"
+                            f"---------------\n"
+                        )
+                else:
+                    message += "⚠️ No transfer payments found.\n"
+
+                self.bot_service.send_message(self.chat_id, message)
             else:
-                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch subscription plans. Please try again.")
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch payments. Please try again.")
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching subscription plans: {e}")  # Debugging line
-            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching subscription plans.")
+            print(f"Error fetching payments: {e}")
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching payments.")
     
     
     

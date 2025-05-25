@@ -45,7 +45,7 @@ from services.serializers import ServicePostSerializer,ServicePostDetailSerializ
 
 from users.serializers import  LoginSerializer ,ProfessionalSerializer, CustomerSerializer, AdminSerializer,\
     VerificationRequestSerializer,PortfolioSerializer,CertificateSerializer,EducationSerializer,SkillSerializer,PaymentSerializer,SubscriptionPlanSerializer,SubscriptionPlanDetailSerializer,SubscriptionPaymentSerializer,\
-        FeedbackSerializer,BankAccountSerializer,BankSerializer
+        FeedbackSerializer,BankAccountSerializer,BankSerializer,SubscriptionPaymentDetailSerializer,PaymentDetailSerializer
     
 from common.serializers import UserSerializer, AddressSerializer,CategorySerializer
 from .utils import filter_service_posts_by_distance
@@ -553,6 +553,23 @@ class ProfessionalSubscriptionHistoryView(APIView):
             subscription_history = SubscriptionPlan.objects.filter(professional=request.user.professional)
             serializer = SubscriptionPlanDetailSerializer(subscription_history, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail':'This user is not Professional'},status=status.HTTP_401_UNAUTHORIZED)
+class ProfessionalPaymentHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type =='professional':
+            subscription_payment_history = SubscriptionPayment.objects.filter(professional=request.user.professional).order_by('-payment_date')[:4]
+            sub_payment_serializer = SubscriptionPaymentDetailSerializer(subscription_payment_history, many=True)
+            
+            transfer_payment = Payment.objects.filter(professional=request.user.professional).order_by('-payment_date')[:4]
+            transfer_payment_serializer = PaymentDetailSerializer(transfer_payment,many=True)
+            data={
+                "subscription_payments":sub_payment_serializer.data,
+                "transfer_payments":transfer_payment_serializer.data,
+            }
+            return Response(data, status=status.HTTP_200_OK)
         else:
             return Response({'detail':'This user is not Professional'},status=status.HTTP_401_UNAUTHORIZED)
 
