@@ -187,6 +187,10 @@ class CompleteServiceRequestAPIView(APIView):
     
     def post(self, request, *args, **kwargs):
         request_id = kwargs.get('request_id')
+        if not request.user.user_type =='customer':
+            return Response({"detail": "user is not customer."},status=status.HTTP_401_UNAUTHORIZED)
+
+            
 
         try:
             service_request = ServiceRequest.objects.get(id=request_id, customer=request.user.customer,status='accepted')
