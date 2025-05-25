@@ -25,13 +25,13 @@ class CustomerMenu:
             self.auth_service.get_logged_in_user()
         menu_text = f"Choose Options"
         keyboard = {
-        "keyboard": [
-            ["📋 Manage Requests", "🛠️ Manage Services"],
-            ["💳 View Professionals", "📄 View Favorites"],
-            ["👤 View Profile","🔐 Logout"]
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": True
+            "keyboard": [
+                ["📅 Manage Requests", "🔧 Manage Services"],
+                ["👥 View Professionals", "⭐ View Favorites"],
+                ["👤 View Profile", "🔒 Logout"]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
@@ -51,8 +51,8 @@ class CustomerMenu:
         menu_text = "Manage Your Services as a Professional:"
         keyboard = {
             "keyboard": [
-                ["🆕 New Jobs", "🔄 Active Bookings", "✅ Completed Job Bookings", "❌ Canceled Job Bookings"],
-                ["📄 Rejected Job Applications", "✔️ Accepted Job Applications", "🔄 Pending Job Applications"],
+                ["🆕 Post Jobs", "🔄 Active Bookings"], 
+                ["✅ Completed Job Bookings", "❌ Canceled Job Bookings"],
                 ["🔙 Back to Main Menu"]
             ],
             "resize_keyboard": True,
@@ -60,123 +60,126 @@ class CustomerMenu:
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
-        
-    def fetch_subscription_plan(self):
+    def fetch_nearby_professionals(self):
         access_token = self.auth_service.get_access_token()
         if not access_token:
-            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch subscription plans. Access token not found.")
+            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch nearby professionals. Access token not found.")
             return
 
-        url = f"{settings.BACKEND_URL}users/professional/subscription/history/"
+        url = f"{settings.BACKEND_URL}users/customer/nearby-professionals/"
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
 
         try:
             response = requests.get(url, headers=headers)
-            print('response text is',response)
             print('Response Status Code:', response.status_code)  # Debugging line
             
             if response.status_code == 200:
-                subscription_plans = response.json()
-                print('subscription plans ',subscription_plans)
-                if subscription_plans:
-                    message = "📋 *Subscription Plans*\n\n"
-                    for plan in subscription_plans:
-                        start_date=plan['start_date']
-                        end_date=plan['end_date']
-                        if start_date:
-                            start_date=format_date(start_date)
-                        if end_date:
-                            end_date=format_date(end_date)
+                data = response.json()
+                if data['message'] == "success" and data['nearby_professionals']:
+                    professionals = data['nearby_professionals']
+                    message = "👥 *Nearby Professionals*\n\n"
+                    
+                    for pro in professionals:
+                        profile_image = pro.get('profile_image', '')
+                        name = pro.get('name', 'Unknown')
+                        bio = pro.get('bio', 'No bio available')
+                        address = pro.get('address', {})
+                        location = f"{address.get('city', 'Unknown')}, {address.get('region', 'Unknown')}, {address.get('country', 'Unknown')}"
+                        distance = pro.get('distance', 0.0)
+
                         message += (
+                            f"----------------------------------------------\n"
+                            f"👤 Name: {name}\n"
+                            f"📍 Location: {location}\n"
+                            f"🌟 Bio: {bio}\n"
+                            f"📏 Distance: {distance} km\n"
+                            f"![Profile Image]({profile_image})\n"
                             f"----------------------------------------------\n\n"
-                            f"🌟 Plan Type: {plan['plan_type']}\n"
-                            f"💰 Price: {plan['cost']} Birr\n"
-                            f"🗓️ Duration: {plan['duration']} months\n"
-                            f"🗓️ Start Date: {end_date} \n"
-                            f"🗓️ End Date: {end_date} \n"
-                            f"---------------------------------------------\n\n"
                         )
-                    self.bot_service.send_message(self.chat_id, message)
+                        
+                        # Inline keyboard for actions
+                        inline_keyboard = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": "🛠️ Request Service", "callback_data": f"request_service_{pro['id']}"},
+                                    {"text": "⭐ Add to Favorites", "callback_data": f"add_to_favorites_{pro['id']}"},
+                                    {"text": "🔍 View Details", "callback_data": f"view_prof_details_{pro['id']}"}
+                                ]
+                            ]
+                        }
+
+                        self.bot_service.send_message(self.chat_id, message, reply_markup=inline_keyboard)
                 else:
-                    self.bot_service.send_message(self.chat_id, "⚠️ No subscription plans available.")
+                    self.bot_service.send_message(self.chat_id, "⚠️ No nearby professionals found.")
             else:
-                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch subscription plans. Please try again.")
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch nearby professionals. Please try again.")
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching subscription plans: {e}")  # Debugging line
-            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching subscription plans.")
+            print(f"Error fetching nearby professionals: {e}")  # Debugging line
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching nearby professionals.")
             
-    def fetch_payment_history(self):
+            
+    
+    #fetch favorite
+    def fetch_favorites(self):
         access_token = self.auth_service.get_access_token()
-        
         if not access_token:
-            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch payments. Access token not found.")
+            self.bot_service.send_message(self.chat_id, "⚠️ Unable to fetch favorites. Access token not found.")
             return
 
-        url = f"{settings.BACKEND_URL}users/professional/payment/history/"
+        url = f"{settings.BACKEND_URL}users/favorites/"
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
-        print('payment history fetched')
 
         try:
             response = requests.get(url, headers=headers)
-            print('Response Status Code:', response.status_code)
-            print('Response Content:', response.json())  # Log the response for debugging
-
+            print('Response Status Code:', response.status_code)  # Debugging line
+            
             if response.status_code == 200:
-                payment_data = response.json()
-                subscription_payments = payment_data.get('subscription_payments', [])
-                transfer_payments = payment_data.get('transfer_payments', [])
+                favorites = response.json()
+                if favorites:
+                    message = "⭐ *Your Favorited Professionals*\n\n"
+                    
+                    for item in favorites:
+                        pro = item.get('professional', {})
+                        profile_image = pro.get('profile_image_url', '')
+                        full_name = pro.get('full_name', 'Unknown')
+                        bio = pro.get('bio', 'No bio available')
+                        address = pro.get('address', {})
+                        location = f"{address.get('city', 'Unknown')}, {address.get('region', 'Unknown')}, {address.get('country', 'Unknown')}"
+                        phone_number = pro.get('phone_number', 'Not provided')
 
-                message = "💰 *Payments Overview*\n\n"
-
-                # Format subscription payments
-                message += "📜 *Subscription Payments:*\n"
-                if subscription_payments:
-                    for payment in subscription_payments:
-                        payment_date=payment['payment_date']
-                        if payment_date:
-                            payment_date = format_date(payment_date)
                         message += (
                             f"----------------------------------------------\n"
-                            f"🔹 Amount: {payment['amount']} Birr\n"
-                            f"🔹 Payment Date: {payment_date}\n"
-                            f"🔹 Status: {payment['payment_status']}\n"
-                            f"🔹 Transaction ID: {payment['transaction_id']}\n"
-                            f"----------------------------------------------\n"
+                            f"👤 Name: {full_name}\n"
+                            f"📍 Location: {location}\n"
+                            f"📞 Phone: {phone_number}\n"
+                            f"🌟 Bio: {bio}\n"
+                            f"![Profile Image]({profile_image})\n"
+                            f"----------------------------------------------\n\n"
                         )
-                else:
-                    message += "⚠️ No subscription payments found.\n"
+                        
+                        # Inline keyboard for actions
+                        inline_keyboard = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": "🛠️ Request Service", "callback_data": f"request_service_{pro['id']}"},
+                                    {"text": "⭐ Remove from Favorites", "callback_data": f"remove_from_favorites_{pro['id']}"},
+                                    {"text": "🔍 View Details", "callback_data": f"view_details_{pro['id']}"}
+                                ]
+                            ]
+                        }
 
-                # Format transfer payments
-                message += "📜 *Transfer Payments:*\n"
-                if transfer_payments:
-                    for payment in transfer_payments:
-                        customer_name = payment['customer']['full_name']
-                        amount = payment['amount']
-                        payment_date = payment['payment_date']
-                        if payment_date:
-                            payment_date=format_date(payment_date)
-                        status = payment['payment_status']
-                        message += (
-                            f"------------------------------------------\n"
-                            f"🔹 Customer: {customer_name}\n"
-                            f"🔹 Amount: {amount} Birr\n"
-                            f"🔹 Payment Date: {payment_date}\n"
-                            f"🔹 Status: {status}\n"
-                            f"-----------------------------------------\n\n"
-                        )
+                        self.bot_service.send_message(self.chat_id, message, reply_markup=inline_keyboard)
                 else:
-                    message += "⚠️ No transfer payments found.\n"
-
-                self.bot_service.send_message(self.chat_id, message)
+                    self.bot_service.send_message(self.chat_id, "⚠️ You have no favorited professionals.")
             else:
-                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch payments. Please try again.")
+                self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch favorites. Please try again.")
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching payments: {e}")
-            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching payments.")
+            print(f"Error fetching favorites: {e}")  # Debugging line
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching your favorites.")
     
     
     
