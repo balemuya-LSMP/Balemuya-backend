@@ -43,7 +43,7 @@ class CustomerProfileView(APIView):
         try:
             user = User.objects.get(id=pk,user_type='customer')
         except User.DoesNotExist as e:
-            return Response({'error': f'Customer not found '}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': f'Customer not found '}, status=status.HTTP_404_NOT_FOUND)
         customer = user.customer
         active_service_posts = ServicePost.objects.filter(customer=user.customer,status='active').order_by('-created_at')
         booked_service_posts = ServicePost.objects.filter(customer=user.customer,status='booked').order_by('-created_at')
