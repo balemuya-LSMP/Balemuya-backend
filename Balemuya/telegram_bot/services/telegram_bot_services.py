@@ -8,14 +8,20 @@ class TelegramBotService:
 
     def send_message(self, chat_id, text, reply_markup=None):
         url = f"{self.base_url}/sendMessage"
+        
         payload = {
             "chat_id": chat_id,
-            "text": text,
+            'text':text
         }
-        if reply_markup:
-            payload["reply_markup"] = reply_markup
         
-        response = requests.post(url, json=payload)
+        if reply_markup:
+            payload["reply_markup"] = reply_markup  
+        
+        try:
+            response = requests.post(url, json=payload)
+            response.raise_for_status()  # Raise an error for bad responses
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending message: {e}")
     
     def send_document(self, chat_id, document, filename):
         url = f"{self.base_url}/sendDocument"
