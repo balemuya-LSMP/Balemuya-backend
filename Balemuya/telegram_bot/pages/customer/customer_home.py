@@ -23,19 +23,19 @@ class CustomerMenu:
         print('user state is', self.auth_service.get_user_state())
         if not self.auth_service:
             self.auth_service.get_logged_in_user()
-        menu_text = f"Choose Options"
+        text='Choose options Below'
         keyboard = {
             "keyboard": [
-                ["📅 Manage Requests", "🔧 Manage Services"],
+                ["📅 Manage Requests","🛠️ Manage Services"],
                 ["👥 View Professionals", "⭐ View Favorites"],
                 ["👤 View Profile", "🔒 Logout"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
         }
-        self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
+        self.bot_service.send_message(self.chat_id,text,reply_markup=keyboard)
 
-    def display_Requests_menu(self):
+    def display_requests_menu(self):
         menu_text = "View Service Requests:"
         keyboard = {
         "keyboard": [
@@ -48,11 +48,11 @@ class CustomerMenu:
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
     def display_service_menu(self):
-        menu_text = "Manage Your Services as a Professional:"
+        menu_text = "Manage Your Services:"
         keyboard = {
             "keyboard": [
-                ["🆕 Post Jobs", "🔄 Active Bookings"], 
-                ["✅ Completed Job Bookings", "❌ Canceled Job Bookings"],
+                ["🆕 Job Posts", "🔄 Active Bookings"], 
+                ["✅ Completed Bookings", "❌ Canceled Bookings"],
                 ["🔙 Back to Main Menu"]
             ],
             "resize_keyboard": True,
@@ -86,6 +86,7 @@ class CustomerMenu:
                         name = pro.get('name', 'Unknown')
                         bio = pro.get('bio', 'No bio available')
                         address = pro.get('address', {})
+                        rating = pro.get('rating','0')
                         location = f"{address.get('city', 'Unknown')}, {address.get('region', 'Unknown')}, {address.get('country', 'Unknown')}"
                         distance = pro.get('distance', 0.0)
 
@@ -94,8 +95,8 @@ class CustomerMenu:
                             f"👤 Name: {name}\n"
                             f"📍 Location: {location}\n"
                             f"🌟 Bio: {bio}\n"
-                            f"📏 Distance: {distance} km\n"
-                            f"![Profile Image]({profile_image})\n"
+                            f"📏 Distance: {distance} km away \n"
+                            f"⭐ rating: {rating}\n"
                             f"----------------------------------------------\n\n"
                         )
                         
@@ -157,7 +158,6 @@ class CustomerMenu:
                             f"📍 Location: {location}\n"
                             f"📞 Phone: {phone_number}\n"
                             f"🌟 Bio: {bio}\n"
-                            f"![Profile Image]({profile_image})\n"
                             f"----------------------------------------------\n\n"
                         )
                         
@@ -191,7 +191,7 @@ class CustomerMenu:
             if not access_token:
                 return {"status": "failure", "message": "Access token not found in cache."}
 
-            url = f"{settings.BACKEND_URL}services/service-posts/"
+            url = f"{settings.BACKEND_URL}users/customer/services/"
             headers = {
                 "Authorization": f"Bearer {access_token}"
             }
@@ -205,37 +205,41 @@ class CustomerMenu:
             print('Response status code:', response.status_code)
 
             if response.status_code == 200:
-                service_posts = response.json()
+                service_posts = response.json().get("data", [])
                 print('Fetched service posts:', service_posts)
 
                 if service_posts:
                     message = "✨ *Service Posts*\n\n"
                     for post in service_posts:
-                        created_at =post.get('created_at')
-                        work_due_date =post.get('work_due_date')
-                        print('------------work due date is',work_due_date)
+                        created_at = post.get('created_at')
+                        work_due_date = post.get('work_due_date')
+                        print('------------work due date is', work_due_date)
                         if created_at:
                             created_at = format_date(created_at)
                         if work_due_date:
                             work_due_date = format_date(work_due_date)
+
+                        customer = post['customer']['user']
                         message += (
                             f"📝 Title: {post['title']}\n"
                             f"📂 Category: {post['category']}\n"
                             f"📅 Due Date: {work_due_date}\n"
                             f"✅ Status: {post['status']}\n"
-                            f"👤 Customer Name: {post['customer']['user']['full_name']} (Type: {post['customer']['user']['entity_type']})\n"
-                            f"⭐ Previous Rating: {post['customer']['rating']}\n"
+                            f"👤 Customer Name: {customer['full_name']} (Type: {customer['entity_type']})\n"
+                            f"⭐ Previous Rating: {post['customer']['rating'] or 'No rating'}\n"
                             f"📌 Details: {post.get('description', 'No details provided')}\n\n"
-                            f"📍 Location: {post['location']['city']}, {post['location']['region']}\n"
+                            f"📍 Location: {post['location'].get('city', 'Unknown')}, "
+                            f"{post['location'].get('region', 'Unknown')}\n"
                             f"⏰ Posted At: {created_at}\n"
                             f"-----------------------------------------------------------------------------\n\n"
                         )
 
-                        # Adding the service post ID to the callback data
+                        # Adding the service post ID to the callback data for Edit and Delete
                         reply_markup = {
                             "inline_keyboard": [
                                 [
-                                    {"text": "✉️ Apply", "callback_data": f"apply_service_{post['id']}"}
+                                    {"text": "✏️ Edit", "callback_data": f"edit_service_{post['id']}"},
+                                    {"text": "🗑️ Delete", "callback_data": f"delete_service_{post['id']}"}
                                 ]
                             ]
                         }
@@ -320,7 +324,7 @@ class CustomerMenu:
             if not access_token:
                 return {"status": "failure", "message": "Access token not found in cache."}
 
-            url = f"{settings.BACKEND_URL}users/professional/services/"
+            url = f"{settings.BACKEND_URL}users/customer/services/"
             headers = {
                 "Authorization": f"Bearer {access_token}"
             }
@@ -341,95 +345,132 @@ class CustomerMenu:
                 
                 if service_posts:
                     for post in service_posts:
-                        service = post['service']
-                        professional = post['professional']
-                        customer = post['customer']
+                        service = post.get('service', {})
+                        professional = post.get('professional', {})
+                        customer = post.get('customer', {})
+
                         # Format the scheduled date
                         scheduled_date = post.get('scheduled_date')
                         if scheduled_date:
                             scheduled_date = format_date(scheduled_date)
 
-                        message = (
-                            f"*📝 Service Title: {service['title']}\n"
-                            f"📂 Category: {service['category']}\n"
-                            f"⚡ Urgency: {service['urgency']}\n"
-                            f"📅 Scheduled Date: {scheduled_date}\n"
-                            f"🔍 Status: {post['status']}\n"
-                            f"📜 Description: {service['description']}\n"
-                            f"👤 Customer: {customer['customer_name']}\n"
-                            f"📍 Location: {service['location']['city'] or 'N/A'}, {service['location']['country']}\n"
-                            f"-------------------------------------------------------\n\n"
-                        )
+                        message = ""
+                        
+                        if status in ['booked', 'completed']:
+                            message = (
+                                f"📝 Service Title: {service.get('title', 'N/A')}\n"
+                                f"📂 Category: {service.get('category', 'N/A')}\n"
+                                f"⚡ Urgency: {service.get('urgency', 'N/A')}\n"
+                                f"📅 Scheduled Date: {scheduled_date or 'N/A'}\n"
+                                f"🔍 Status: {post.get('status', 'N/A')}\n"
+                                f"📜 Description: {service.get('description', 'N/A')}\n"
+                                f"👤 Professional: {professional.get('professional_name', 'N/A')}\n"
+                                f"📞 Phone: {professional.get('phone_number', 'N/A')}\n"
+                                f"⭐ Rating: {professional.get('rating', 'No rating')}\n"
+                                f"👤 Customer: {customer.get('customer_name', 'N/A')}\n"
+                                f"📍 Location: {service.get('location', {}).get('city', 'N/A')}, {service.get('location', {}).get('country', 'N/A')}\n"
+                                "-------------------------------------------------------\n"
+                            )
+                        elif status is None or status == 'pending':
+                            work_due_date = post.get('work_due_date')
+                            if work_due_date:
+                                work_due_date = format_date(work_due_date)
 
-                        # Create the inline keyboard
-                        if status == 'booked':
+                            message = (
+                                f"📝 Service Title: {service.get('title', 'N/A')}\n"
+                                f"📂 Category: {post.get('category', 'N/A')}\n"
+                                f"⚡ Urgency: {post.get('urgency', 'N/A')}\n"
+                                f"📅 Work Due Date: {work_due_date or 'N/A'}\n"
+                                f"🔍 Status: {post.get('status', 'N/A')}\n"
+                                f"📜 Description: {post.get('description', 'N/A')}\n"
+                                f"📍 Location: {post.get('location', {}).get('city', 'N/A')}, {service.get('location', {}).get('country', 'N/A')}\n"
+                                "-------------------------------------------------------\n"
+                            )
+
+                        # Create the inline keyboard based on status
+                        if status in ['booked']:
                             reply_markup = {
                                 "inline_keyboard": [
                                     [
-                                        {"text": "Report", "callback_data": f"report_booking_{post['id']}"},
-                                        {"text": "Review", "callback_data": f"review_booking_{post['id']}"}
-                                    ],
-                                    [
-                                        {"text": "Cancel", "callback_data": f"cancel_booking_{post['id']}"},
+                                        {"text": "❌ Cancel", "callback_data": f"cancel_booking_{post['id']}"},
                                         {"text": "✅ Mark as Completed", "callback_data": f"complete_booking_{post['id']}"}
                                     ]
                                 ]
                             }
-                        else:
+                        elif status in ['completed']:
                             reply_markup = {
                                 "inline_keyboard": [
                                     [
-                                        {"text": "Report", "callback_data": f"report_booking_{post['id']}"},
-                                        {"text": "Review", "callback_data": f"review_booking_{post['id']}"}
+                                        {"text": "💳 Pay Now", "callback_data": f"pay_for_booking_{post['id']}"},
+                                    ],
+                                    [
+                                        {"text": "🚨 Report", "callback_data": f"report_booking_{post['id']}"},
+                                        {"text": "📝 Review", "callback_data": f"review_booking_{post['id']}"}
+                                    ],
+                                ]
+                            }
+                        elif status is None or status == 'pending':
+                            reply_markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "✏️ Edit Post", "callback_data": f"edit_post_{post['id']}"},
+                                        {"text": "🗑️ Delete Post", "callback_data": f"delete_post_{post['id']}"},
+                                    ],
+                                    [
+                                        {"text": "View Applications", "callback_data": f"view_post_apps{post['id']}"},
                                     ]
                                 ]
                             }
+                        else:
+                            reply_markup = None
 
-                        self.bot_service.send_message(self.chat_id, message,reply_markup=reply_markup)
-                       
-                            
+                        self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
+
                 else:
                     self.bot_service.send_message(self.chat_id, f"⚠️ No {status} service bookings available.")
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service bookings.")
-                
+                    
         except requests.exceptions.RequestException as e:
             print(f"Error fetching service bookings: {e}")  # Debugging line
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching service bookings.")
-   
-   
-    def fetch_professional_profile(self):
-        profile = self.auth_service.user_instance
-        print('User instance is:', profile) 
-
-        if 'user' in profile:
-            user_info = profile['user']
             
-            message = (
-                f"✨ Profile of {user_info['full_name']} ✨\n\n"
-                f"📷 Profile Image: (Image sent above)\n"
-                f"📧 Email: {user_info['email']}\n"
-                f"👤 Username: @{user_info['username']}\n"
-                f"📞 Phone Number: {user_info['phone_number']}\n"
-                f"🏢 Organization: {user_info['org_name']}\n"
-                f"📝 Bio: {user_info.get('bio', 'No bio provided')}\n"
-                f"📍 Address: {user_info['address']['city']}, {user_info['address']['region']}, {user_info['address']['country']}\n"
-                f"🌟 Rating: {profile['rating']}\n"
-                f"🛠️ Years of Experience: {profile['years_of_experience']}\n"
-                f"💰 Balance: {profile['balance']}Birr\n"
-                f"✅ Available: {'Yes' if profile['is_available'] else 'No'}\n"
-                f"🔒 Verified: {'Yes' if profile['is_verified'] else 'No'}\n"
-                f"----------------------------------------------\n\n"
+   
+    def fetch_customer_profile(self):
+        try:
+            profile = self.auth_service.user_instance
+            print('User instance is:', profile) 
 
-            )
+            if 'user' in profile:
+                user_info = profile['user']
+                
+                message = (
+                    f"✨ Profile of {user_info['full_name']} ✨\n\n"
+                    f"🏢 Name : {user_info['full_name']}\n\n"
+                    f"📷 Profile Image:  (Image sent above)\n\n"
+                    f"📧 Email : {user_info['email']}\n\n"
+                    f"👤 Username:  @{user_info['username']}\n\n"
+                    f"📞 Phone Number:  {user_info['phone_number']}\n\n"
+                    f"🏢 Entity Type:  {user_info['entity_type']}\n\n"
+                    f"📝 Bio : {user_info.get('bio', 'No bio provided')}\n\n"
+                    f"📍 Address : {user_info['address']['city']}, "
+                    f"{user_info['address']['region']}, {user_info['address']['country']}\n\n"
+                    f"🌟 Rating : {profile.get('rating', '0')}\n\n"
+                    f"📅 Number of Services Booked : {profile.get('number_of_services_booked', '0')}\n\n"
+                    f"🚨 Number of Reports : {profile.get('report_count', '0')}\n\n"
+                    f"----------------------------------------------\n\n"
+                )
 
-            self.bot_service.send_photo(self.chat_id, user_info['profile_image_url'])
-
-            self.bot_service.send_message(self.chat_id, message)
-            self.auth_service.set_user_state('professional_menu')
-        else:
-            self.bot_service.send_message(self.chat_id, "⚠️ Profile information is not available.")
-            self.auth_service.set_user_state('professional_menu')
+                self.bot_service.send_photo(self.chat_id, user_info['profile_image_url'])
+                self.bot_service.send_message(self.chat_id, message)
+                self.auth_service.set_user_state('customer_menu')
+            else:
+                self.bot_service.send_message(self.chat_id, "⚠️ Profile information is not available.")
+                self.auth_service.set_user_state('customer_menu')
+        except requests.exceptions.RequestException as e:
+            print(f"Error at fetching profile: {e}")
+            self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching the profile.")
+    
     
     def fetch_service_requests(self, status=None):
         try:
@@ -437,7 +478,7 @@ class CustomerMenu:
             if not access_token:
                 return {"status": "failure", "message": "Access token not found in cache."}
 
-            url = f"{settings.BACKEND_URL}users/professional/service-requests/"
+            url = f"{settings.BACKEND_URL}users/customer/service-requests/"
             headers = {"Authorization": f"Bearer {access_token}"}
 
             params = {}
@@ -458,13 +499,12 @@ class CustomerMenu:
 
                         customer = request.get('customer', {}).get('user', {})
                         customer_name = customer.get('full_name', 'Unknown Customer')
-                        customer_address = customer.get('address', None)  # Address can be None
+                        customer_address = customer.get('address', None)
 
-                        # Check if customer_address is not None before accessing its attributes
                         if customer_address:
                             customer_city = customer_address.get('city', 'Unknown City')
                         else:
-                            customer_city = 'Unknown City'  # Default value if address is None
+                            customer_city = 'Unknown City'
 
                         customer_phone = customer.get('phone_number', 'No phone number')
 
@@ -479,16 +519,33 @@ class CustomerMenu:
                             f"----------------------------------------------------\n"
                         )
 
-                        if request['status'] in ["", "pending"]:
+                        if request['status'] in ["accepted"]:
                             reply_markup = {
                                 "inline_keyboard": [
                                     [
-                                        {"text": "✅ Accept", "callback_data": f"accept_request_{request['id']}"},
-                                        {"text": "❌ Reject", "callback_data": f"reject_request_{request['id']}"}
+                                        {"text": "❌ Cancel Request", "callback_data": f"reject_request_{request['id']}"}
+                                    ],
+                                ]
+                            }
+                        elif request['status'] in ["completed"]:
+                            reply_markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "💳 Pay Now", "callback_data": f"pay_completed_request_{request['id']}"},
                                     ],
                                     [
-                                        {"text": "🔍 See Customer Detail", "callback_data": f"view_customer_detail_{customer['id']}"}
-                                    ]
+                                        {"text": "📝 Review", "callback_data": f"review_completed_request_{request['id']}"},
+                                        {"text": "🚨 Report", "callback_data": f"report_completed_request_{request['id']}"}
+                                    ],
+                                ]
+                            }
+                        elif request['status'] in ["canceled"]:
+                            reply_markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "📝 Review", "callback_data": f"review_canceled_request_{request['id']}"},
+                                        {"text": "🚨 Report", "callback_data": f"report_canceled_request_{request['id']}"}
+                                    ],
                                 ]
                             }
                         else:

@@ -129,6 +129,9 @@ class CustomerServiceRequestAPIView(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user
+        if not user.user_type =='customer':
+            return Response({"detail": "only customer access this"},status=status.HTTP_401_UNAUTHORIZED)
+
         status_param = request.query_params.get('status')
 
         service_requests = ServiceRequest.objects.filter(customer=user.customer).order_by('-updated_at')
@@ -189,8 +192,6 @@ class CompleteServiceRequestAPIView(APIView):
         request_id = kwargs.get('request_id')
         if not request.user.user_type =='customer':
             return Response({"detail": "user is not customer."},status=status.HTTP_401_UNAUTHORIZED)
-
-            
 
         try:
             service_request = ServiceRequest.objects.get(id=request_id, customer=request.user.customer,status='accepted')

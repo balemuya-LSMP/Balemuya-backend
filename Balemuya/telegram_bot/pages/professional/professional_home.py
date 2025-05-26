@@ -30,7 +30,7 @@ class ProfessionalMenu:
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
 
-    def display_Requests_menu(self):
+    def display_requests_menu(self):
         menu_text = "View Service Requests:"
         keyboard = {
         "keyboard": [

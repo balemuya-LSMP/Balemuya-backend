@@ -23,22 +23,29 @@ class TelegramFacade:
         self.customer_callback_handler = CustomerCallbackHandler(self.bot_service, self.auth_service)
     
     def send_main_menu(self, message="Please choose an option:"):
-        is_logged_in = self.auth_service.get_session_data("is_logged_in")
-        user_state = self.auth_service.get_user_state()
+        try:
+            is_logged_in = self.auth_service.get_session_data("is_logged_in")
+            user_state = self.auth_service.get_user_state()
 
-        if is_logged_in and user_state == 'professional_menu': 
-            self.send_professional_menu()
-        elif is_logged_in and user_state == 'customer_menu': 
-            self.send_customer_menu()
-        else:
-            keyboard = [
-                ["📝 Register", "🔐 Login"],
-                ["ℹ️ Help", "❌ Cancel"]
-            ]
+            if is_logged_in and user_state == 'professional_menu': 
+                self.send_professional_menu()
+            elif is_logged_in and user_state == 'customer_menu': 
+                self.send_customer_menu()
+            else:
+                keyboard = [
+                    ["📝 Register", "🔐 Login"],
+                    ["ℹ️ Help", "❌ Cancel"]
+                ]
+                self.bot_service.send_message(
+                    self.chat_id,
+                    message,
+                    reply_markup=generate_keyboard(keyboard)
+                )
+        except Exception as e:
+            print(f"Error in send_main_menu: {e}")
             self.bot_service.send_message(
                 self.chat_id,
-                message,
-                reply_markup=generate_keyboard(keyboard)
+                "An error occurred. Please try again later."
             )
 
     def handle_update(self, update):
@@ -88,15 +95,37 @@ class TelegramFacade:
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
 
     def handle_customer_commands(self, text):
-        if text == "Service Posts":
-            self.customer_menu.display_service_posts_menu()
+        if text == "🛠️ Manage Services":
+            self.customer_menu.display_service_menu()
+            
+        elif text == "🆕 Job Posts":
+            self.customer_menu.fetch_service_booking()
+        elif text == "🔄 Active Bookings":
+            self.customer_menu.fetch_service_booking(status='booked')
+        elif text == "✅ Completed Bookings":
+            self.customer_menu.fetch_service_booking(status='completed')
+        elif text == "❌ Canceled Bookings":
+            self.customer_menu.fetch_service_booking(status='canceled')
+            
         elif text == "Service Applications":
             self.customer_menu.display_service_applications_menu()
         elif text == "Bookings":
             self.customer_menu.display_bookings_menu()
             
-        elif text == "Profile":
-            self.customer_menu.display_profile_menu()
+            
+        elif text == "📅 Manage Requests":
+            self.customer_menu.display_requests_menu()
+        elif text == "⌛ Pending Requests":
+            self.customer_menu.fetch_service_requests(status='pending')
+        elif text == "✅ Accepted Requests":
+            self.customer_menu.fetch_service_requests(status='accepted')
+        elif text == "❌ Rejected Requests":
+            self.customer_menu.fetch_service_requests(status='rejected')
+        elif text == "✅ Completed Requests":
+            self.customer_menu.fetch_service_requests(status='completed')
+        
+        elif text == "👤 View Profile":
+            self.customer_menu.fetch_customer_profile()
             
         elif text == "⭐ View Favorites":
             self.customer_menu.fetch_favorites()
@@ -104,8 +133,11 @@ class TelegramFacade:
         elif text == "👥 View Professionals":
             self.customer_menu.fetch_nearby_professionals()
             
+        elif text == "🔙 Back to Main Menu":
+            self.send_customer_menu()
+            
         else:
-            self.bot_service.send_message(self.chat_id, "⚠️ Unknown customer command. Please choose options below.")
+            self.bot_service.send_message(self.chat_id, "⚠️ Unknown command. Please choose options below.")
             self.send_customer_menu()  
 
     def handle_professional_commands(self, text):
@@ -131,7 +163,7 @@ class TelegramFacade:
             self.professional_menu.fetch_service_applications(status='accepted')
             
         elif text == "📋 Manage Requests":
-            self.professional_menu.display_Requests_menu()
+            self.professional_menu.display_requests_menu()
         elif text == "⌛ Pending Requests":
             self.professional_menu.fetch_service_requests(status='pending')
         elif text == "✅ Accepted Requests":
