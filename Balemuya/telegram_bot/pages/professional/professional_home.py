@@ -23,7 +23,7 @@ class ProfessionalMenu:
         "keyboard": [
             ["📋 Manage Requests", "🛠️ Manage Services"],
             ["💳 Payment History", "📄 View Subscription"],
-            ["👤 View Profile","🔐 Logout"]
+            ["👤 View Profile","🔓 Logout"]
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
@@ -89,7 +89,7 @@ class ProfessionalMenu:
                             f"🌟 Plan Type: {plan['plan_type']}\n"
                             f"💰 Price: {plan['cost']} Birr\n"
                             f"🗓️ Duration: {plan['duration']} months\n"
-                            f"🗓️ Start Date: {end_date} \n"
+                            f"🗓️ Start Date: {start_date} \n"
                             f"🗓️ End Date: {end_date} \n"
                             f"---------------------------------------------\n\n"
                         )
