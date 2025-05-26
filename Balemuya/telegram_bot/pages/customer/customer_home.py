@@ -12,11 +12,13 @@ import pytz
 from PIL import Image, ImageDraw
 from io import BytesIO
 from  ...utils.common import create_circular_image,format_date
+from ...handlers.job_handler import JobHandler
 class CustomerMenu:
     def __init__(self, bot_service,auth_service, chat_id):
         self.bot_service = bot_service
         self.auth_service=auth_service
         self.chat_id = chat_id
+        self.job_handler = JobHandler(self)
 
     def display_menu(self):
         self.auth_service.set_user_state("customer_menu")
@@ -28,7 +30,7 @@ class CustomerMenu:
             "keyboard": [
                 ["📅 Manage Requests","🛠️ Manage Services"],
                 ["👥 View Professionals", "⭐ View Favorites"],
-                ["👤 View Profile", "🔒 Logout"]
+                ["👤 View Profile", "🔓 Logout"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
@@ -51,15 +53,36 @@ class CustomerMenu:
         menu_text = "Manage Your Services:"
         keyboard = {
             "keyboard": [
-                ["🆕 Job Posts", "🔄 Active Bookings"], 
-                ["✅ Completed Bookings", "❌ Canceled Bookings"],
+                ["🆕 Post New Job","View Posts" ], 
+                ["✅ Completed Bookings","🔄 Active Bookings", "❌ Canceled Bookings"],
                 ["🔙 Back to Main Menu"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
         }
         self.bot_service.send_message(self.chat_id, menu_text, reply_markup=keyboard)
+    def post_new_job(self):
+        self.auth_service.set_user_state("waiting_for_job_title")
+        self.bot_service.send_message(self.chat_id, "🏗️ Please enter the job title:")
+    
+    def handle_user_response(self, text):
+        user_state = self.auth_service.get_user_state()
 
+        if user_state == "waiting_for_job_title":
+            self.job_handler.handle(text, user_state)
+        elif user_state == "waiting_for_job_description":
+            self.job_handler.handle(text, user_state) 
+        elif user_state == "waiting_for_job_category":
+            self.job_handler.handle(text, user_state) 
+        elif user_state == "waiting_for_job_urgency":
+            self.job_handler.handle(text, user_state) 
+        elif user_state == "waiting_for_work_due_date":
+            self.job_handler.handle(text, user_state)
+        elif text == "🆕 Post New Job":
+            self.post_new_job()  # Start the job posting process
+        else:
+            self.bot_service.send_message(self.chat_id, "⚠️ Please select a valid option.")
+    
     def fetch_nearby_professionals(self):
         access_token = self.auth_service.get_access_token()
         if not access_token:
@@ -245,6 +268,7 @@ class CustomerMenu:
                         }
 
                     self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
+                    
                 else:
                     self.bot_service.send_message(self.chat_id, "⚠️ No service posts available.")
                     

@@ -13,18 +13,15 @@ class TelegramBotWebhook(APIView):
         # Extract chat_id from either message or callback_query
         chat_id = data.get("message", {}).get("chat", {}).get("id") or data.get("callback_query", {}).get("from", {}).get("id")
 
-        # User lookup and state retrieval
         user = self.get_user(chat_id)
+        print('user is',user)
         user_state = cache.get(f'user_state_{chat_id}', None)
 
-        # Create an instance of TelegramFacade
         facade = TelegramFacade(chat_id)
 
-        # Check if user is logged in
         is_logged_in = user is not None
         facade.auth_service.set_session_data('is_logged_in', is_logged_in)
 
-        # Call the handle_update method with the incoming data
         facade.handle_update(data)
 
         # Update user state in cache
@@ -33,8 +30,7 @@ class TelegramBotWebhook(APIView):
         return JsonResponse({"status": "ok"})
 
     def get_user(self, chat_id):
-        """Retrieve the user from the database based on chat_id."""
         try:
-            return User.objects.get(telegram_chat_id=chat_id)
+            return User.objects.filter(telegram_chat_id=chat_id).first()
         except User.DoesNotExist:
             return None

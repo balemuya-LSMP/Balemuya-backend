@@ -98,7 +98,9 @@ class TelegramFacade:
         if text == "🛠️ Manage Services":
             self.customer_menu.display_service_menu()
             
-        elif text == "🆕 Job Posts":
+        elif text == "🆕 Post New Job":
+            self.customer_menu.post_new_job()
+        elif text == "View Posts":
             self.customer_menu.fetch_service_booking()
         elif text == "🔄 Active Bookings":
             self.customer_menu.fetch_service_booking(status='booked')
@@ -137,8 +139,7 @@ class TelegramFacade:
             self.send_customer_menu()
             
         else:
-            self.bot_service.send_message(self.chat_id, "⚠️ Unknown command. Please choose options below.")
-            self.send_customer_menu()  
+            self.customer_menu.handle_user_response(text)
 
     def handle_professional_commands(self, text):
         if text == "💳 Payment History":
