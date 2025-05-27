@@ -94,13 +94,13 @@ class TelegramFacade:
                 self.handle_professional_commands(text)
         else:
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
+    def handle_customer_commands(self, message):
+        text = message.text if message.text else None
 
-    def handle_customer_commands(self, text):
         if text == "🛠️ Manage Services":
             self.customer_menu.display_service_menu()
-            
         elif text == "🆕 Post New Job":
-            self.customer_menu.post_new_job ()
+            self.customer_menu.post_new_job()
         elif text == "View Posts":
             self.customer_menu.fetch_service_booking()
         elif text == "🔄 Active Bookings":
@@ -109,13 +109,10 @@ class TelegramFacade:
             self.customer_menu.fetch_service_booking(status='completed')
         elif text == "❌ Canceled Bookings":
             self.customer_menu.fetch_service_booking(status='canceled')
-            
         elif text == "Service Applications":
             self.customer_menu.display_service_applications_menu()
         elif text == "Bookings":
             self.customer_menu.display_bookings_menu()
-            
-            
         elif text == "📅 Manage Requests":
             self.customer_menu.display_requests_menu()
         elif text == "⌛ Pending Requests":
@@ -126,21 +123,17 @@ class TelegramFacade:
             self.customer_menu.fetch_service_requests(status='rejected')
         elif text == "✅ Completed Requests":
             self.customer_menu.fetch_service_requests(status='completed')
-        
         elif text == "👤 View Profile":
             self.customer_menu.fetch_customer_profile()
-            
         elif text == "⭐ View Favorites":
             self.customer_menu.fetch_favorites()
-            
         elif text == "👥 View Professionals":
             self.customer_menu.fetch_nearby_professionals()
-            
         elif text == "🔙 Back to Main Menu":
             self.send_customer_menu()
-            
         else:
-            self.customer_menu.handle_user_response(text)
+            self.customer_menu.handle_user_response(message)
+
 
     def handle_professional_commands(self, text):
         if text == "💳 Payment History":

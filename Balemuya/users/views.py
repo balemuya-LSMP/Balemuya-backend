@@ -282,13 +282,77 @@ class VerifyPasswordResetOTPView(APIView):
 
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-class GoogleLoginView(APIView):
+class SigninWithGoogle(APIView):
+    def post(self, request):
+        code = request.data.get('code')
+        redirect_uri = request.data.get('redirect_uri')
+
+        if not code:
+            logging.warning("Missing authorization code")
+            return Response({'error': "Missing authorization code"}, status=status.HTTP_400_BAD_REQUEST)
+
+        code = unquote(code)
+
+        try:
+            token_response = requests.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': code,
+                    'client_id': settings.GOOGLE_CLIENT_ID,
+                    'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                    'redirect_uri': redirect_uri if redirect_uri else settings.GOOGLE_REDIRECT_URI,
+                    'grant_type': 'authorization_code',
+                },
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+
+            if token_response.status_code != 200:
+                logging.error("Failed to exchange code: %s", token_response.text)
+                return Response({'error': 'Failed to exchange code for token'}, status=status.HTTP_400_BAD_REQUEST)
+
+            tokens = token_response.json()
+            access_token = tokens.get('access_token')
+
+            user_info_response = requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+
+            if user_info_response.status_code != 200:
+                logging.error("Failed to fetch user info: %s", user_info_response.text)
+                return Response({'error': 'Failed to fetch user info'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_info = user_info_response.json()
+            email = user_info.get('email')
+
+            if not email:
+                return Response({'error': "Email not found in Google account"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response({'error': "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'user_type': user.user_type,
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logging.error("Unexpected error: %s", e)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class SignupWithGoogle(APIView):
     def post(self, request):
         code = request.data.get('code')
         user_type = request.data.get('user_type')
         entity_type = request.data.get('entity_type')
-        redirect_uri=request.data.get('redirect_uri')
+        redirect_uri = request.data.get('redirect_uri')
 
         if not code:
             logging.warning("Missing authorization code")
@@ -361,7 +425,7 @@ class GoogleLoginView(APIView):
         except Exception as e:
             logging.error("Unexpected error: %s", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+                
 class LoginView(APIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
