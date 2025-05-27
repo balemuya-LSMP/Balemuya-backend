@@ -96,8 +96,11 @@ class ProfessionalMenu:
                     self.bot_service.send_message(self.chat_id, message)
                 else:
                     self.bot_service.send_message(self.chat_id, "⚠️ No subscription plans available.")
+                    self.display_service_menu()
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch subscription plans. Please try again.")
+                self.display_service_menu()
+
         except requests.exceptions.RequestException as e:
             print(f"Error fetching subscription plans: {e}")  # Debugging line
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching subscription plans.")
@@ -167,8 +170,12 @@ class ProfessionalMenu:
                     message += "⚠️ No transfer payments found.\n"
 
                 self.bot_service.send_message(self.chat_id, message)
+                self.display_service_menu()
+
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch payments. Please try again.")
+                self.display_service_menu()
+
         except requests.exceptions.RequestException as e:
             print(f"Error fetching payments: {e}")
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching payments.")
@@ -235,9 +242,13 @@ class ProfessionalMenu:
                     self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
                 else:
                     self.bot_service.send_message(self.chat_id, "⚠️ No service posts available.")
+                    self.display_service_menu()
+
                     
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service posts.")
+                self.display_service_menu()
+
 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching service posts: {e}")
@@ -296,6 +307,8 @@ class ProfessionalMenu:
                         self.bot_service.send_message(self.chat_id, message)
                 else:
                     self.bot_service.send_message(self.chat_id,f"⚠️ No {status} service applications available.")
+                    self.display_service_menu()
+
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service applications.")
         
@@ -382,8 +395,12 @@ class ProfessionalMenu:
                             
                 else:
                     self.bot_service.send_message(self.chat_id, f"⚠️ No {status} service bookings available.")
+                    self.display_service_menu()
+
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service bookings.")
+                self.display_service_menu()
+
                 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching service bookings: {e}")  # Debugging line
@@ -420,7 +437,6 @@ class ProfessionalMenu:
             # self.auth_service.set_user_state('professional_menu')
         else:
             self.bot_service.send_message(self.chat_id, "⚠️ Profile information is not available.")
-            # self.auth_service.set_user_state('professional_menu')
     
     def fetch_service_requests(self, status=None):
         try:
@@ -485,9 +501,11 @@ class ProfessionalMenu:
                         else:
                             reply_markup = None  # No butt
                         self.bot_service.send_message(self.chat_id, message, reply_markup=reply_markup)
-
+                    
+                    self.display_requests_menu()
                 else:
                     self.bot_service.send_message(self.chat_id, "⚠️ No service requests available.")
+                    self.display_requests_menu()
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Failed to fetch service requests.")
 
