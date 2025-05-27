@@ -25,7 +25,6 @@ class CustomerCallbackHandler:
         callback_data = callback_query.get("data")
         chat_id = callback_query.get("from", {}).get("id")
 
-
         if callback_data.startswith("apply_service_"):
             service_post_id = self.extract_id(callback_data, "apply_service_")
             self.process_application(chat_id, service_post_id)
@@ -76,7 +75,7 @@ class CustomerCallbackHandler:
             self.pending_booking_reports[chat_id] = booking_id
             
             # Set user state to waiting for booking report reason
-            self.auth_service.set_user_state(chat_id, "waiting_for_booking_report_reason")
+            self.auth_service.set_user_state("waiting_for_booking_report_reason")
 
             self.bot_service.send_message(chat_id, "✍️ Please enter the reason for reporting this booking:")
 
