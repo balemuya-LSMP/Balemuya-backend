@@ -72,7 +72,7 @@ class TelegramAuthService:
     
     def logout_user(self):
         if self.user_instance:
-            id=self.user_instance.user.id
+            id=self.user_instance['user']['id']
             user = User.objects.filter(id=id,telegram_chat_id=self.chat_id).first()
             if user:
                 user.telegram_chat_id=None

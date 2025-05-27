@@ -64,6 +64,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         
         if user.user_type == 'professional':
             group_names.append(f"professional_{user.id}_ver_notifications")
+            group_names.append(f"professional_{user.id}_payment_notifications")
             group_names.append(f"professional_{user.id}_sub_notifications")
             group_names.append(f"professional_{user.id}_new_bookings")
             group_names.append(f"professional_{user.id}_general_notifications")
