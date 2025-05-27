@@ -21,7 +21,6 @@ class CustomerMenu:
         self.job_handler = JobHandler(self)
 
     def display_menu(self):
-        self.auth_service.set_user_state("customer_menu")
         print('user state is', self.auth_service.get_user_state())
         if not self.auth_service:
             self.auth_service.get_logged_in_user()
@@ -67,6 +66,7 @@ class CustomerMenu:
     
     def handle_user_response(self, text):
         user_state = self.auth_service.get_user_state()
+        print('user state is', user_state)
 
         if user_state == "waiting_for_job_title":
             self.job_handler.handle(text, user_state)
@@ -78,11 +78,17 @@ class CustomerMenu:
             self.job_handler.handle(text, user_state) 
         elif user_state == "waiting_for_work_due_date":
             self.job_handler.handle(text, user_state)
+        elif user_state == "waiting_for_location":
+            print('text is at location',text)
+            # Added condition for location
+            self.job_handler.handle(text, user_state)
         elif text == "🆕 Post New Job":
             self.post_new_job()  # Start the job posting process
         else:
+            print('user_state is', user_state)
+            print('text is', text)
             self.bot_service.send_message(self.chat_id, "⚠️ Please select a valid option.")
-    
+            
     def fetch_nearby_professionals(self):
         access_token = self.auth_service.get_access_token()
         if not access_token:
@@ -487,10 +493,10 @@ class CustomerMenu:
 
                 self.bot_service.send_photo(self.chat_id, user_info['profile_image_url'])
                 self.bot_service.send_message(self.chat_id, message)
-                self.auth_service.set_user_state('customer_menu')
+                # self.auth_service.set_user_state('customer_menu')
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ Profile information is not available.")
-                self.auth_service.set_user_state('customer_menu')
+                # self.auth_service.set_user_state('customer_menu')
         except requests.exceptions.RequestException as e:
             print(f"Error at fetching profile: {e}")
             self.bot_service.send_message(self.chat_id, "⚠️ An error occurred while fetching the profile.")

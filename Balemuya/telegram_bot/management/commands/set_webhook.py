@@ -8,9 +8,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         bot_token = settings.TELEGRAM_BOT_TOKEN
-        webhook_url = "https://icy-memes-sip.loca.lt/api/telegram/webhook/"
+        webhook_url ="https://chubby-moose-tease.loca.lt/api/telegram/webhook/"
         
-        webhook_url = "https://balemuya-project.onrender.com/api/telegram/webhook/"
+        # webhook_url = "https://balemuya-project.onrender.com/api/telegram/webhook/"
 
         url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}"
         response = requests.get(url)

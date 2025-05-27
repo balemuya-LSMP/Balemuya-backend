@@ -14,7 +14,7 @@ class ProfessionalMenu:
         self.chat_id = chat_id
 
     def display_menu(self):
-        self.auth_service.set_user_state("professional_menu")
+        self.auth_service.set_menu_state("professional_menu")
         print('user state is', self.auth_service.get_user_state())
         if not self.auth_service:
             self.auth_service.get_logged_in_user()
@@ -418,10 +418,10 @@ class ProfessionalMenu:
             self.bot_service.send_photo(self.chat_id, user_info['profile_image_url'])
 
             self.bot_service.send_message(self.chat_id, message)
-            self.auth_service.set_user_state('professional_menu')
+            # self.auth_service.set_user_state('professional_menu')
         else:
             self.bot_service.send_message(self.chat_id, "⚠️ Profile information is not available.")
-            self.auth_service.set_user_state('professional_menu')
+            # self.auth_service.set_user_state('professional_menu')
     
     def fetch_service_requests(self, status=None):
         try:
