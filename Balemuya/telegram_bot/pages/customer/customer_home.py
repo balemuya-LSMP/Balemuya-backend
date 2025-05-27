@@ -19,6 +19,7 @@ class CustomerMenu:
         self.auth_service=auth_service
         self.chat_id = chat_id
         self.job_handler = JobHandler(self)
+        self.customer_callback_handler=CustomerCallbackHandler(bot_service,auth_service)
 
     def display_menu(self):
         print('user state is', self.auth_service.get_user_state())
@@ -67,6 +68,15 @@ class CustomerMenu:
     def handle_user_response(self, text):
         user_state = self.auth_service.get_user_state()
         print('user state is', user_state)
+        
+        if user_state == "waiting_for_booking_report_reason":
+            booking_id = self.customer_callback_handler.pending_booking_reports.pop(self.chat_id, None)
+            if booking_id:
+                # Call the method that processes the booking report
+                self.customer_callback_handler.report_booking(self.chat_id, booking_id, text)
+                self.auth_service.set_user_state(None)  # Reset the state
+            else:
+                self.bot_service.send_message(self.chat_id, "⚠️ No booking to report found.")
 
         if user_state == "waiting_for_job_title":
             self.job_handler.handle(text, user_state)
