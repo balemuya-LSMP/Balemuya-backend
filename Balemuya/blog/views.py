@@ -11,9 +11,10 @@ from .serializers import BlogPostSerializer,BlogPostDetailSerializer, CommentSer
 class BlogPostListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        posts = BlogPost.objects.all()
+        posts = BlogPost.objects.all().order_by('-updated_at', '-created_at')
         serializer = BlogPostDetailSerializer(posts, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
 
     def post(self, request):
         if not request.user.user_type =='professional':
