@@ -41,7 +41,7 @@ class BlogPostDetailAPIView(APIView):
 
     def get_post_object(self, request, post_id):
         try:
-            return BlogPost.objects.get(id=post_id,author=request.user)
+            return BlogPost.objects.get(id=post_id)
         except BlogPost.DoesNotExist:
             return None
 
