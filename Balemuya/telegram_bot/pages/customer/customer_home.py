@@ -13,6 +13,7 @@ from PIL import Image, ImageDraw
 from io import BytesIO
 from  ...utils.common import create_circular_image,format_date
 from ...handlers.job_handler import JobHandler
+from .callbacks import CustomerCallbackHandler
 class CustomerMenu:
     def __init__(self, bot_service,auth_service, chat_id):
         self.bot_service = bot_service
