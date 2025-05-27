@@ -31,7 +31,7 @@ class CustomerMenu:
             "keyboard": [
                 ["📅 Manage Requests","🛠️ Manage Services"],
                 ["👥 View Professionals", "⭐ View Favorites"],
-                ["👤 View Profile", "🔓 Logout"]
+                ["👤 View Profile","🔙 Back to Main Menu", "🔓 Logout"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
@@ -78,6 +78,7 @@ class CustomerMenu:
                 self.auth_service.set_user_state(None)  # Reset the state
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ No booking to report found.")
+                self.display_service_menu()
 
         if user_state == "waiting_for_job_title":
             self.job_handler.handle(text, user_state)
