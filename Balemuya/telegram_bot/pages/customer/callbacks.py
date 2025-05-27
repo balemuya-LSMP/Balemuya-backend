@@ -22,8 +22,9 @@ class CustomerCallbackHandler:
             return
 
     def handle_callback_query(self, callback_query):
-        callback_data = callback_query.data
-        chat_id = callback_query.message.chat.id
+        callback_data = callback_query.get("data")
+        chat_id = callback_query.get("from", {}).get("id")
+
 
         if callback_data.startswith("apply_service_"):
             service_post_id = self.extract_id(callback_data, "apply_service_")
