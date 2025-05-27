@@ -94,8 +94,7 @@ class TelegramFacade:
                 self.handle_professional_commands(text)
         else:
             self.send_main_menu("⚠️ Unknown command. Please select an option.")
-    def handle_customer_commands(self, message):
-        text = message.text if message.text else None
+    def handle_customer_commands(self, text):
 
         if text == "🛠️ Manage Services":
             self.customer_menu.display_service_menu()
@@ -132,7 +131,7 @@ class TelegramFacade:
         elif text == "🔙 Back to Main Menu":
             self.send_customer_menu()
         else:
-            self.customer_menu.handle_user_response(message)
+            self.customer_menu.handle_user_response(text)
 
 
     def handle_professional_commands(self, text):
