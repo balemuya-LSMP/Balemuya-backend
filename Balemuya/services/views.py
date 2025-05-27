@@ -311,6 +311,7 @@ class ReviewAPIView(APIView):
         user = request.user
         booking = request.data.get('booking')
         service_request = request.data.get('service_request')
+        print('datas in review is',request.data)
 
         if booking and service_request:
             return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
@@ -351,13 +352,15 @@ class ReviewAPIView(APIView):
         serializer = ReviewSerializer(data=review_data)
         if serializer.is_valid():
             serializer.save()
-
+            
+            print('review data is ',serializer.data)
             if user.user_type == "customer":
                 if booking:
                     booking_instance.application.professional.rating = (
                         (booking_instance.application.professional.rating + serializer.validated_data['rating']) / 2
                     )
                     booking_instance.application.professional.save()
+                    print('rating of professional is',booking_instance.application.professional.rating)
                 else:
                     request_instance.professional.rating = (
                         (request_instance.professional.rating + serializer.validated_data['rating']) / 2
@@ -369,6 +372,8 @@ class ReviewAPIView(APIView):
                         (booking_instance.application.service.customer.rating + serializer.validated_data['rating']) / 2
                     )
                     booking_instance.application.service.customer.save()
+                    print('rating of customer is',booking_instance.application.service.customer.rating)
+
                 else:
                     request_instance.customer.rating = (
                         (request_instance.customer.rating + serializer.validated_data['rating']) / 2
