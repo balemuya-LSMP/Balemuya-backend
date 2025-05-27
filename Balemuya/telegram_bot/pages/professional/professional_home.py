@@ -403,7 +403,6 @@ class ProfessionalMenu:
                 f"📧 Email: {user_info['email']}\n"
                 f"👤 Username: @{user_info['username']}\n"
                 f"📞 Phone Number: {user_info['phone_number']}\n"
-                f"🏢 Organization: {user_info['org_name']}\n"
                 f"📝 Bio: {user_info.get('bio', 'No bio provided')}\n"
                 f"📍 Address: {user_info['address']['city']}, {user_info['address']['region']}, {user_info['address']['country']}\n"
                 f"🌟 Rating: {profile['rating']}\n"
