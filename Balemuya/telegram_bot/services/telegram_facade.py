@@ -82,12 +82,13 @@ class TelegramFacade:
             self.registration_handler.handle(text, user_state)
         elif text == "🔐 Login" or (user_state and user_state.startswith("waiting_for_") and "login" in user_state):
             self.login_handler.handle(text, user_state)
-        elif is_logged_in and self.auth_service.user_instance:
-            if user_state == "customer_menu" or user_type== 'customer':
+        elif is_logged_in or self.auth_service.user_instance:
+            menu_state = self.auth_service.get_menu_state()
+            if menu_state == "customer_menu" and user_type== 'customer':
                 if not self.customer_menu:
                     self.send_customer_menu()
                 self.handle_customer_commands(text)
-            elif user_state == "professional_menu" or user_type== 'professional':
+            elif menu_state == "professional_menu" or user_type== 'professional':
                 if not self.professional_menu:
                     self.send_professional_menu()
                 self.handle_professional_commands(text)
@@ -99,7 +100,7 @@ class TelegramFacade:
             self.customer_menu.display_service_menu()
             
         elif text == "🆕 Post New Job":
-            self.customer_menu.post_new_job()
+            self.customer_menu.post_new_job ()
         elif text == "View Posts":
             self.customer_menu.fetch_service_booking()
         elif text == "🔄 Active Bookings":
@@ -266,3 +267,24 @@ class TelegramFacade:
             "🚫 User logged out. You're back to the main menu.",
             reply_markup=generate_keyboard([["📝 Register", "🔐 Login"], ["ℹ️ Help"]])
         )
+        
+        
+        
+        
+    # elif is_logged_in and self.auth_service.user_instance:
+    #         if user_type == 'customer':
+    #             # menu_state = self.auth_service.get_menu_state()
+    #             if menu_state != "customer_menu":
+    #                 self.send_customer_menu()  # Show menu
+    #                 self.auth_service.set_menu_state("customer_menu")  # Update menu state
+    #             else:
+    #                 self.handle_customer_commands(text)  # Handle commands in current menu
+    #         elif user_type == 'professional':
+    #             # menu_state = self.auth_service.get_menu_state()
+    #             if menu_state != "professional_menu":
+    #                 self.send_professional_menu()  # Show menu
+    #                 self.auth_service.set_menu_state("professional_menu")  # Update menu state
+    #             else:
+    #                 self.handle_professional_commands(text)  # Handle commands in current menu
+    #     else:
+    #         self.send_main_menu("⚠️ Unknown command. Please select an option.")

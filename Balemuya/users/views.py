@@ -288,7 +288,7 @@ class GoogleLoginView(APIView):
         code = request.data.get('code')
         user_type = request.data.get('user_type')
         entity_type = request.data.get('entity_type')
-        username = request.data.get('username')
+        redirect_uri=request.data.get('redirect_uri')
 
         if not code:
             logging.warning("Missing authorization code")
@@ -303,7 +303,7 @@ class GoogleLoginView(APIView):
                     'code': code,
                     'client_id': settings.GOOGLE_CLIENT_ID,
                     'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                    'redirect_uri': settings.GOOGLE_REDIRECT_URI,
+                    'redirect_uri': redirect_uri if redirect_uri else settings.GOOGLE_REDIRECT_URI,
                     'grant_type': 'authorization_code',
                 },
                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
@@ -339,7 +339,6 @@ class GoogleLoginView(APIView):
                 'is_active': True,
                 'user_type': user_type,
                 'entity_type': entity_type,
-                'username': username if user_type == 'organization' else f"{first_name}{last_name}".lower()
             })
 
             if created:

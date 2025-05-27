@@ -16,6 +16,9 @@ class TelegramBotWebhook(APIView):
         user = self.get_user(chat_id)
         print('user is',user)
         user_state = cache.get(f'user_state_{chat_id}', None)
+        print('user state at start is',user_state)
+        menu_state = cache.get(f'menu_state_{chat_id}', None)
+        print('menu state at start is',menu_state)
 
         facade = TelegramFacade(chat_id)
 
@@ -26,6 +29,7 @@ class TelegramBotWebhook(APIView):
 
         # Update user state in cache
         cache.set(f'user_state_{chat_id}', facade.auth_service.get_user_state())
+        cache.set(f'menu_state_{chat_id}', facade.auth_service.get_menu_state())
 
         return JsonResponse({"status": "ok"})
 
