@@ -18,7 +18,12 @@ class TelegramAuthService:
 
     def set_user_state(self, state):
         cache.set(f"user_state_{self.chat_id}", state)
+        
+    def set_menu_state(self, state):
+        cache.set(f"menu_state_{self.chat_id}", state)
 
+    def get_menu_state(self):
+        return cache.get(f"menu_state_{self.chat_id}")
     def get_user_state(self):
         return cache.get(f"user_state_{self.chat_id}")
 
