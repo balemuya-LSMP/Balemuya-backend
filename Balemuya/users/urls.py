@@ -2,7 +2,7 @@ from django.urls import path, include
 import uuid
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import RegisterFCMDeviceView,RegisterView,LoginView,VerifyEmailView,LogoutView,VerifyPhoneView,VerifyPasswordResetOTPView,ResendOTPView ,SetPasswordView,ResetPasswordView,\
-UpdatePasswordView,GoogleLoginView,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView,FavoriteListCreateAPIView
+UpdatePasswordView,SignupWithGoogle,SigninWithGoogle,ProfileView,UserUpdateView,UserDetailView,UserDeleteView,UserBlockView,UserFeedbackView,FavoriteListCreateAPIView
         
 from .address import AddressView
 urlpatterns = [
@@ -24,7 +24,8 @@ urlpatterns = [
     path('auth/set-new-password/', SetPasswordView.as_view(), name='set-password'),
     path('auth/update-password/', UpdatePasswordView.as_view(), name='update-password'),
     
-    path('auth/continue-with-google/',GoogleLoginView.as_view(), name='google-login'),
+    path('auth/signin-with-google/',SigninWithGoogle.as_view(), name='google-login'),
+    path('auth/signup-with-google/',SignupWithGoogle.as_view(), name='google-signup'),
     
     path('profile/',ProfileView.as_view(), name='profile'),
     path('profile/update/', UserUpdateView.as_view(), name='user-update'),
