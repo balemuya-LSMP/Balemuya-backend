@@ -7,7 +7,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from services.models import ServicePost, ServicePostApplication, ServiceBooking, Review, Complain,ServiceRequest
 from .models import Notification
-from users.models import Professional,Customer,Admin,User,VerificationRequest,Feedback
+from users.models import Professional,Customer,Admin,User,VerificationRequest,Feedback,Payment,SubscriptionPayment
 from common.models import Category
 from .serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -198,6 +198,73 @@ def notify_professional_on_service_request(sender, instance, created, **kwargs):
                 group_name,
                 {'type': 'send_notification', 'data': notification_serializer.data}
             )
+
+#payment recieved signal
+@receiver(post_save, sender=Payment)
+def notify_professional_on_payment_received(sender, instance, created, **kwargs):
+    if created and instance.payment_status == 'pending' and instance.professional:
+        channel_layer = get_channel_layer()
+        group_name = f"professional_{instance.professional.user.id}_payment_notifications"
+        customer_user = instance.customer.user if instance.customer and instance.customer.user else None
+        customer_username = customer_user.username if customer_user else "Unknown"
+        customer_profile_image = getattr(customer_user, 'profile_image', None)
+        profile_image_url = customer_profile_image.url if customer_profile_image else None
+
+        message = f"A new payment request from {customer_username}."
+
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='New Service Payment',
+                message=message,
+                notification_type="new_service_payment",
+                metadata={
+                    "id": str(instance.customer.id) if instance.customer else None,
+                    "username": customer_username,
+                    "profile_image": profile_image_url,
+                }
+            )
+            notification.recipient.set([instance.professional.user])
+            notification.save()
+
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+
+
+@receiver(post_save, sender=SubscriptionPayment)
+def notify_professional_on_subscription_payment(sender, instance, created, **kwargs):
+    if created and instance.payment_status == 'pending':
+        professional_user = instance.professional.user if instance.professional else None
+        if not professional_user:
+            return  # avoid failure if no professional
+
+        channel_layer = get_channel_layer()
+        group_name = f"professional_{professional_user.id}_payment_notifications"
+
+        message = f"Your subscription payment is being processed for the {instance.subscription_plan.plan_type.title()} plan."
+
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title='Subscription Payment Initiated',
+                message=message,
+                notification_type="subscription_payment",
+                metadata={
+                    "plan": instance.subscription_plan.plan_type,
+                    "duration": instance.subscription_plan.duration,
+                    "cost": str(instance.amount),
+                }
+            )
+            notification.recipient.set([professional_user])
+            notification.save()
+
+            notification_serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {'type': 'send_notification', 'data': notification_serializer.data}
+            )
+            
 
 @receiver(post_save, sender=ServiceRequest)
 def notify_customer_on_service_response(sender, instance, created, **kwargs):
