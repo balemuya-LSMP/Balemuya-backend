@@ -795,7 +795,7 @@ class ServicePostFilterView(APIView):
             return Response({"detail": "please turn on your location."}, status=status.HTTP_400_BAD_REQUEST)
         filtered_posts = filter_service_posts_by_distance(service_posts, user_location)
 
-        serializer = ServicePostSerializer(filtered_posts, many=True)
+        serializer = ServicePostDetailSerializer(filtered_posts, many=True)
 
         for i, post in enumerate(serializer.data):
             post['distance'] = filtered_posts[i].distance 
