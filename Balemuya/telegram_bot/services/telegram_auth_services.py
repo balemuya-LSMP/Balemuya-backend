@@ -2,6 +2,7 @@ import requests
 import re
 from django.core.cache import cache
 from django.conf import settings
+from users.models import User
 
 class TelegramAuthService:
     def __init__(self, chat_id):
