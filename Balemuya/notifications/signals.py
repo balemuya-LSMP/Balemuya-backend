@@ -254,6 +254,8 @@ def notify_professional_on_subscription_payment(sender, instance, created, **kwa
                     "plan": instance.subscription_plan.plan_type,
                     "duration": instance.subscription_plan.duration,
                     "cost": str(instance.amount),
+                    "username": instance.subscription_plan.professional.user.username,
+                    "profile_image": str(instance.subscription_plan.professional.user.profile_image.url)or None,
                 }
             )
             notification.recipient.set([professional_user])
