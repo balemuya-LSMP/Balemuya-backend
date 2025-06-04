@@ -338,16 +338,16 @@ class ReviewAPIView(APIView):
         print('datas in review is',request.data)
 
         if booking and service_request:
-            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Please provide either a ServiceBooking or a ServiceRequest, not both."}, status=status.HTTP_400_BAD_REQUEST)
 
         if booking:
             try:
                 booking_instance = ServiceBooking.objects.get(id=booking)
             except ServiceBooking.DoesNotExist:
-                return Response({"error": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"detail": "No booking found"}, status=status.HTTP_404_NOT_FOUND)
 
             if Review.objects.filter(booking=booking_instance, user=user).exists():
-                return Response({"error": "Review already exists for this booking"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Review already exists for this booking"}, status=status.HTTP_400_BAD_REQUEST)
 
             review_data = {
                 "booking": booking_instance.id,
@@ -359,10 +359,10 @@ class ReviewAPIView(APIView):
             try:
                 request_instance = ServiceRequest.objects.get(id=service_request)
             except ServiceRequest.DoesNotExist:
-                return Response({"error": "No service request found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"detail": "No service request found"}, status=status.HTTP_404_NOT_FOUND)
 
             if Review.objects.filter(service_request=request_instance, user=user).exists():
-                return Response({"error": "Review already exists for this service request"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": "Review already exists for this service request"}, status=status.HTTP_400_BAD_REQUEST)
 
             review_data = {
                 "service_request": request_instance.id,
@@ -371,7 +371,7 @@ class ReviewAPIView(APIView):
             }
 
         else:
-            return Response({"error": "Please provide either a ServiceBooking or a ServiceRequest."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Please provide either a ServiceBooking or a ServiceRequest."}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ReviewSerializer(data=review_data)
         if serializer.is_valid():
@@ -406,7 +406,7 @@ class ReviewAPIView(APIView):
 
             return Response({"success": "Review added."}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ComplainAPIView(APIView):

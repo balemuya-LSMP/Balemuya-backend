@@ -7,14 +7,12 @@ class CustomerCallbackHandler:
     def __init__(self, bot_service, auth_service):
         self.bot_service = bot_service
         self.auth_service = auth_service
-        self.pending_booking_reports = {}
     
     def handle_message(self, update):
         message = update.message
         chat_id = message.chat.id
         text = message.text
 
-        # ✅ Check if user was prompted for a booking report reason
         if chat_id in self.pending_booking_reports:
             booking_id = self.pending_booking_reports.pop(chat_id)
             reason = text
@@ -72,17 +70,16 @@ class CustomerCallbackHandler:
 
         elif callback_data.startswith("report_booking_"):
             booking_id = self.extract_id(callback_data, "report_booking_")
-            self.pending_booking_reports[chat_id] = booking_id
-            
-            # Set user state to waiting for booking report reason
             self.auth_service.set_user_state("waiting_for_booking_report_reason")
-
+            self.auth_service.set_session_data("report_booking_id",booking_id)
             self.bot_service.send_message(chat_id, "✍️ Please enter the reason for reporting this booking:")
 
 
         elif callback_data.startswith("review_booking_"):
             booking_id = self.extract_id(callback_data, "review_booking_")
-            self.review_booking(chat_id, booking_id)
+            self.auth_service.set_user_state(f"review_booking_rating_{booking_id}")
+            self.bot_service.send_message(chat_id, "✍️ Please enter a rating from 1 to 5:")
+
 
         elif callback_data.startswith("edit_post_"):
             post_id = self.extract_id(callback_data, "edit_post_")
@@ -379,7 +376,7 @@ class CustomerCallbackHandler:
         print(f"Processing payment for booking ID={booking_id}")
         self.bot_service.send_message(chat_id, f"💳 Payment initiated for booking {booking_id}.")
 
-    def report_booking(self, chat_id, service_post_id, reason):
+    def report_booking(self, chat_id, booking_id, reason):
         try:
             access_token = self.auth_service.get_access_token()
             if not access_token:
@@ -389,18 +386,18 @@ class CustomerCallbackHandler:
             if not reason:
                 self.bot_service.send_message(chat_id, "⚠️ Please provide a reason for reporting the service post.")
                 return
+            print('booking id is',booking_id)
 
-            url = f"{settings.BACKEND_URL}services/service-posts/{service_post_id}/report/"
+            url = f"{settings.BACKEND_URL}services/bookings/complain/create/"
             headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json"
             }
-            data = {"reason": reason}
+            data = {"reason": reason,"booking":booking_id}
 
             response = requests.post(url, headers=headers, json=data)
-
             if response.status_code == 201:
-                self.bot_service.send_message(chat_id, f"🚨 Report submitted for service post {service_post_id}.")
+                self.bot_service.send_message(chat_id, f"🚨 Report submitted for service .")
             else:
                 error_message = response.json().get('detail', 'Failed to submit report.')
                 self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
@@ -417,17 +414,20 @@ class CustomerCallbackHandler:
                 self.bot_service.send_message(chat_id, "⚠️ You must be logged in to submit a review.")
                 return
 
-            url = f"{settings.BACKEND_URL}services/service-bookings/{booking_id}/review/"
+            url = f"{settings.BACKEND_URL}services/bookings/review/"
             headers = {
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json"
             }
             payload = {
+                "booking":booking_id,
                 "rating": rating,
                 "comment": comment
             }
+            print('payload is',payload)
 
             response = requests.post(url, json=payload, headers=headers)
+            print('review response is',response)
 
             if response.status_code == 200:
                 self.bot_service.send_message(chat_id, "✅ Review submitted successfully.")

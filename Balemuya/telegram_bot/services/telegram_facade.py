@@ -128,8 +128,10 @@ class TelegramFacade:
             self.customer_menu.fetch_favorites()
         elif text == "👥 View Professionals":
             self.customer_menu.fetch_nearby_professionals()
-        elif text == "🔙 Back to Main Menu":
+        elif text == "🔙 Back":
             self.send_customer_menu()
+        elif text == "🔙 Back to Main Menu":
+            self.send_main_menu()
         else:
             self.customer_menu.handle_user_response(text)
 
@@ -171,6 +173,8 @@ class TelegramFacade:
             self.professional_menu.fetch_subscription_plan()
         elif text == "👤 View Profile":
             self.professional_menu.fetch_professional_profile()
+        elif text == "🔙 Back":
+            self.send_main_menu()
         elif text == "🔙 Back to Main Menu":
             self.professional_menu.display_menu()
         else:

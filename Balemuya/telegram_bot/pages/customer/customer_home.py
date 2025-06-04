@@ -43,7 +43,7 @@ class CustomerMenu:
         keyboard = {
         "keyboard": [
             ["⌛ Pending Requests", "✅ Accepted Requests"],
-            ["✅ Completed Requests","❌ Rejected Requests","🔙 Back to Main Menu"]
+            ["✅ Completed Requests","❌ Rejected Requests","🔙 Back"]
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
@@ -56,7 +56,7 @@ class CustomerMenu:
             "keyboard": [
                 ["🆕 Post New Job","View Posts" ], 
                 ["✅ Completed Bookings","🔄 Active Bookings", "❌ Canceled Bookings"],
-                ["🔙 Back to Main Menu"]
+                ["🔙 Back"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
@@ -71,16 +71,42 @@ class CustomerMenu:
         print('user state is', user_state)
         
         if user_state == "waiting_for_booking_report_reason":
-            booking_id = self.customer_callback_handler.pending_booking_reports.pop(self.chat_id, None)
+            print('user state os',user_state)
+            booking_id = self.auth_service.get_session_data('report_booking_id')
+            print('booking id is',booking_id)
             if booking_id:
-                # Call the method that processes the booking report
                 self.customer_callback_handler.report_booking(self.chat_id, booking_id, text)
-                self.auth_service.set_user_state(None)  # Reset the state
+                self.auth_service.set_user_state(None)
             else:
                 self.bot_service.send_message(self.chat_id, "⚠️ No booking to report found.")
                 self.display_service_menu()
+        elif user_state and user_state.startswith("review_booking_"):
+            parts = user_state.split("_")
+            stage = parts[2]
+            booking_id = parts[3]
 
-        if user_state == "waiting_for_job_title":
+            if stage == "rating":
+                try:
+                    rating = int(text.strip())
+                    if 1 <= rating <= 5:
+                        self.auth_service.set_session_data("review_rating", rating)
+                        self.auth_service.set_user_state(f"review_booking_comment_{booking_id}")
+                        self.bot_service.send_message(self.chat_id, "💬 Please enter your comment about the service:")
+                    else:
+                        self.bot_service.send_message(self.chat_id, "⚠️ Rating must be between 1 and 5.")
+                except ValueError:
+                    self.bot_service.send_message(self.chat_id, "⚠️ Please enter a valid integer rating.")
+
+            elif stage == "comment":
+                comment = text.strip()
+                rating = self.auth_service.get_session_data("review_rating")
+                if rating is not None:
+                    self.customer_callback_handler.review_booking(chat_id=self.chat_id, booking_id=booking_id, rating=rating, comment=comment)
+                    self.auth_service.set_user_state(None)
+                else:
+                    self.bot_service.send_message(self.chat_id, "⚠️ Rating not found. Please start review again.")
+
+        elif user_state == "waiting_for_job_title":
             self.job_handler.handle(text, user_state)
         elif user_state == "waiting_for_job_description":
             self.job_handler.handle(text, user_state) 

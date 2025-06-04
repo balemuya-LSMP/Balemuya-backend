@@ -23,7 +23,7 @@ class ProfessionalMenu:
         "keyboard": [
             ["📋 Manage Requests", "🛠️ Manage Services"],
             ["💳 Payment History", "📄 View Subscription"],
-            ["👤 View Profile","🔓 Logout"]
+            ["👤 View Profile","🔙 Back to Main Menu","🔓 Logout"]
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
@@ -35,7 +35,7 @@ class ProfessionalMenu:
         keyboard = {
         "keyboard": [
             ["⌛ Pending Requests", "✅ Accepted Requests"],
-            ["✅ Completed Requests","❌ Rejected Requests","🔙 Back to Main Menu"]
+            ["✅ Completed Requests","❌ Rejected Requests","🔙 Back"]
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
@@ -48,7 +48,7 @@ class ProfessionalMenu:
             "keyboard": [
                 ["🆕 New Jobs", "🔄 Active Bookings", "✅ Completed Job Bookings", "❌ Canceled Job Bookings"],
                 ["📄 Rejected Job Applications", "✔️ Accepted Job Applications", "🔄 Pending Job Applications"],
-                ["🔙 Back to Main Menu"]
+                ["🔙 Back"]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": True
@@ -70,7 +70,7 @@ class ProfessionalMenu:
         try:
             response = requests.get(url, headers=headers)
             print('response text is',response)
-            print('Response Status Code:', response.status_code)  # Debugging line
+            print('Response Status Code:', response.status_code)  
             
             if response.status_code == 200:
                 subscription_plans = response.json()
