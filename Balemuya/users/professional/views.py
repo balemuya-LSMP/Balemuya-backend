@@ -90,7 +90,14 @@ class ProfessionalServiceListView(APIView):
             query_param_status = request.query_params.get('status', None)
             if query_param_status is None:
                 new_service_post = []
-                new_service_post = ServicePost.objects.filter(category__in=request.user.professional.categories.all(),status='active').order_by('-urgency','-created_at')
+                applied_posts = ServicePostApplication.objects.filter(
+                professional=request.user.professional
+                    ).values('service_post')
+
+                new_service_post = ServicePost.objects.filter(
+                        category__in=request.user.professional.categories.all(),
+                        status='active'
+                ).exclude(id__in=Subquery(applied_posts)).order_by('-urgency', '-created_at')
                 new_service_post_serializer = ServicePostDetailSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
@@ -104,7 +111,7 @@ class ProfessionalServiceListView(APIView):
                 return Response({"data": list(service_accepted_serializer.data)}, status=status.HTTP_200_OK)
             
             elif query_param_status == 'rejected':
-                service_rejected = ServicePostApplication.objects.filter(professional=request.user.id,status='rejected').order_by('-created_at')
+                service_rejected = ServicePostApplication.objects.filter(professional=request.user.professional,status='rejected').order_by('-created_at')
                 service_rejected_serializer = ServicePostApplicationDetailSerializer(service_rejected, many=True)
                 return Response({"data": list(service_rejected_serializer.data)}, status=status.HTTP_200_OK)
             
