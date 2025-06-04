@@ -96,9 +96,13 @@ class CustomerCallbackHandler:
             post_id = self.extract_id(callback_data, "view_post_apps")
             self.view_post_applications(chat_id, post_id)
 
-        elif callback_data.startswith("reject_request_"):
-            request_id = self.extract_id(callback_data, "reject_request_")
-            self.cancel_request(chat_id, request_id)
+        elif callback_data.startswith("accept_app_"):
+            app_id = self.extract_id(callback_data, "accept_app_")
+            self.accept_application(chat_id, app_id)
+
+        elif callback_data.startswith("reject_app_"):
+            app_id = self.extract_id(callback_data, "reject_app_")
+            self.reject_application(chat_id, app_id)
 
         elif callback_data.startswith("pay_completed_request_"):
             request_id = self.extract_id(callback_data, "pay_completed_request_")
@@ -163,9 +167,12 @@ class CustomerCallbackHandler:
                 "detail":"I want you your service"
             }
             response = requests.post(url, headers=headers,json=data)
-            if response.status_code == 200:
-                self.bot_service.send_message(chat_id, f"📨 Your service request has been sent to professional professional.")
+            print('response is',response.text)
+            print('code is',response.status_code)
+            if response.status_code == 201:
+                self.bot_service.send_message(chat_id, f"✅ Your service request has been sent to professional.")
             else:
+                print('response json',response.json().get('detail'))
                 error_message = response.json().get('detail', 'Failed to send service request.')
                 self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
 
@@ -189,7 +196,7 @@ class CustomerCallbackHandler:
             response = requests.post(url, headers=headers,json=data)
             
             if response.status_code == 204:
-                self.bot_service.send_message(chat_id, f"❌ Professional ID {prof_id} has been removed from your favorites.")
+                self.bot_service.send_message(chat_id, f"❌ Professional  has been removed from your favorites.")
             else:
                 error_message = response.json().get('detail', 'Failed to remove from favorites.')
                 self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
@@ -412,12 +419,143 @@ class CustomerCallbackHandler:
         self.bot_service.send_message(chat_id, f"✏️ Editing post ID {post_id}.")
 
     def delete_post(self, chat_id, post_id):
-        print(f"Deleting post ID={post_id}")
-        self.bot_service.send_message(chat_id, f"🗑️ Deleted post ID {post_id}.")
+        try:
+            access_token = self.auth_service.get_access_token()
+            if not access_token:
+                self.bot_service.send_message(chat_id, "⚠️ You must be logged in to delete a post.")
+                return
 
+            url = f"{settings.BACKEND_URL}services/service-posts/{post_id}/"
+            headers = {
+                "Authorization": f"Bearer {access_token}"
+            }
+
+            response = requests.delete(url, headers=headers)
+
+            if response.status_code == 204:
+                self.bot_service.send_message(chat_id, f"🗑️ Post is deleted.")
+            else:
+                error_message = response.json().get('detail', 'Failed to delete post.')
+                self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error deleting service post: {e}")
+            self.bot_service.send_message(chat_id, "⚠️ An error occurred while deleting the post.")
+    
     def view_post_applications(self, chat_id, post_id):
-        print(f"Viewing applications for post ID={post_id}")
-        self.bot_service.send_message(chat_id, f"📋 Showing applications for post {post_id}.")
+        try:
+            access_token = self.auth_service.get_access_token()
+            if not access_token:
+                self.bot_service.send_message(chat_id, "⚠️ You must be logged in to view applications.")
+                return
+
+            url = f"{settings.BACKEND_URL}services/service-posts/customer/{post_id}/applications/"
+            headers = {
+                "Authorization": f"Bearer {access_token}"
+            }
+
+            response = requests.get(url, headers=headers)
+            print('response is', response)
+            print('response code', response.status_code)
+            print('response text', response.text)
+            
+            if response.status_code == 200:
+                # FIX: Extract only the list of applications
+                applications = response.json().get("data", [])
+                
+                if applications:
+                    for app in applications:
+                        app_id = app.get("id")
+                        professional = app.get("professional", {})
+                        prof_name = professional.get("professional_name", "Unknown")
+                        rating = professional.get("rating", "0")
+                        submitted_message = app.get("message", "--")
+                        status = app.get("status", "N/A")
+
+                        text = (
+                            f"👤 {prof_name} (⭐ {rating})\n"
+                            f"📨 {submitted_message}\n"
+                            f"📌 Status: {status}"
+                        )
+
+                        reply_markup = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": "✅ Accept", "callback_data": f"accept_app_{app_id}"},
+                                    {"text": "❌ Reject", "callback_data": f"reject_app_{app_id}"}
+                                ]
+                            ]
+                        }
+
+                        self.bot_service.send_message(chat_id, text, reply_markup=reply_markup)
+
+                else:
+                    self.bot_service.send_message(chat_id, f"📭 No applications found for this post.")
+            else:
+                error_message = response.json().get("detail", "Failed to retrieve applications.")
+                self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching applications: {e}")
+            self.bot_service.send_message(chat_id, "⚠️ An error occurred while fetching applications.")
+
+            
+    
+    
+    def accept_application(self, chat_id, application_id):
+        try:
+            access_token = self.auth_service.get_access_token()
+            if not access_token:
+                self.bot_service.send_message(chat_id, "⚠️ You must be logged in to accept an application.")
+                return
+
+            url = f"{settings.BACKEND_URL}services/service-posts/applications/{application_id}/accept/"
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(url, headers=headers)
+
+            if response.status_code == 200:
+                self.bot_service.send_message(chat_id, f"✅ Application accepted successfully.")
+            else:
+                error_message = response.json().get('detail', 'Failed to accept the application.')
+                self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error accepting application: {e}")
+            self.bot_service.send_message(chat_id, "⚠️ An error occurred while accepting the application.")
+
+    def reject_application(self, chat_id, application_id):
+        try:
+            access_token = self.auth_service.get_access_token()
+            if not access_token:
+                self.bot_service.send_message(chat_id, "⚠️ You must be logged in to reject an application.")
+                return
+            print('application id is',application_id)
+
+            url = f"{settings.BACKEND_URL}services/service-posts/applications/{application_id}/reject/"
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(url, headers=headers)
+            print('response is',response)
+            print('response code',response.status_code)
+            print('response text',response.text)
+            if response.status_code == 200:
+                self.bot_service.send_message(chat_id, f"❌ Application  rejected successfully.")
+            else:
+                error_message = response.json().get('detail', 'Failed to reject the application.')
+                self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error rejecting application: {e}")
+            self.bot_service.send_message(chat_id, "⚠️ An error occurred while rejecting the application.")
+
+
 
     def cancel_request(self, chat_id, request_id):
         print(f"Cancelling request ID={request_id}")

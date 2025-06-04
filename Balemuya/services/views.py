@@ -211,6 +211,30 @@ class AcceptServicePostApplicationAPIView(APIView):
         except Exception as e:
             return Response({"error": "An error occurred while processing your request"}, status=500)
 
+class RejectServicePostApplicationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk=None):
+        try:
+            application = ServicePostApplication.objects.get(id=pk)
+        except ServicePostApplication.DoesNotExist:
+            return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not application.service:
+            return Response({"detail": "service not  not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if application.status == 'rejected':
+            return Response({'error': "User already rejected"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                application.status = 'rejected'
+                application.save()
+
+                return Response({"message": "Application Rejected."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": "An error occurred while processing your request"}, status=500)
+
 class ServiceBookingListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
