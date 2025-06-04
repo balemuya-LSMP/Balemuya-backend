@@ -92,7 +92,7 @@ class ProfessionalServiceListView(APIView):
                 new_service_post = []
                 applied_posts = ServicePostApplication.objects.filter(
                 professional=request.user.professional
-                    ).values('service_post')
+                    ).values('service')
 
                 new_service_post = ServicePost.objects.filter(
                         category__in=request.user.professional.categories.all(),
@@ -587,7 +587,6 @@ class InitiateSubscriptionPaymentView(APIView):
         user = request.user
         data = request.data
 
-        # Input validation
         amount = data.get("amount")
         plan_type = data.get("plan_type")
         duration = int(data.get("duration"))
@@ -621,9 +620,9 @@ class InitiateSubscriptionPaymentView(APIView):
 
         payload = {
             "amount": str(amount),
-            "first_name": professional.user.first_name,
-            "last_name": professional.user.last_name,
-            "phone_number": professional.user.phone_number,
+            "first_name": professional.user.first_name if professional.user.entity_type =='individual' else professional.user.org_name,
+            "last_name": professional.user.last_name if professional.user.entity_type=='individual' else '',
+            "mobile": professional.user.phone_number,
             "currency": "ETB",
             "email": professional.user.email,
             "tx_ref": str(txt_ref),
@@ -684,7 +683,6 @@ class CheckPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_professional(self, user):
-        """Retrieve the professional based on user account type."""
         return Professional.objects.filter(user=user, is_verified=True).first()
         
     def get(self, request, transaction_id):
@@ -708,11 +706,9 @@ class CheckPaymentView(APIView):
             response_data = response.json()
 
             if response.status_code == 200:
-                # Update payment status
                 subscription_payment.payment_status = 'completed'
                 subscription_payment.save()
 
-                # Fetch the professional associated with the payment
                 professional = self.get_professional(request.user)
                 if professional:
                     professional.is_available = True

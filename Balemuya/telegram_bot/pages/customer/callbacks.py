@@ -410,13 +410,39 @@ class CustomerCallbackHandler:
             self.bot_service.send_message(chat_id, "⚠️ An error occurred while submitting the report.")
 
 
-    def review_booking(self, chat_id, booking_id):
-        print(f"Reviewing booking ID={booking_id}")
-        self.bot_service.send_message(chat_id, f"📝 Review submitted for booking {booking_id}.")
+    def review_booking(self, chat_id, booking_id, rating, comment):
+        try:
+            access_token = self.auth_service.get_access_token()
+            if not access_token:
+                self.bot_service.send_message(chat_id, "⚠️ You must be logged in to submit a review.")
+                return
+
+            url = f"{settings.BACKEND_URL}services/service-bookings/{booking_id}/review/"
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "rating": rating,
+                "comment": comment
+            }
+
+            response = requests.post(url, json=payload, headers=headers)
+
+            if response.status_code == 200:
+                self.bot_service.send_message(chat_id, "✅ Review submitted successfully.")
+            else:
+                error_message = response.json().get('detail', 'Failed to submit review.')
+                self.bot_service.send_message(chat_id, f"⚠️ {error_message}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error submitting review: {e}")
+            self.bot_service.send_message(chat_id, "⚠️ An error occurred while submitting your review.")
+
 
     def edit_post(self, chat_id, post_id):
         print(f"Editing post ID={post_id}")
-        self.bot_service.send_message(chat_id, f"✏️ Editing post ID {post_id}.")
+        self.bot_service.send_message(chat_id, f"✏️ Editing post.")
 
     def delete_post(self, chat_id, post_id):
         try:
@@ -559,24 +585,24 @@ class CustomerCallbackHandler:
 
     def cancel_request(self, chat_id, request_id):
         print(f"Cancelling request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"❌ Request {request_id} cancelled.")
+        self.bot_service.send_message(chat_id, f"❌ Request cancelled.")
 
     def pay_for_completed_request(self, chat_id, request_id):
         print(f"Paying for completed request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"💳 Payment initiated for request {request_id}.")
+        self.bot_service.send_message(chat_id, f"💳 Payment initiated for request.")
 
     def review_completed_request(self, chat_id, request_id):
         print(f"Reviewing completed request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"📝 Review submitted for request {request_id}.")
+        self.bot_service.send_message(chat_id, f"📝 Review submitted for reques.")
 
     def report_completed_request(self, chat_id, request_id):
         print(f"Reporting completed request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"🚨 Report submitted for request {request_id}.")
+        self.bot_service.send_message(chat_id, f"🚨 Report submitted for reques.")
 
     def review_canceled_request(self, chat_id, request_id):
         print(f"Reviewing canceled request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"📝 Review submitted for canceled request {request_id}.")
+        self.bot_service.send_message(chat_id, f"📝 Review submitted for canceled request .")
 
     def report_canceled_request(self, chat_id, request_id):
         print(f"Reporting canceled request ID={request_id}")
-        self.bot_service.send_message(chat_id, f"🚨 Report submitted for canceled request {request_id}.")
+        self.bot_service.send_message(chat_id, f"🚨 Report submitted for canceled request.")
