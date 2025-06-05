@@ -90,14 +90,14 @@ class ProfessionalServiceListView(APIView):
             query_param_status = request.query_params.get('status', None)
             if query_param_status is None:
                 new_service_post = []
-                applied_posts = ServicePostApplication.objects.filter(
-                professional=request.user.professional
-                    ).values('service')
+                # applied_posts = ServicePostApplication.objects.filter(
+                # professional=request.user.professional
+                #     ).values('service')
 
                 new_service_post = ServicePost.objects.filter(
                         category__in=request.user.professional.categories.all(),
                         status='active'
-                ).exclude(id__in=Subquery(applied_posts)).order_by('-urgency', '-created_at')
+                ).order_by('-urgency', '-created_at')
                 new_service_post_serializer = ServicePostDetailSerializer(new_service_post, many=True)
                 return Response({"data": list(new_service_post_serializer.data)}, status=status.HTTP_200_OK)
             elif query_param_status == 'pending':
